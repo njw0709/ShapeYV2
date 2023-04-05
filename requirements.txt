@@ -1,0 +1,10 @@
+tqdm >= 4.48.0
+cupy-cuda102
+matplotlib>=3.3.1
+h5py>=2.10.0
+twine
+black
+pylint
+pytest
+mypy
+numpy==1.21
