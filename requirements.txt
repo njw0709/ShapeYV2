@@ -8,3 +8,4 @@ pylint
 pytest
 mypy
 numpy==1.21
+bidict

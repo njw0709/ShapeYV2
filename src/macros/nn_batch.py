@@ -6,6 +6,7 @@ from .. import custom_dataclasses as cd
 from .. import analysis as an
 from .. import utils
 from tqdm import tqdm
+from bidict import bidict
 
 
 def exclusion_distance_analysis_batch(
@@ -40,9 +41,17 @@ def exclusion_distance_analysis_batch(
         ]
     else:
         col_descriptor_idx = typing.cast(List[int], col_descriptor)
-    corrmat_descriptor_idx: Tuple[Sequence[int], Sequence[int]] = (
-        row_descriptor_idx,
-        col_descriptor_idx,
+
+    # convert corrmat descriptors to bidirectional dictionary
+    row_descriptor_idx_dict: bidict[int, int] = bidict(
+        zip(range(len(row_descriptor_idx)), row_descriptor_idx)
+    )
+    col_descriptor_idx_dict: bidict[int, int] = bidict(
+        zip(range(len(col_descriptor_idx)), col_descriptor_idx)
+    )
+    corrmat_descriptor_idx: Tuple[bidict[int, int], bidict[int, int]] = (
+        row_descriptor_idx_dict,
+        col_descriptor_idx_dict,
     )
 
     # check if all necessary data is present for requested analysis

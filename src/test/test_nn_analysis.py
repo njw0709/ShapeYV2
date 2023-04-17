@@ -3,6 +3,7 @@ from typing import Tuple, Union, List
 import numpy as np
 import numpy.typing as npt
 import random
+from bidict import bidict
 from .. import custom_dataclasses as cd
 from .. import analysis as an
 from .. import utils
@@ -60,14 +61,16 @@ def custom_row_imgnames(custom_obj_subset, custom_axes_subset) -> List[str]:
 @pytest.fixture
 def test_corrmat_descriptor_int(
     custom_col_imgnames, custom_row_imgnames
-) -> Tuple[List[int], List[int]]:
+) -> Tuple[bidict[int, int], bidict[int, int]]:
     row_descriptor = [
         utils.SHAPEY200_IMGNAMES.index(img) for img in custom_row_imgnames
     ]
     col_descriptor = [
         utils.SHAPEY200_IMGNAMES.index(img) for img in custom_col_imgnames
     ]
-    return (row_descriptor, col_descriptor)
+    row_descriptor_dict = bidict(zip(range(len(row_descriptor)), row_descriptor))
+    col_descriptor_dict = bidict(zip(range(len(col_descriptor)), col_descriptor))
+    return (row_descriptor_dict, col_descriptor_dict)
 
 
 @pytest.fixture

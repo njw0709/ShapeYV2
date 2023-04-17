@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from collections.abc import Iterable
 from typing import List, Union, Sequence, Tuple
+from bidict import bidict
 from .. import utils
 
 
@@ -45,20 +46,17 @@ class ImageNameHelper:
 
     @staticmethod
     def shapey_idx_to_corrmat_idx(
-        shapey_idx: Sequence[int], descriptor: Sequence[int]
-    ) -> Tuple[List[int], List[int]]:
-        assert len(descriptor) > 0
-        if len(shapey_idx) == 2:
-            shapey_idx = list(range(shapey_idx[0], shapey_idx[1]))
-        elif len(shapey_idx) < 2:
-            raise ValueError("shapey_idx must be of length 2 or greater")
-
+        shapey_idx: Sequence[int], corrmat_descriptor: bidict[int, int]
+    ) -> List[int]:
         corrmat_idx: List[int] = []
         is_avail_shapey_idx: List[int] = []
         for shid in shapey_idx:
-            if shid in descriptor:
-                corrmat_idx.append(descriptor.index(shid))
-                is_avail_shapey_idx.append(shid)
+            try:
+                coridx = corrmat_descriptor.inverse[shid]
+                corrmat_idx.append(coridx)
+            except KeyError:
+                continue
+
         if len(corrmat_idx) == 0:
             raise ValueError("No indices in descriptor within range of shapey_idx")
-        return (corrmat_idx, is_avail_shapey_idx)
+        return corrmat_idx

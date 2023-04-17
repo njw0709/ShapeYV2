@@ -4,6 +4,7 @@ import typing
 import numpy as np
 import cupy as cp
 from cupyx.scipy.linalg import tri
+from bidict import bidict
 from .. import custom_dataclasses as cd
 from .. import utils
 from .. import dataextractor as de
@@ -42,7 +43,7 @@ def get_corrmats(
 def check_necessary_data_batch(
     corrmats: Union[Sequence[np.ndarray], Sequence[h5py.Dataset]],
     nn_analysis_config: cd.NNAnalysisConfig,
-    corrmat_descriptor: Tuple[List[int], List[int]],
+    corrmat_descriptor: Tuple[bidict[int, int], bidict[int, int]],
 ) -> None:
     # check if corrmats are of necessary shape
     if nn_analysis_config.contrast_exclusion:
@@ -74,53 +75,67 @@ def check_necessary_data_batch(
         img_list_idx = [
             cd.ImageNameHelper.imgname_to_shapey_idx(img) for img in img_list
         ]
-        assert set(img_list_idx) <= set(corrmat_descriptor[0])
+        assert set(img_list_idx) <= set(corrmat_descriptor[0].values())
 
 
 ## get coordinates of the requested object (for batch processing only)
 def objname_to_corrmat_coordinates(
     obj_name: str,
-    corrmat_descriptor: Tuple[Sequence[int], Sequence[int]],
+    corrmat_descriptor: Tuple[bidict[int, int], bidict[int, int]],
     ax: str = "all",
-) -> Tuple[Tuple[List[int], List[int]], Tuple[List[int], List[int]]]:
+) -> Tuple[List[int], List[int]]:
     objidx = cd.ImageNameHelper.objname_to_shapey_obj_idx(obj_name)
-    whole_corrmat_idx = [
+    obj_mat_shapey_idx_range = [
         objidx * utils.NUMBER_OF_VIEWS_PER_AXIS * utils.NUMBER_OF_AXES,
         (objidx + 1) * utils.NUMBER_OF_VIEWS_PER_AXIS * utils.NUMBER_OF_AXES,
     ]
     if ax == "all":
-        col_corrmat_idx = whole_corrmat_idx
-        row_corrmat_idx = whole_corrmat_idx
+        col_shapey_idx = obj_mat_shapey_idx_range
+        row_shapey_idx = obj_mat_shapey_idx_range
     else:
         ax_idx = utils.ALL_AXES.index(ax)
         # select only the rows of corrmat specific to the axis
-        row_corrmat_idx = [
-            objidx * utils.NUMBER_OF_VIEWS_PER_AXIS * utils.NUMBER_OF_AXES
-            + ax_idx * utils.NUMBER_OF_VIEWS_PER_AXIS,
-            objidx * utils.NUMBER_OF_VIEWS_PER_AXIS * utils.NUMBER_OF_AXES
-            + (ax_idx + 1) * utils.NUMBER_OF_VIEWS_PER_AXIS,
-        ]
+        row_shapey_idx = list(
+            range(
+                objidx * utils.NUMBER_OF_VIEWS_PER_AXIS * utils.NUMBER_OF_AXES
+                + ax_idx * utils.NUMBER_OF_VIEWS_PER_AXIS,
+                objidx * utils.NUMBER_OF_VIEWS_PER_AXIS * utils.NUMBER_OF_AXES
+                + (ax_idx + 1) * utils.NUMBER_OF_VIEWS_PER_AXIS,
+            )
+        )
         # select columns where the exclusion axes are present. (i.e., if ax = "pw", then select all that has "pw" in it - pwr, pwy, pwx, prw, etc.)
         contain_ax = np.array(
-            [[all([c in a for c in "pw"])] * 11 for a in utils.ALL_AXES], dtype=int
+            [[all([c in a for c in ax])] * 11 for a in utils.ALL_AXES], dtype=int
         ).flatten()  # binary vector indicating whether the specified axis (ax) is contained in the column exclusion axes(a).
-        whole_corrmat_idx_np = np.linspace(
-            whole_corrmat_idx[0],
-            whole_corrmat_idx[1] - 1,
-            whole_corrmat_idx[1] - whole_corrmat_idx[0],
-            dtype=int,
+        obj_mat_shapey_idxs = np.array(
+            list(range(obj_mat_shapey_idx_range[0], obj_mat_shapey_idx_range[1]))
         )
-        col_corrmat_idx = list(whole_corrmat_idx_np[contain_ax == 1])
+        col_shapey_idx = list(obj_mat_shapey_idxs[contain_ax == 1])
 
     # convert whole_corrmat_idx to currently given corrmat idx using corrmat_descriptor
     # currently cannot deal with corrmat with dispersed object indices. (i.e. images of single object must be in consecutive order)
-    row_coords, is_avail_shapey_idx_row = cd.ImageNameHelper.shapey_idx_to_corrmat_idx(
-        row_corrmat_idx, corrmat_descriptor[0]
+    row_corrmat_idx = cd.ImageNameHelper.shapey_idx_to_corrmat_idx(
+        row_shapey_idx, corrmat_descriptor[0]
     )
-    col_coords, is_avail_shapey_idx_col = cd.ImageNameHelper.shapey_idx_to_corrmat_idx(
-        col_corrmat_idx, corrmat_descriptor[1]
+    col_corrmat_idx = cd.ImageNameHelper.shapey_idx_to_corrmat_idx(
+        col_shapey_idx, corrmat_descriptor[1]
     )
-    return (row_coords, col_coords), (is_avail_shapey_idx_row, is_avail_shapey_idx_col)
+    return (row_corrmat_idx, col_corrmat_idx)
+
+
+def convert_subset_to_full_candidate_set(
+    cval_mat_subset: np.ndarray,
+    shapey_idxs: Tuple[Sequence[int], Sequence[int]],
+) -> np.ndarray:
+    cval_mat = np.full(
+        [
+            utils.NUMBER_OF_VIEWS_PER_AXIS,
+            utils.NUMBER_OF_VIEWS_PER_AXIS * utils.NUMBER_OF_AXES,
+        ],
+        np.nan,
+    )
+    cval_mat[:, shapey_idxs[1]] = cval_mat_subset
+    return cval_mat
 
 
 # get correlation (distance) values of the top 1 match with the exclusion.
@@ -138,23 +153,29 @@ def get_top1_sameobj_with_exclusion(
 
     assert cval_mat_sameobj.shape[0] == utils.NUMBER_OF_VIEWS_PER_AXIS
 
-    # fill cval matrix using shapey indices
-    cval_mat = cp.full(
-        [
-            utils.NUMBER_OF_VIEWS_PER_AXIS,
-            utils.NUMBER_OF_VIEWS_PER_AXIS * utils.NUMBER_OF_AXES,
-        ],
-        np.nan,
-    )
-    cval_mat[:, shapey_idxs[1]] = cval_mat_sameobj
+    # check if you have full matrix
+    if (
+        cval_mat_sameobj.shape[1]
+        != utils.NUMBER_OF_AXES
+        * utils.NUMBER_OF_OBJECTS
+        * utils.NUMBER_OF_VIEWS_PER_AXIS
+    ):
+        cval_mat_full = convert_subset_to_full_candidate_set(
+            cval_mat_sameobj, shapey_idxs
+        )
+    else:
+        cval_mat_full = cval_mat_sameobj
+
+    # convert numpy array to cupy array for gpu processing
+    cval_mat = cp.asarray(cval_mat_full)
 
     for xdist in range(0, 11):
         res = excluded_to_zero(cval_mat, ax, xdist, distance=distance)
         max_cvals.append(cp.nanmax(res, axis=1))
         max_idxs.append(cp.nanargmax(res, axis=1))
-    max_cvals = cp.array(max_cvals, dtype=float).T
-    max_idxs = cp.array(max_idxs, dtype=cp.int64).T
-    return max_cvals.get(), max_idxs.get()
+    max_cvals = np.array(max_cvals, dtype=float).T
+    max_idxs = np.array(max_idxs, dtype=cp.int64).T
+    return max_cvals, max_idxs
 
 
 def excluded_to_zero(
@@ -188,6 +209,6 @@ def excluded_to_zero(
         corr_mat_sameobj = cp.multiply(sampling_mask_whole, corr_mat_sameobj)
         return corr_mat_sameobj
     else:
-        idx = self.axes_of_interest.index(axis)
+        idx = utils.ALL_AXES.index(axis)
         corr_mat_sameobj = corr_mat_sameobj[idx * 11 : (idx + 1) * 11, :]
         return corr_mat_sameobj
