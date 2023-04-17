@@ -6,7 +6,7 @@ import numpy.typing as npt
 
 
 @dataclass
-class WholeCorrMat:
+class WholeMat:
     dims: Tuple[int, int]
     corrmat: np.ndarray
 
@@ -18,7 +18,7 @@ class Coordinates:
 
 
 @dataclass
-class PartialCorrMat:
+class PartialMat:
     dims: Tuple[int, int]
     corrmat: np.ndarray
     coordinates: Coordinates
