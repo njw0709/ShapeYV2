@@ -73,17 +73,16 @@ def exclusion_distance_analysis_batch(
         obj_cat = obj.split("_")[0]
         for ax in axes:
             # grab relevant cut out of the cval matrix
-            corrmat_coords, available_shapey_idxs = an.objname_to_corrmat_coordinates(
+            corrmat_coords, shapey_idxs = an.objname_to_corrmat_coordinates(
                 obj, corrmat_descriptor_idx, ax=ax
             )
             cval_mat_sameobj = corrmats[0][corrmat_coords[0], :][:, corrmat_coords[1]]
 
             # make same object cval array with exclusion distance in ax
             cval_arr_sameobj, idx_sameobj = an.get_top1_sameobj_with_exclusion(
-                obj,
                 ax,
                 cval_mat_sameobj,
-                available_shapey_idxs,
+                corrmat_coords,
                 distance=nn_analysis_config.distance_measure,
             )
 

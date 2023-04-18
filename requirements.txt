@@ -6,6 +6,7 @@ twine
 black
 pylint
 pytest
+pytest-profiling
 mypy
 numpy==1.21
 bidict

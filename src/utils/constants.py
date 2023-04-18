@@ -4,6 +4,7 @@ from typing import List
 import json
 import os
 import numpy as np
+from bidict import bidict
 
 
 def generate_axes_of_interest() -> List[str]:
@@ -40,3 +41,4 @@ with open(
     SHAPEY200_OBJS = json.load(f)
 SHAPEY200_OBJCATS = np.unique([obj.split("_")[0] for obj in SHAPEY200_OBJS])
 SHAPEY200_IMGNAMES = generate_all_imgnames(SHAPEY200_OBJS)
+SHAPEY200_IMGNAMES_DICT = bidict(enumerate(SHAPEY200_IMGNAMES))

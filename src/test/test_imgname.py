@@ -16,7 +16,7 @@ def shapey_idx_to_corrmat_test_data():
         (
             [1, 2, 4],  # shapey_idx
             bidict({0: 1, 1: 2, 2: 3, 3: 5}),  # corrmat_descriptor
-            [0, 1],  # expected_output
+            ([0, 1], [1, 2]),  # expected_output
         ),
         # Test 2: Empty output case
         (
@@ -43,9 +43,7 @@ def test_shapey_idx_to_corrmat_idx(imagename_helper, shapey_idx_to_corrmat_test_
                     shapey_idx, corrmat_descriptor
                 )
         else:
-            assert (
-                imagename_helper.shapey_idx_to_corrmat_idx(
-                    shapey_idx, corrmat_descriptor
-                )
-                == expected_output
+            output = imagename_helper.shapey_idx_to_corrmat_idx(
+                shapey_idx, corrmat_descriptor
             )
+            assert output == expected_output
