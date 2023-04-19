@@ -2,12 +2,11 @@ import h5py
 from typing import List, Union
 import typing
 import numpy as np
-from .. import custom_dataclasses as cd
-from .. import utils
-from . import dataextractor as dp
+from .. import data_classes as cd
+import corrmat_extractor as ce
 
 
-class HDFProcessor(dp.DataExtractor[h5py.File]):
+class HDFProcessor(ce.CorrMatExtractor[h5py.File]):
     @staticmethod
     def check_and_return_dataset(
         hdfstore: Union[h5py.File, h5py.Group], key: str
@@ -31,16 +30,18 @@ class HDFProcessor(dp.DataExtractor[h5py.File]):
         return key_hierarchy
 
     @staticmethod
-    def get_whole_data(hdfstore: h5py.File, key: str) -> cd.WholeMat:
+    def get_whole_data(hdfstore: h5py.File, key: str) -> cd.WholeShapeYMat:
         dataset = HDFProcessor.check_and_return_dataset(hdfstore, key)
-        return cd.WholeMat(
+        return cd.WholeShapeYMat(
             dims=dataset.shape,
             corrmat=dataset[:],
         )
 
     @staticmethod
     def get_partial_data(
-        hdfstore: h5py.File, key: str, coords: cd.Coordinates
+        hdfstore: h5py.File,
+        key: str,
+        row_col_coords: Tuple[Sequence[int], Sequence[int]],
     ) -> cd.PartialMat:
         dataset = HDFProcessor.check_and_return_dataset(hdfstore, key)
         if isinstance(coords.x, tuple):

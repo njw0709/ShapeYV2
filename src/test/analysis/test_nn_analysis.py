@@ -1,12 +1,11 @@
 import pytest
-from typing import Tuple, Union, List
+from typing import Tuple, List
 import numpy as np
-import numpy.typing as npt
 import random
 from bidict import bidict
-from .. import custom_dataclasses as cd
-from .. import analysis as an
-from .. import utils
+from ... import data_classes as cd
+from ... import analysis as an
+from ... import utils
 
 
 @pytest.fixture

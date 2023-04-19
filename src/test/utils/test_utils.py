@@ -1,12 +1,11 @@
 import pytest
-from typing import List
 from bidict import bidict
-from .. import custom_dataclasses as cd
+from .. import utils
 
 
 @pytest.fixture
 def imagename_helper():
-    return cd.ImageNameHelper()
+    return utils.ImageNameHelper()
 
 
 @pytest.fixture

@@ -1,13 +1,13 @@
-from typing import List, Union, Generic, TypeVar
+from typing import List, Union, Generic, TypeVar, Tuple, Sequence
 from abc import ABC, abstractmethod
-from .. import custom_dataclasses as cd
+from .. import data_classes as cd
 import h5py
 import numpy as np
 
 T = TypeVar("T")
 
 
-class DataExtractor(ABC, Generic[T]):
+class CorrMatExtractor(ABC, Generic[T]):
     @staticmethod
     @abstractmethod
     def get_data_hierarchy(datadir: T) -> dict:
@@ -15,17 +15,14 @@ class DataExtractor(ABC, Generic[T]):
 
     @staticmethod
     @abstractmethod
-    def get_whole_data(datadir: T, key: str) -> cd.WholeMat:
+    def get_whole_data(datadir: T, key: str) -> cd.WholeShapeYMat:
         pass
 
     @staticmethod
     @abstractmethod
-    def get_partial_data(datadir: T, key: str, coords: cd.Coordinates) -> cd.PartialMat:
-        pass
-
-    @staticmethod
-    @abstractmethod
-    def get_imgnames(datadir: T, imgname_key: str) -> List[str]:
+    def get_partial_data(
+        datadir: T, key: str, row_col_coords: Tuple[Sequence[int], Sequence[int]]
+    ) -> cd.PartialCorrMat:
         pass
 
     @staticmethod

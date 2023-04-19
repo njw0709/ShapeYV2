@@ -5,10 +5,9 @@ import numpy as np
 import cupy as cp
 from cupyx.scipy.linalg import tri
 from bidict import bidict
-from .. import custom_dataclasses as cd
+from .. import data_classes as cd
 from .. import utils
-from .. import dataextractor as de
-from .. import custom_dataclasses as cd
+from .. import data_extractor as de
 
 
 """
@@ -60,7 +59,7 @@ def check_necessary_data_batch(
             img_list: List[str] = []
             for objname in nn_analysis_config.objnames:
                 img_list.extend(
-                    cd.ImageNameHelper.generate_imgnames_from_objname(
+                    utils.ImageNameHelper.generate_imgnames_from_objname(
                         objname, nn_analysis_config.axes
                     )
                 )
@@ -73,7 +72,7 @@ def check_necessary_data_batch(
 
         # check if img_list is subset of corrmat_descriptor
         img_list_idx = [
-            cd.ImageNameHelper.imgname_to_shapey_idx(img) for img in img_list
+            utils.ImageNameHelper.imgname_to_shapey_idx(img) for img in img_list
         ]
         assert set(img_list_idx) <= set(corrmat_descriptor[0].values())
 
@@ -84,7 +83,7 @@ def objname_to_corrmat_coordinates(
     corrmat_descriptor: Tuple[bidict[int, int], bidict[int, int]],
     ax: str = "all",
 ) -> Tuple[Tuple[List[int], List[int]], Tuple[List[int], List[int]]]:
-    objidx = cd.ImageNameHelper.objname_to_shapey_obj_idx(obj_name)
+    objidx = utils.ImageNameHelper.objname_to_shapey_obj_idx(obj_name)
     obj_mat_shapey_idxs = list(
         range(
             objidx * utils.NUMBER_OF_VIEWS_PER_AXIS * utils.NUMBER_OF_AXES,
@@ -117,10 +116,10 @@ def objname_to_corrmat_coordinates(
 
     # convert whole_corrmat_idx to currently given corrmat idx using corrmat_descriptor
     # currently cannot deal with corrmat with dispersed object indices. (i.e. images of single object must be in consecutive order)
-    row_corrmat_idx, row_shapey_idx = cd.ImageNameHelper.shapey_idx_to_corrmat_idx(
+    row_corrmat_idx, row_shapey_idx = utils.IndexingHelper.shapey_idx_to_corrmat_idx(
         row_shapey_idx, corrmat_descriptor[0]
     )
-    col_corrmat_idx, col_shapey_idx = cd.ImageNameHelper.shapey_idx_to_corrmat_idx(
+    col_corrmat_idx, col_shapey_idx = utils.IndexingHelper.shapey_idx_to_corrmat_idx(
         col_shapey_idx, corrmat_descriptor[1]
     )
     return (row_corrmat_idx, col_corrmat_idx), (row_shapey_idx, col_shapey_idx)
