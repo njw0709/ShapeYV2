@@ -1,8 +1,8 @@
 from typing import Union, List, Tuple, Sequence
 import typing
 import h5py
-from .. import dataextractor as de
-from .. import custom_dataclasses as cd
+from .. import data_extractor as de
+from .. import data_classes as cd
 from .. import analysis as an
 from .. import utils
 from tqdm import tqdm
@@ -16,7 +16,7 @@ def exclusion_distance_analysis_batch(
     corrmat_descriptor: Tuple[
         Union[Sequence[str], Sequence[int]], Union[Sequence[str], Sequence[int]]
     ],  # row / column descriptors for (row, col). can be image names or image indices. if None, assumes using all images.
-    data_loader: de.DataExtractor,
+    data_loader: de.CorrMatExtractor,
     save_path: h5py.File,  # hdf5 file to save the results.
     data_saver: de.HDFProcessor,
     nn_analysis_config: cd.NNAnalysisConfig,
@@ -29,14 +29,14 @@ def exclusion_distance_analysis_batch(
     row_descriptor, col_descriptor = corrmat_descriptor
     if isinstance(row_descriptor[0], str):
         row_descriptor_idx = [
-            cd.ImageNameHelper.imgname_to_shapey_idx(typing.cast(str, imgname))
+            utils.ImageNameHelper.imgname_to_shapey_idx(typing.cast(str, imgname))
             for imgname in row_descriptor
         ]
     else:
         row_descriptor_idx = typing.cast(List[int], row_descriptor)
     if isinstance(col_descriptor[0], str):
         col_descriptor_idx = [
-            cd.ImageNameHelper.imgname_to_shapey_idx(typing.cast(str, imgname))
+            utils.ImageNameHelper.imgname_to_shapey_idx(typing.cast(str, imgname))
             for imgname in col_descriptor
         ]
     else:
@@ -82,7 +82,7 @@ def exclusion_distance_analysis_batch(
             cval_arr_sameobj, idx_sameobj = an.get_top1_sameobj_with_exclusion(
                 ax,
                 cval_mat_sameobj,
-                corrmat_coords,
+                shapey_idxs,
                 distance=nn_analysis_config.distance_measure,
             )
 

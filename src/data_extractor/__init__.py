@@ -1,2 +1,2 @@
 from .hdf import *
-from .dataextractor import *
+from .corrmat_extractor import *

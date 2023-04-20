@@ -20,7 +20,7 @@ sketch:
 ## load coor mats from input data
 def get_corrmats(
     input_data: Union[h5py.File, str],
-    data_loader: de.DataExtractor,
+    data_loader: de.CorrMatExtractor,
     nn_analysis_config: cd.NNAnalysisConfig,
 ) -> Union[Sequence[np.ndarray], Sequence[h5py.Dataset]]:
     corrmats = []
