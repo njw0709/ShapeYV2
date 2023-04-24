@@ -4,10 +4,10 @@ import typing
 import numpy as np
 from .. import data_classes as cd
 from .. import utils
-import corrmat_extractor as ce
+from . import data_loader
 
 
-class HDFProcessor(ce.CorrMatExtractor[h5py.File]):
+class HDFProcessor(data_loader.DataLoader[h5py.File]):
     @staticmethod
     def check_and_return_dataset(
         hdfstore: Union[h5py.File, h5py.Group], key: str
@@ -18,51 +18,17 @@ class HDFProcessor(ce.CorrMatExtractor[h5py.File]):
         return dataset
 
     @staticmethod
-    def get_data_hierarchy(hdfstore: Union[h5py.File, h5py.Group]) -> dict:
+    def display_data_hierarchy(hdfstore: Union[h5py.File, h5py.Group]) -> dict:
         key_hierarchy = {}
         keys = list(hdfstore.keys())
         for k in keys:
             if isinstance(hdfstore[k], h5py.Group):
-                key_hierarchy[k] = HDFProcessor.get_data_hierarchy(
+                key_hierarchy[k] = HDFProcessor.display_data_hierarchy(
                     hdfstore.require_group(k)
                 )
             else:
                 key_hierarchy[k] = None
         return key_hierarchy
-
-    @staticmethod
-    def get_whole_data(hdfstore: h5py.File, key: str) -> cd.WholeShapeYMat:
-        dataset = HDFProcessor.check_and_return_dataset(hdfstore, key)
-        axis_description = cd.AxisDescription(utils.SHAPEY200_IMGNAMES)
-        corrmat_description = cd.CorrMatDescription(
-            [axis_description, axis_description]
-        )
-        return cd.WholeShapeYMat(corrmat_description, dataset)
-
-    # only 2D coords
-    @staticmethod
-    def get_partial_data(
-        hdfstore: h5py.File,
-        key: str,
-        coords: Sequence[Sequence[int]],
-    ) -> cd.PartialShapeYCorrMat:
-        dataset = HDFProcessor.check_and_return_dataset(hdfstore, key)
-        assert dataset.dims == len(coords) == 2
-        axes_descriptions: Sequence[cd.AxisDescription] = []
-        for coord in coords:
-            imgname = [utils.ImageNameHelper.shapey_idx_to_imgname(c) for c in coord]
-            axes_descriptions.append(cd.AxisDescription(imgname))
-        corrmat_description = cd.CorrMatDescription(axes_descriptions)
-        data = dataset[coords[0], :][:, coords[1]]
-        return cd.PartialShapeYCorrMat(
-            corrmat_description, typing.cast(np.ndarray, data)
-        )
-
-    @staticmethod
-    def get_imgnames(hdfstore: h5py.File, imgname_key: str) -> Sequence[str]:
-        dataset = HDFProcessor.check_and_return_dataset(hdfstore, imgname_key)
-        imgnames = list(dataset[:].astype("U"))
-        return imgnames
 
     @staticmethod
     def load(

@@ -1,7 +1,7 @@
 from typing import Union, List, Tuple, Sequence
 import typing
 import h5py
-from .. import data_extractor as de
+from .. import data_loader as de
 from .. import data_classes as cd
 from .. import analysis as an
 from .. import utils
@@ -16,7 +16,7 @@ def exclusion_distance_analysis_batch(
     corrmat_descriptor: Tuple[
         Union[Sequence[str], Sequence[int]], Union[Sequence[str], Sequence[int]]
     ],  # row / column descriptors for (row, col). can be image names or image indices. if None, assumes using all images.
-    data_loader: de.CorrMatExtractor,
+    data_loader: de.DataLoader,
     save_path: h5py.File,  # hdf5 file to save the results.
     data_saver: de.HDFProcessor,
     nn_analysis_config: cd.NNAnalysisConfig,

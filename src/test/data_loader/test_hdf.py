@@ -2,7 +2,7 @@ import h5py
 import pytest
 import os
 import numpy as np
-from ... import data_extractor as dp
+from ... import data_loader as dp
 from ... import data_classes as cd
 from ... import utils
 
@@ -71,47 +71,12 @@ def hdfprocessor():
 
 class TestHDFProcessor:
     def test_get_data_hierarchy(self, hdf_file_nested, hdfprocessor):
-        result = hdfprocessor.get_data_hierarchy(hdf_file_nested)
+        result = hdfprocessor.display_data_hierarchy(hdf_file_nested)
         expected = {
             "group1": {"dataset1": None, "group2": {}},
             "group3": {"dataset2": None},
         }
         assert result == expected
-
-    def test_get_whole_data(self, custom_hdf_file, hdfprocessor):
-        corrmat = hdfprocessor.get_whole_data(custom_hdf_file, "key1")
-        assert corrmat.dims == (2, 2)
-        assert (corrmat.corrmat == [[1, 2], [3, 4]]).all()
-
-    def test_get_partial_data(self, custom_hdf_file, hdfprocessor):
-        coords = cd.Coordinates(x=(0, 2), y=(1, 2))
-        coormat = hdfprocessor.get_partial_data(custom_hdf_file, "key2", coords)
-        assert coormat.dims == (2, 1)
-        assert (coormat.corrmat == [[6], [9]]).all()
-        assert coormat.coordinates == coords
-
-    def test_get_partial_coormat_with_fancy_indexing(
-        self, custom_hdf_file, hdfprocessor
-    ):
-        coords = cd.Coordinates(x=(0, 2), y=np.array([1, 2]))
-        coormat = hdfprocessor.get_partial_data(custom_hdf_file, "key2", coords)
-        assert coormat.dims == (2, 2)
-        assert (coormat.corrmat == [[6, 7], [9, 10]]).all()
-        assert coormat.coordinates == coords
-
-        coords = cd.Coordinates(x=np.array([0, 1]), y=(1, 2))
-        coormat = hdfprocessor.get_partial_data(custom_hdf_file, "key2", coords)
-        assert coormat.dims == (2, 1)
-        assert (coormat.corrmat == [[6], [9]]).all()
-        assert coormat.coordinates == coords
-
-    def test_get_imgnames(self, custom_img_names_hdf, custom_obj_names, hdfprocessor):
-        img_names = hdfprocessor.get_imgnames(custom_img_names_hdf, "img_names")
-        assert (
-            img_names.imgnames == custom_img_names_hdf["img_names"][:].astype("U")
-        ).all()
-        assert (img_names.axes_of_interest == utils.ALL_AXES).all()
-        assert (img_names.objnames == np.array(custom_obj_names)).all()
 
     def test_save_and_load(self, custom_hdf_file, hdfprocessor):
         # create test data

@@ -4,17 +4,17 @@ import numpy as np
 import h5py
 from abc import ABC
 from .. import utils
-from .image_names import CorrMatDescription
+from . import image_names
 
 
 @dataclass
 class CorrMat(ABC):
-    description: CorrMatDescription
+    description: image_names.CorrMatDescription
     corrmat: Union[np.ndarray, h5py.Dataset]
 
     def __post_init__(self):
-        assert self.corrmat.shape[0] == len(self.description.shapey_idxs[0])
-        assert self.corrmat.shape[1] == len(self.description.shapey_idxs[1])
+        assert self.corrmat.shape[0] == len(self.description.axis_idx_to_shapey_idxs[0])
+        assert self.corrmat.shape[1] == len(self.description.axis_idx_to_shapey_idxs[1])
 
 
 @dataclass

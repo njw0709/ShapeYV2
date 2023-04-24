@@ -5,51 +5,53 @@ import numpy as np
 import cupy as cp
 from cupyx.scipy.linalg import tri
 from bidict import bidict
-from .. import data_classes as cd
+from .. import data_classes as dc
 from .. import utils
-from .. import data_extractor as de
-
-
-"""
-sketch:
-1) input = data itself (input corrmat), data descriptor(row / col to imgnames or img index), save path, overwrite
-
-"""
+from .. import data_loader as dl
 
 
 ## load coor mats from input data
 def get_corrmats(
-    input_data: Union[h5py.File, str],
-    data_loader: de.CorrMatExtractor,
-    nn_analysis_config: cd.NNAnalysisConfig,
-) -> Union[Sequence[np.ndarray], Sequence[h5py.Dataset]]:
-    corrmats = []
+    data_root_path: Union[h5py.File, str],
+    input_data_description_path: Union[Tuple[str, str], None],
+    data_loader: dl.DataLoader,
+    nn_analysis_config: dc.NNAnalysisConfig,
+) -> Sequence[dc.CorrMat]:
+    corrmats: Sequence[dc.CorrMat] = []
     # list of corrmats (for contrast exclusion, two corrmats)
     # get path for corrmat
     corrmat_path = data_loader.get_data_pathway("corrmat", nn_analysis_config)
     # load and append
-    corrmats.append(data_loader.load(input_data, corrmat_path))
+    data = data_loader.load(data_root_path, corrmat_path)
+    if input_data_description_path is None:
+        row_description = dc.AxisDescription(utils.SHAPEY200_IMGNAMES)
+        col_description = dc.AxisDescription(utils.SHAPEY200_IMGNAMES)
+    else:
+        row_description = dc.pull_axis_description_from_txt(
+            input_data_description_path[0]
+        )
+        col_description = dc.pull_axis_description_from_txt(
+            input_data_description_path[1]
+        )
+    corrmat_description = dc.CorrMatDescription([row_description, col_description])
+    corrmat = dc.CorrMat(corrmat=data, description=corrmat_description)
+    corrmats.append(corrmat)
 
     # load and append contrast reversed corrmat if contrast exclusion is true
     if nn_analysis_config.contrast_exclusion:
         corrmat_cr_path = data_loader.get_data_pathway("corrmat_cr", nn_analysis_config)
-        corrmat_cr = data_loader.load(input_data, corrmat_cr_path)
+        data_cr = data_loader.load(data_root_path, corrmat_cr_path)
+        assert data_cr.shape == data.shape
+        corrmat_cr = dc.CorrMat(corrmat=data_cr, description=corrmat_description)
         corrmats.append(corrmat_cr)
     return corrmats
 
 
 ## check if configs and input data are sufficient for requested analysis
 def check_necessary_data_batch(
-    corrmats: Union[Sequence[np.ndarray], Sequence[h5py.Dataset]],
-    nn_analysis_config: cd.NNAnalysisConfig,
-    corrmat_descriptor: Tuple[bidict[int, int], bidict[int, int]],
+    corrmats: Sequence[dc.CorrMat],
+    nn_analysis_config: dc.NNAnalysisConfig,
 ) -> None:
-    # check if corrmats are of necessary shape
-    if nn_analysis_config.contrast_exclusion:
-        assert corrmats[0].shape == corrmats[1].shape
-    assert len(corrmat_descriptor[0]) == corrmats[0].shape[0]
-    assert len(corrmat_descriptor[1]) == corrmats[0].shape[1]
-
     # check if provided objname / imgname options are present in corrmat
     if (
         nn_analysis_config.objnames is not None
@@ -74,7 +76,7 @@ def check_necessary_data_batch(
         img_list_idx = [
             utils.ImageNameHelper.imgname_to_shapey_idx(img) for img in img_list
         ]
-        assert set(img_list_idx) <= set(corrmat_descriptor[0].values())
+        assert set(img_list_idx) <= set(corrmats[0].description.imgnames[0])
 
 
 ## get coordinates of the requested object (for batch processing only)
