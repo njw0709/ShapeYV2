@@ -2,9 +2,9 @@ import h5py
 import pytest
 import os
 import numpy as np
-from .. import dataextractor as dp
-from .. import custom_dataclasses as cd
-from .. import utils
+from ... import data_extractor as dp
+from ... import data_classes as cd
+from ... import utils
 
 
 @pytest.fixture

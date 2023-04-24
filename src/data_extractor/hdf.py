@@ -1,8 +1,9 @@
 import h5py
-from typing import List, Union
+from typing import Union, Tuple, Sequence
 import typing
 import numpy as np
 from .. import data_classes as cd
+from .. import utils
 import corrmat_extractor as ce
 
 
@@ -12,7 +13,7 @@ class HDFProcessor(ce.CorrMatExtractor[h5py.File]):
         hdfstore: Union[h5py.File, h5py.Group], key: str
     ) -> h5py.Dataset:
         if not isinstance(hdfstore[key], h5py.Dataset):
-            raise TypeError("key does not point to a dataset")
+            raise KeyError("key does not point to a dataset")
         dataset = typing.cast(h5py.Dataset, hdfstore[key])
         return dataset
 
@@ -32,47 +33,36 @@ class HDFProcessor(ce.CorrMatExtractor[h5py.File]):
     @staticmethod
     def get_whole_data(hdfstore: h5py.File, key: str) -> cd.WholeShapeYMat:
         dataset = HDFProcessor.check_and_return_dataset(hdfstore, key)
-        return cd.WholeShapeYMat(
-            dims=dataset.shape,
-            corrmat=dataset[:],
+        axis_description = cd.AxisDescription(utils.SHAPEY200_IMGNAMES)
+        corrmat_description = cd.CorrMatDescription(
+            [axis_description, axis_description]
         )
+        return cd.WholeShapeYMat(corrmat_description, dataset)
 
+    # only 2D coords
     @staticmethod
     def get_partial_data(
         hdfstore: h5py.File,
         key: str,
-        row_col_coords: Tuple[Sequence[int], Sequence[int]],
-    ) -> cd.PartialMat:
+        coords: Sequence[Sequence[int]],
+    ) -> cd.PartialShapeYCorrMat:
         dataset = HDFProcessor.check_and_return_dataset(hdfstore, key)
-        if isinstance(coords.x, tuple):
-            if isinstance(coords.y, tuple):
-                coormat_partial_np = dataset[
-                    coords.x[0] : coords.x[1], coords.y[0] : coords.y[1]
-                ]
-            else:
-                coormat_partial_np = dataset[coords.x[0] : coords.x[1], coords.y]
-        else:
-            if isinstance(coords.y, tuple):
-                coormat_partial_np = dataset[coords.x, coords.y[0] : coords.y[1]]
-            else:
-                coormat_partial_np = dataset[coords.x, coords.y]
-        return cd.PartialMat(
-            dims=coormat_partial_np.shape,
-            corrmat=coormat_partial_np,
-            coordinates=coords,
+        assert dataset.dims == len(coords) == 2
+        axes_descriptions: Sequence[cd.AxisDescription] = []
+        for coord in coords:
+            imgname = [utils.ImageNameHelper.shapey_idx_to_imgname(c) for c in coord]
+            axes_descriptions.append(cd.AxisDescription(imgname))
+        corrmat_description = cd.CorrMatDescription(axes_descriptions)
+        data = dataset[coords[0], :][:, coords[1]]
+        return cd.PartialShapeYCorrMat(
+            corrmat_description, typing.cast(np.ndarray, data)
         )
 
     @staticmethod
-    def get_imgnames(hdfstore: h5py.File, imgname_key: str) -> cd.ImageNames:
+    def get_imgnames(hdfstore: h5py.File, imgname_key: str) -> Sequence[str]:
         dataset = HDFProcessor.check_and_return_dataset(hdfstore, imgname_key)
-        imgnames = dataset[:].astype("U")
-        axes_of_interest = np.unique(
-            np.array([c.split("-")[1].split(".")[0][:-2] for c in imgnames])
-        )
-        objnames = np.unique(np.array([c.split("-")[0] for c in imgnames]))
-        return cd.ImageNames(
-            imgnames=imgnames, objnames=objnames, axes_of_interest=axes_of_interest
-        )
+        imgnames = list(dataset[:].astype("U"))
+        return imgnames
 
     @staticmethod
     def load(

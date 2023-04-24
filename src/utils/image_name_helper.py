@@ -24,6 +24,8 @@ class ImageNameHelper:
 
     @staticmethod
     def imgname_to_shapey_idx(imgname: str) -> int:
+        if "/" in imgname:
+            imgname = imgname.split("/")[-1]
         return constants.SHAPEY200_IMGNAMES_DICT.inverse[imgname]
 
     @staticmethod

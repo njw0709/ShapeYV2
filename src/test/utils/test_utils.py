@@ -1,6 +1,6 @@
 import pytest
 from bidict import bidict
-from .. import utils
+from ... import utils
 
 
 @pytest.fixture

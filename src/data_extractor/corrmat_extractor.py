@@ -21,8 +21,8 @@ class CorrMatExtractor(ABC, Generic[T]):
     @staticmethod
     @abstractmethod
     def get_partial_data(
-        datadir: T, key: str, row_col_coords: Tuple[Sequence[int], Sequence[int]]
-    ) -> cd.PartialCorrMat:
+        datadir: T, key: str, coords: Sequence[Sequence[int]]
+    ) -> cd.PartialShapeYCorrMat:
         pass
 
     @staticmethod
