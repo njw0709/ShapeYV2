@@ -6,6 +6,8 @@ from ... import data_extractor as dp
 from ... import data_classes as cd
 from ... import utils
 
+import numpy as np
+
 
 @pytest.fixture
 def custom_hdf_file():
