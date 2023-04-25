@@ -1,20 +1,36 @@
+from __future__ import annotations
 from dataclasses import dataclass
-from typing import Union
+from typing import Union, Sequence
 import numpy as np
 import h5py
 from abc import ABC
 from .. import utils
-from . import image_names
+from . import axis_description
 
 
 @dataclass
 class CorrMat(ABC):
-    description: image_names.CorrMatDescription
+    description: axis_description.CorrMatDescription
     corrmat: Union[np.ndarray, h5py.Dataset]
 
     def __post_init__(self):
         assert self.corrmat.shape[0] == len(self.description.axis_idx_to_shapey_idxs[0])
         assert self.corrmat.shape[1] == len(self.description.axis_idx_to_shapey_idxs[1])
+
+    def get_subset(self, row_idxs: Sequence[int], col_idxs: Sequence[int]) -> CorrMat:
+        assert max(row_idxs) < self.corrmat.shape[0]
+        assert max(col_idxs) < self.corrmat.shape[1]
+        row_description = axis_description.AxisDescription(
+            [self.description.imgnames[0][i] for i in row_idxs]
+        )
+        col_description = axis_description.AxisDescription(
+            [self.description.imgnames[1][i] for i in col_idxs]
+        )
+        subset_description = axis_description.CorrMatDescription(
+            [row_description, col_description]
+        )
+        subset_corrmat = self.corrmat[row_idxs, :][:, col_idxs]
+        return CorrMat(subset_description, subset_corrmat)
 
 
 @dataclass

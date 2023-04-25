@@ -11,7 +11,7 @@ from .. import data_loader as dl
 
 
 ## load coor mats from input data
-def get_corrmats(
+def load_corrmat_input(
     data_root_path: Union[h5py.File, str],
     input_data_description_path: Union[Tuple[str, str], None],
     data_loader: dl.DataLoader,

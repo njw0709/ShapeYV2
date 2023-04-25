@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Sequence, Union
+from typing import Sequence, Union, Tuple, List
 from bidict import bidict
 from .. import utils
 
@@ -17,6 +17,36 @@ class AxisDescription:
         self.axis_idx_to_shapey_idx: bidict[int, int] = bidict(
             zip(range(len(shapey_idxs)), shapey_idxs)
         )
+
+    def shapey_idx_to_corrmat_idx(
+        self, shapey_idx: Sequence[int]
+    ) -> Tuple[List[int], List[int]]:
+        corrmat_idx: List[int] = []
+        available_shapey_idx: List[int] = []
+        for shid in shapey_idx:
+            try:
+                coridx = self.axis_idx_to_shapey_idx.inverse[shid]
+                corrmat_idx.append(coridx)
+                available_shapey_idx.append(shid)
+            except KeyError:
+                continue
+
+        if len(corrmat_idx) == 0:
+            raise ValueError("No indices in descriptor within range of shapey_idx")
+        return corrmat_idx, available_shapey_idx
+
+    def corrmat_idx_to_shapey_idx(self, corrmat_idx: Sequence[int]) -> List[int]:
+        shapey_idx: List[int] = []
+        for coridx in corrmat_idx:
+            try:
+                shid = self.axis_idx_to_shapey_idx[coridx]
+                shapey_idx.append(shid)
+            except KeyError:
+                continue
+
+        if len(shapey_idx) == 0:
+            raise ValueError("No indices in descriptor within range of corrmat_idx")
+        return shapey_idx
 
     def __len__(self):
         return len(self.imgnames)
@@ -39,6 +69,8 @@ def pull_axis_description_from_txt(filepath: str) -> AxisDescription:
         imgnames = f.read().splitlines()
     if "features" in imgnames[0]:
         imgnames = [imgname.split("features_")[1] for imgname in imgnames]
+    if ".mat" in imgnames[0]:
+        imgnames = [imgname.split(".mat")[0] + ".png" for imgname in imgnames]
     axis_description = AxisDescription(imgnames)
     return axis_description
 
@@ -49,6 +81,7 @@ class CorrMatDescription:
         axes_descriptors: Sequence[AxisDescription],
         summary: Union[None, str] = None,
     ):
+        self.__axes_descriptors: Sequence[AxisDescription] = axes_descriptors
         self.imgnames: Sequence[Sequence[str]] = []
         self.axis_idx_to_shapey_idxs: Sequence[bidict[int, int]] = []
         self.summary: Union[None, str] = summary
@@ -61,3 +94,6 @@ class CorrMatDescription:
             return f"CorrMatDescription(imgnames={self.imgnames}, shapey_idxs={self.axis_idx_to_shapey_idxs})"
         else:
             return f"CorrMatDescription(imgnames={self.imgnames}, shapey_idxs={self.axis_idx_to_shapey_idxs}, summary={self.summary})"
+
+    def __getitem__(self, idx):
+        return self.__axes_descriptors[idx]
