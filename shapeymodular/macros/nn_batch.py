@@ -11,7 +11,7 @@ from bidict import bidict
 
 def exclusion_distance_analysis_batch(
     input_data: Union[
-        h5py.File, str
+        Sequence[h5py.File], Sequence[str]
     ],  # hdf5 file containing the corrmat. if str, assumes it is the root directory containing all data.
     input_data_description_path: Union[
         Tuple[str, str], None
@@ -23,12 +23,12 @@ def exclusion_distance_analysis_batch(
     overwrite: bool = False,
 ) -> None:
     # get correlation (or distance) matrix
-    corrmats = an.load_corrmat_input(
+    corrmats = an.PrepData.load_corrmat_input(
         input_data, input_data_description_path, data_loader, nn_analysis_config
     )
 
     # check if all necessary data is present for requested analysis
-    an.check_necessary_data_batch(corrmats, nn_analysis_config)
+    an.PrepData.check_necessary_data_batch(corrmats, nn_analysis_config)
 
     # parse configs
     if nn_analysis_config.objnames is not None:
@@ -49,10 +49,10 @@ def exclusion_distance_analysis_batch(
             row_shapey_idx = utils.IndexingHelper.objname_ax_to_shapey_index(obj, ax)
             col_shapey_idx = corrmats[0].description[1].shapey_idxs
 
-            row_corrmat_idx = (
+            row_corrmat_idx, available_row_shapey_idx = (
                 corrmats[0].description[0].shapey_idx_to_corrmat_idx(row_shapey_idx)
             )
-            col_corrmat_idx = (
+            col_corrmat_idx, available_col_shapey_idx = (
                 corrmats[0].description[1].shapey_idx_to_corrmat_idx(col_shapey_idx)
             )
 
@@ -65,7 +65,7 @@ def exclusion_distance_analysis_batch(
             sameobj_shapey_idx = utils.IndexingHelper.objname_ax_to_shapey_index(
                 obj, "all"
             )
-            sameobj_corrmat_idx = (
+            sameobj_corrmat_idx, available_sameobj_shapey_idx = (
                 corrmats[0].description[1].shapey_idx_to_corrmat_idx(sameobj_shapey_idx)
             )
 

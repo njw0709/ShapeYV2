@@ -5,6 +5,7 @@ import pathlib
 import os
 from shapeymodular import data_loader as dl
 from shapeymodular import data_classes as dc
+from shapeymodular import analysis as an
 from dacite import from_dict
 import json
 
@@ -39,3 +40,16 @@ def nn_analysis_config():
     config = from_dict(data_class=dc.NNAnalysisConfig, data=config_dict)
     yield config
     f.close()
+
+
+@pytest.fixture
+def corrmat_no_contrast(
+    data_root_path, input_data_description_path, data_loader, nn_analysis_config
+):
+    corrmats = an.PrepData.load_corrmat_input(
+        data_root_path,
+        input_data_description_path,
+        data_loader,
+        nn_analysis_config,
+    )
+    yield corrmats

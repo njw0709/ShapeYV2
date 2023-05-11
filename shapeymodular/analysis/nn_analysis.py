@@ -219,22 +219,29 @@ class MaskExcluded:
     def create_single_axis_nan_mask(exc_dist: int) -> cp.ndarray:
         # make number_of_views_per_axis x number_of_views_per_axis exclusion to nan mask
         # creates a mask that is 1 for positive match candidates and nan for excluded candidates
-        single_axis_excluded_to_nan_mask: cp.ndarray = 1 - (
-            tri(
-                utils.NUMBER_OF_VIEWS_PER_AXIS,
-                utils.NUMBER_OF_VIEWS_PER_AXIS,
-                exc_dist - 1,
-                dtype=float,
+        if exc_dist == 0:
+            return cp.ones(
+                (utils.NUMBER_OF_VIEWS_PER_AXIS, utils.NUMBER_OF_VIEWS_PER_AXIS)
             )
-            - tri(
-                utils.NUMBER_OF_VIEWS_PER_AXIS,
-                utils.NUMBER_OF_VIEWS_PER_AXIS,
-                -exc_dist,
-                dtype=float,
+        else:
+            single_axis_excluded_to_nan_mask: cp.ndarray = 1 - (
+                tri(
+                    utils.NUMBER_OF_VIEWS_PER_AXIS,
+                    utils.NUMBER_OF_VIEWS_PER_AXIS,
+                    exc_dist - 1,
+                    dtype=float,
+                )
+                - tri(
+                    utils.NUMBER_OF_VIEWS_PER_AXIS,
+                    utils.NUMBER_OF_VIEWS_PER_AXIS,
+                    -exc_dist,
+                    dtype=float,
+                )
             )
-        )
-        single_axis_excluded_to_nan_mask[single_axis_excluded_to_nan_mask == 0] = cp.nan
-        return single_axis_excluded_to_nan_mask
+            single_axis_excluded_to_nan_mask[
+                single_axis_excluded_to_nan_mask == 0
+            ] = cp.nan
+            return single_axis_excluded_to_nan_mask
 
     @staticmethod
     def create_irrelevant_axes_to_nan_mask(
