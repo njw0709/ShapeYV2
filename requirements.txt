@@ -10,3 +10,4 @@ pytest-profiling
 mypy
 numpy==1.21
 bidict
+dataclasses-json

@@ -17,6 +17,7 @@ class AxisDescription:
         self.axis_idx_to_shapey_idx: bidict[int, int] = bidict(
             zip(range(len(shapey_idxs)), shapey_idxs)
         )
+        self.shapey_idxs = shapey_idxs
 
     def shapey_idx_to_corrmat_idx(
         self, shapey_idx: Sequence[int]
@@ -95,5 +96,5 @@ class CorrMatDescription:
         else:
             return f"CorrMatDescription(imgnames={self.imgnames}, shapey_idxs={self.axis_idx_to_shapey_idxs}, summary={self.summary})"
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx) -> AxisDescription:
         return self.__axes_descriptors[idx]

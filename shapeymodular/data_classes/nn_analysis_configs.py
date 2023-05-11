@@ -1,10 +1,10 @@
 from dataclasses import dataclass
-from typing import Union, List, Sequence
-import numpy as np
+from dataclasses_json import DataClassJsonMixin
+from typing import Union, List
 
 
 @dataclass
-class NNAnalysisConfig:
+class NNAnalysisConfig(DataClassJsonMixin):
     """Configuration for NNAnalysis."""
 
     contrast_exclusion: bool  # if True, run contrast exclusion analysis.
@@ -12,6 +12,7 @@ class NNAnalysisConfig:
         str, None
     ]  # must be specified for contrast exclusion analysis. "soft" or "hard".
     distance_measure: str  # distance measure to use for NN analysis. "correlation" or "euclidean".
+    distance_dtype: type  # dtype to use for distance measure.
     num_objs: int  # number of objects in the dataset. if 0, will be total number of objects in the dataset.
     axes: Union[List[str], None]  # axes to run NN analysis on.
     objnames: Union[

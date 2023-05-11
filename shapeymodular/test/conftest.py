@@ -70,11 +70,3 @@ def hdf_file_nested():
         f.create_dataset("group3/dataset2", data=[4, 5, 6])
         yield f
     os.remove("custom_nested.hdf5")
-
-
-@pytest.fixture
-def random_shapey_imgs(number=3):
-    sampled_idxs = random.sample(range(len(utils.SHAPEY200_IMGNAMES)), number)
-    sampled_idxs.sort()
-    sampled_elements = [utils.SHAPEY200_IMGNAMES[i] for i in sampled_idxs]
-    return sampled_elements, sampled_idxs

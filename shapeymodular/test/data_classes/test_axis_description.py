@@ -4,42 +4,13 @@ import os
 from ... import data_classes as dc
 from ... import utils
 
-NUM_MOCK_IMGS = 100
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
-
-
-@pytest.fixture
-def random_imgnames_large():
-    sampled_idxs = random.sample(range(len(utils.SHAPEY200_IMGNAMES)), NUM_MOCK_IMGS)
-    sampled_idxs.sort()
-    sampled_elements = [utils.SHAPEY200_IMGNAMES[i] for i in sampled_idxs]
-    return sampled_elements, sampled_idxs
-
-
-@pytest.fixture
-def random_imgnames_from_not_sampled(random_imgnames_large):
-    imgnames, idxs = random_imgnames_large
-    not_sampled_idxs = [
-        i for i in range(len(utils.SHAPEY200_IMGNAMES)) if i not in idxs
-    ]
-    subsampled_not_sampled_idxs = random.sample(not_sampled_idxs, 10)
-    subsampled_not_sampled_imgnames = [
-        utils.SHAPEY200_IMGNAMES[i] for i in subsampled_not_sampled_idxs
-    ]
-    return subsampled_not_sampled_imgnames, not_sampled_idxs
 
 
 @pytest.fixture
 def mock_axis_description(random_imgnames_large):
     imgnames, idxs = random_imgnames_large
     return dc.AxisDescription(imgnames), idxs
-
-
-@pytest.fixture
-def mock_corrmat_idxs():
-    mock_idxs = random.sample(range(NUM_MOCK_IMGS), 10)
-    mock_idxs.sort()
-    return mock_idxs
 
 
 class TestAxisDescription:
@@ -84,9 +55,9 @@ class TestAxisDescription:
         assert all([idx in shapey_idxs for idx in available_shapey_idxs])
         assert all([idx not in not_sampled_idxs for idx in available_shapey_idxs])
 
-    def test_corrmat_idx_to_shapey_idx(self, mock_axis_description):
+    def test_corrmat_idx_to_shapey_idx(self, mock_axis_description, num_sampled_imgs):
         axis_description, shapey_idxs = mock_axis_description
-        mock_corrmat_idxs = random.sample(range(NUM_MOCK_IMGS), 10)
+        mock_corrmat_idxs = random.sample(range(num_sampled_imgs), 10)
         mock_corrmat_idxs.sort()
         shapey_idxs_res = axis_description.corrmat_idx_to_shapey_idx(mock_corrmat_idxs)
         assert shapey_idxs_res == [shapey_idxs[i] for i in mock_corrmat_idxs]

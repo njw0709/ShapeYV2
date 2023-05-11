@@ -13,9 +13,9 @@ def exclusion_distance_analysis_batch(
     input_data: Union[
         h5py.File, str
     ],  # hdf5 file containing the corrmat. if str, assumes it is the root directory containing all data.
-    corrmat_descriptor: Tuple[
-        Union[Sequence[str], Sequence[int]], Union[Sequence[str], Sequence[int]]
-    ],  # row / column descriptors for (row, col). can be image names or image indices. if None, assumes using all images.
+    input_data_description_path: Union[
+        Tuple[str, str], None
+    ],  # row / column descriptors for (row, col). if None, assumes using all images.
     data_loader: de.DataLoader,
     save_path: h5py.File,  # hdf5 file to save the results.
     data_saver: de.HDFProcessor,
@@ -23,39 +23,12 @@ def exclusion_distance_analysis_batch(
     overwrite: bool = False,
 ) -> None:
     # get correlation (or distance) matrix
-    corrmats = an.get_corrmats(input_data, data_loader, nn_analysis_config)
-
-    # convert corrmat_descriptor to integer indices
-    row_descriptor, col_descriptor = corrmat_descriptor
-    if isinstance(row_descriptor[0], str):
-        row_descriptor_idx = [
-            utils.ImageNameHelper.imgname_to_shapey_idx(typing.cast(str, imgname))
-            for imgname in row_descriptor
-        ]
-    else:
-        row_descriptor_idx = typing.cast(List[int], row_descriptor)
-    if isinstance(col_descriptor[0], str):
-        col_descriptor_idx = [
-            utils.ImageNameHelper.imgname_to_shapey_idx(typing.cast(str, imgname))
-            for imgname in col_descriptor
-        ]
-    else:
-        col_descriptor_idx = typing.cast(List[int], col_descriptor)
-
-    # convert corrmat descriptors to bidirectional dictionary
-    row_descriptor_idx_dict: bidict[int, int] = bidict(
-        zip(range(len(row_descriptor_idx)), row_descriptor_idx)
-    )
-    col_descriptor_idx_dict: bidict[int, int] = bidict(
-        zip(range(len(col_descriptor_idx)), col_descriptor_idx)
-    )
-    corrmat_descriptor_idx: Tuple[bidict[int, int], bidict[int, int]] = (
-        row_descriptor_idx_dict,
-        col_descriptor_idx_dict,
+    corrmats = an.load_corrmat_input(
+        input_data, input_data_description_path, data_loader, nn_analysis_config
     )
 
     # check if all necessary data is present for requested analysis
-    an.check_necessary_data_batch(corrmats, nn_analysis_config, corrmat_descriptor_idx)
+    an.check_necessary_data_batch(corrmats, nn_analysis_config)
 
     # parse configs
     if nn_analysis_config.objnames is not None:
@@ -72,18 +45,60 @@ def exclusion_distance_analysis_batch(
     for obj in tqdm(objnames):
         obj_cat = obj.split("_")[0]
         for ax in axes:
-            # grab relevant cut out of the cval matrix
-            corrmat_coords, shapey_idxs = an.objname_to_corrmat_coordinates(
-                obj, corrmat_descriptor_idx, ax=ax
-            )
-            cval_mat_sameobj = corrmats[0][corrmat_coords[0], :][:, corrmat_coords[1]]
+            # grab relevant cut out of the cval matrix (11 x all images)
+            row_shapey_idx = utils.IndexingHelper.objname_ax_to_shapey_index(obj, ax)
+            col_shapey_idx = corrmats[0].description[1].shapey_idxs
 
-            # make same object cval array with exclusion distance in ax
-            cval_arr_sameobj, idx_sameobj = an.get_top1_sameobj_with_exclusion(
+            row_corrmat_idx = (
+                corrmats[0].description[0].shapey_idx_to_corrmat_idx(row_shapey_idx)
+            )
+            col_corrmat_idx = (
+                corrmats[0].description[1].shapey_idx_to_corrmat_idx(col_shapey_idx)
+            )
+
+            corrmats = [
+                corrmat.get_subset(row_corrmat_idx, col_corrmat_idx)
+                for corrmat in corrmats
+            ]
+
+            # compute what is the closest same object image to the original image with exclusion distance
+            sameobj_shapey_idx = utils.IndexingHelper.objname_ax_to_shapey_index(
+                obj, "all"
+            )
+            sameobj_corrmat_idx = (
+                corrmats[0].description[1].shapey_idx_to_corrmat_idx(sameobj_shapey_idx)
+            )
+
+            # compare original to background contrast reversed image if contrast_reversed is True
+            if nn_analysis_config.contrast_exclusion:
+                obj_ax_corr_mat = corrmats[1].get_subset(
+                    row_corrmat_idx, sameobj_corrmat_idx
+                )
+            else:
+                obj_ax_corr_mat = corrmats[0].get_subset(
+                    row_corrmat_idx, sameobj_corrmat_idx
+                )
+
+            # compute what is the closest same object image to the original image with exclusion distance
+            (
+                sameobj_top1_dists_with_xdists,
+                sameobj_top1_idxs_with_xdists,  # shapey index
+            ) = an.get_top1_sameobj_with_exclusion(
+                obj,
                 ax,
-                cval_mat_sameobj,
-                shapey_idxs,
-                distance=nn_analysis_config.distance_measure,
+                obj_ax_corr_mat,
+            )
+
+            # compute the closest other object image to the original image
+            other_obj_corrmat = corrmats[0]
+            if (
+                nn_analysis_config.contrast_exclusion
+                and nn_analysis_config.constrast_exclusion_mode == "soft"
+            ):
+                other_obj_corrmat = corrmats[1]
+
+            otherobj_top1_dists, otherobj_top1_idxs = an.get_top1_other_object(
+                other_obj_corrmat, distance=nn_analysis_config.distance
             )
 
             # obj_ax_key = "/" + key_head + "/" + obj + "/" + ax

@@ -1,0 +1,13 @@
+{
+    "contrast_exclusion": false,
+    "contrast_exclusion_mode": null,
+    "distance_measure": "euclidean",
+    "distance_dtype": "int",
+    "num_objs": null,
+    "axes": [
+        "pw"
+    ],
+    "objnames": null,
+    "imgnames": null,
+    "batch_analysis": true
+}
