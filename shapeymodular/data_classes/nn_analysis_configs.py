@@ -12,7 +12,7 @@ class NNAnalysisConfig(DataClassJsonMixin):
         str, None
     ]  # must be specified for contrast exclusion analysis. "soft" or "hard".
     distance_measure: str  # distance measure to use for NN analysis. "correlation" or "euclidean".
-    distance_dtype: type  # dtype to use for distance measure.
+    distance_dtype: str  # dtype to use for distance measure.
     num_objs: int  # number of objects in the dataset. if 0, will be total number of objects in the dataset.
     axes: Union[List[str], None]  # axes to run NN analysis on.
     objnames: Union[
@@ -22,3 +22,6 @@ class NNAnalysisConfig(DataClassJsonMixin):
         List[str], None
     ]  # image names to run NN analysis on. if None, will be all images in the dataset.
     batch_analysis: bool  # if True, bulk-analyzes all images in a single series (i.e, all images in pw-series for object x).
+    distances_key: Union[
+        List[str], None
+    ]  # if none, follows original key structure. if specified, uses the specified key to get distances.

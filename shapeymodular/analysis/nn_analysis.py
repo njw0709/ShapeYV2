@@ -13,7 +13,7 @@ class PrepData:
     @staticmethod
     ## load coor mats from input data
     def load_corrmat_input(
-        data_root_path: Union[h5py.File, str],
+        data_root_path: Union[Sequence[h5py.File], Sequence[str]],
         input_data_description_path: Union[Tuple[str, str], None],
         data_loader: dl.DataLoader,
         nn_analysis_config: dc.NNAnalysisConfig,
@@ -23,7 +23,7 @@ class PrepData:
         # get path for corrmat
         corrmat_path = data_loader.get_data_pathway("corrmat", nn_analysis_config)
         # load and append
-        data = data_loader.load(data_root_path, corrmat_path)
+        data = data_loader.load(data_root_path[0], corrmat_path)
         if input_data_description_path is None:
             row_description = dc.AxisDescription(utils.SHAPEY200_IMGNAMES)
             col_description = dc.AxisDescription(utils.SHAPEY200_IMGNAMES)
@@ -43,7 +43,7 @@ class PrepData:
             corrmat_cr_path = data_loader.get_data_pathway(
                 "corrmat_cr", nn_analysis_config
             )
-            data_cr = data_loader.load(data_root_path, corrmat_cr_path)
+            data_cr = data_loader.load(data_root_path[1], corrmat_cr_path)
             assert data_cr.shape == data.shape
             corrmat_cr = dc.CorrMat(corrmat=data_cr, description=corrmat_description)
             corrmats.append(corrmat_cr)

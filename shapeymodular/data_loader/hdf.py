@@ -68,13 +68,19 @@ class HDFProcessor(dl.DataLoader[h5py.File]):
         ## get specific key for each data type
         if data_type == "corrmat" or data_type == "corrmat_cr":
             if data_type == "corrmat":
-                key = key_head + "original"
+                if nn_analysis_config.distances_key is not None:
+                    key = nn_analysis_config.distances_key[0]
+                else:
+                    key = key_head + "original"
             else:
                 if not nn_analysis_config.contrast_exclusion:
                     raise ValueError(
                         "Contrast exclusion must be true to get corrmat_cr."
                     )
-                key = key_head + "contrast_reversed"
+                if nn_analysis_config.distances_key is not None:
+                    key = nn_analysis_config.distances_key[1]
+                else:
+                    key = key_head + "contrast_reversed"
 
             if nn_analysis_config.num_objs != 0:
                 key = key + "_{}".format(nn_analysis_config.num_objs)

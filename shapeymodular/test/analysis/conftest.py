@@ -5,6 +5,8 @@ import pathlib
 import os
 from shapeymodular import data_loader as dl
 from shapeymodular import data_classes as dc
+from dacite import from_dict
+import json
 
 CURR_PATH = pathlib.Path(__file__).parent.resolve()
 
@@ -13,7 +15,7 @@ CURR_PATH = pathlib.Path(__file__).parent.resolve()
 def data_root_path():
     file_path = os.path.join(CURR_PATH, "../test_data/distances.mat")
     with h5py.File(file_path, "r") as f:
-        yield f
+        yield [f]
 
 
 @pytest.fixture
@@ -32,5 +34,8 @@ def data_loader():
 @pytest.fixture
 def nn_analysis_config():
     json_path = os.path.join(CURR_PATH, "../test_data/config_normal.json")
-    config = dc.NNAnalysisConfig.schema().loads(json_path)
-    return config
+    f = open(json_path, "r")
+    config_dict = json.load(f)
+    config = from_dict(data_class=dc.NNAnalysisConfig, data=config_dict)
+    yield config
+    f.close()

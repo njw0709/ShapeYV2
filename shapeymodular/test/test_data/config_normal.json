@@ -2,12 +2,15 @@
     "contrast_exclusion": false,
     "contrast_exclusion_mode": null,
     "distance_measure": "euclidean",
-    "distance_dtype": int,
-    "num_objs": null,
+    "distance_dtype": "int",
+    "num_objs": 0,
     "axes": [
         "pw"
     ],
     "objnames": null,
     "imgnames": null,
-    "batch_analysis": true
+    "batch_analysis": true,
+    "distances_key": [
+        "Jaccard_dist"
+    ]
 }
