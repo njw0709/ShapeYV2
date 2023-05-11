@@ -1,8 +1,8 @@
 import pytest
 import random
 import os
-from ... import data_classes as dc
-from ... import utils
+from shapeymodular import data_classes as dc
+from shapeymodular import utils
 
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 

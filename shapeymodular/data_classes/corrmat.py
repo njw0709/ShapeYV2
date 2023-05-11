@@ -4,8 +4,8 @@ from typing import Union, Sequence
 import numpy as np
 import h5py
 from abc import ABC
-from .. import utils
-from . import axis_description
+from shapeymodular import utils
+from shapeymodular.data_classes import axis_description
 
 
 @dataclass

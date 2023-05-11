@@ -2,7 +2,7 @@
     "contrast_exclusion": false,
     "contrast_exclusion_mode": null,
     "distance_measure": "euclidean",
-    "distance_dtype": "int",
+    "distance_dtype": int,
     "num_objs": null,
     "axes": [
         "pw"

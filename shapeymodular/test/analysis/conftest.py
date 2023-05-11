@@ -3,8 +3,8 @@ from typing import List
 import h5py
 import pathlib
 import os
-from ... import data_loader as dl
-from ... import data_classes as dc
+from shapeymodular import data_loader as dl
+from shapeymodular import data_classes as dc
 
 CURR_PATH = pathlib.Path(__file__).parent.resolve()
 

@@ -1,5 +1,5 @@
 import pytest
-from ... import utils
+from shapeymodular import utils
 import random
 
 

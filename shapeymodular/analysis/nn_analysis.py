@@ -4,9 +4,9 @@ import typing
 import numpy as np
 import cupy as cp
 from cupyx.scipy.linalg import tri
-from .. import data_classes as dc
-from .. import utils
-from .. import data_loader as dl
+from shapeymodular import data_classes as dc
+from shapeymodular import utils
+from shapeymodular import data_loader as dl
 
 
 class PrepData:

@@ -2,10 +2,9 @@ import pytest
 from typing import Tuple, List
 import numpy as np
 import random
-from bidict import bidict
-from ... import data_classes as cd
-from ... import analysis as an
-from ... import utils
+from shapeymodular import data_classes as cd
+from shapeymodular import analysis as an
+from shapeymodular import utils
 
 
 class TestPrepData:

@@ -1,6 +1,6 @@
 import pytest
 import random
-from ... import utils
+from shapeymodular import utils
 
 NUM_MOCK_IMGS = 100
 

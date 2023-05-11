@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from ... import data_classes as dc
+from shapeymodular import data_classes as dc
 
 
 @pytest.fixture

@@ -2,12 +2,11 @@ import h5py
 from typing import Union, Tuple, Sequence
 import typing
 import numpy as np
-from .. import data_classes as cd
-from .. import utils
-from . import data_loader
+from shapeymodular import data_classes as cd
+from . import data_loader as dl
 
 
-class HDFProcessor(data_loader.DataLoader[h5py.File]):
+class HDFProcessor(dl.DataLoader[h5py.File]):
     @staticmethod
     def check_and_return_dataset(
         hdfstore: Union[h5py.File, h5py.Group], key: str

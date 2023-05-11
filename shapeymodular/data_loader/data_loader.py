@@ -1,6 +1,6 @@
 from typing import Union, Generic, TypeVar
 from abc import ABC, abstractmethod
-from .. import data_classes as cd
+from shapeymodular import data_classes as cd
 import h5py
 import numpy as np
 

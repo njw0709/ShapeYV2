@@ -1,8 +1,6 @@
-import h5py
 import pytest
-import os
 import numpy as np
-from ... import data_loader as dp
+from shapeymodular import data_loader as dp
 
 
 @pytest.fixture
