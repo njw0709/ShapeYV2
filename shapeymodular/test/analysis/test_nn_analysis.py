@@ -45,10 +45,56 @@ class TestPrepData:
         except Exception as e:
             raise (e)
 
+    def test_check_necessary_data_batch(self, corrmat_no_contrast, nn_analysis_config):
+        an.PrepData.check_necessary_data_batch(corrmat_no_contrast, nn_analysis_config)
+
 
 class TestProcessData:
-    def test_get_top1_sameobj_with_exclusion(self):
-        pass
+    def test_get_top1_sameobj_with_exclusion(self, get_top1_sameobj_setup):
+        (obj, ax, sameobj_corrmat_subset) = get_top1_sameobj_setup
+        (
+            top1_sameobj_dist,
+            top1_sameobj_idxs,
+        ) = an.ProcessData.get_top1_sameobj_with_exclusion(
+            obj, ax, sameobj_corrmat_subset
+        )
+        for r in range(top1_sameobj_dist.shape[0]):
+            for exc_dist in range(top1_sameobj_dist.shape[1]):
+                r_shapey_idx = sameobj_corrmat_subset.description[
+                    0
+                ].corrmat_idx_to_shapey_idx(r)
+                if not np.isnan(top1_sameobj_dist[r, exc_dist]):
+                    c_corrmat_idx, _ = sameobj_corrmat_subset.description[
+                        1
+                    ].shapey_idx_to_corrmat_idx(top1_sameobj_idxs[r, exc_dist])
+                    if exc_dist == 0:
+                        try:
+                            assert top1_sameobj_idxs[r, exc_dist] == r_shapey_idx
+                        except AssertionError:
+                            c_corrmat_idx, _ = sameobj_corrmat_subset.description[
+                                1
+                            ].shapey_idx_to_corrmat_idx(r_shapey_idx)
+                            assert (
+                                top1_sameobj_dist[r, exc_dist]
+                                == sameobj_corrmat_subset.corrmat[r, c_corrmat_idx]
+                            )
+                    else:
+                        row_series_idx = utils.ImageNameHelper.shapey_idx_to_series_idx(
+                            r_shapey_idx
+                        )
+                        top1_series_idx = (
+                            utils.ImageNameHelper.shapey_idx_to_series_idx(
+                                top1_sameobj_idxs[r, exc_dist]
+                            )
+                        )
+                        assert abs(row_series_idx - top1_series_idx) >= exc_dist
+
+                    assert (
+                        top1_sameobj_dist[r, exc_dist]
+                        == sameobj_corrmat_subset.corrmat[r, c_corrmat_idx]
+                    )
+                else:
+                    assert top1_sameobj_idxs[r, exc_dist] == -1
 
 
 class TestMaskExcluded:

@@ -107,7 +107,7 @@ class ProcessData:
     def get_top1_sameobj_with_exclusion(
         obj: str,
         ax: str,
-        obj_ax_corrmat: dc.CorrMat,
+        sameobj_corrmat: dc.CorrMat,
         distance: str = "correlation",
         dist_dtype: type = float,
     ) -> Tuple[np.ndarray, np.ndarray]:  # distances, indices
@@ -119,10 +119,10 @@ class ProcessData:
             (utils.NUMBER_OF_VIEWS_PER_AXIS, utils.NUMBER_OF_VIEWS_PER_AXIS), dtype=int
         )  # 11 x 11 (first dim = images, second dim = exclusion distance)
         # load data from hdf5 file if not already loaded
-        if isinstance(obj_ax_corrmat.corrmat, h5py.Dataset):
-            obj_ax_corrmat_np = typing.cast(np.ndarray, obj_ax_corrmat.corrmat[:])
+        if isinstance(sameobj_corrmat.corrmat, h5py.Dataset):
+            obj_ax_corrmat_np = typing.cast(np.ndarray, sameobj_corrmat.corrmat[:])
         else:
-            obj_ax_corrmat_np = obj_ax_corrmat.corrmat
+            obj_ax_corrmat_np = sameobj_corrmat.corrmat
 
         assert obj_ax_corrmat_np.shape[0] == utils.NUMBER_OF_VIEWS_PER_AXIS
         obj_idx_start = (
@@ -137,7 +137,7 @@ class ProcessData:
             != utils.NUMBER_OF_AXES * utils.NUMBER_OF_VIEWS_PER_AXIS
         ):
             within_obj_idx_col = [
-                (i - obj_idx_start) for i in obj_ax_corrmat.description[1].shapey_idxs
+                (i - obj_idx_start) for i in sameobj_corrmat.description[1].shapey_idxs
             ]
             assert all([i >= 0 for i in within_obj_idx_col])
             cval_mat_full_np = PrepData.convert_subset_to_full_candidate_set(
@@ -159,12 +159,13 @@ class ProcessData:
                 closest_dist_xdist = cp.nanmin(res, axis=1)
                 closest_idx_xdist = cp.nanargmin(res, axis=1)
                 # convert nan to -1
-                closest_idx_xdist[cp.isnan(closest_idx_xdist)] = -1
+                # closest_idx_xdist[closest_idx_xdist == -1] = cp.nan
             closest_dists[:, xdist] = closest_dist_xdist.get()
             closest_idxs[:, xdist] = closest_idx_xdist.get()
 
         # convert closest index to shapey index
         closest_shapey_idxs = closest_idxs + obj_idx_start
+        closest_shapey_idxs[closest_idxs == -1] = -1
         return closest_dists, closest_shapey_idxs
 
     @staticmethod

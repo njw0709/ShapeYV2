@@ -56,37 +56,40 @@ def exclusion_distance_analysis_batch(
                 corrmats[0].description[1].shapey_idx_to_corrmat_idx(col_shapey_idx)
             )
 
-            corrmats = [
+            corrmats_obj_ax_row_subset = [
                 corrmat.get_subset(row_corrmat_idx, col_corrmat_idx)
                 for corrmat in corrmats
-            ]
+            ]  # row = original image (11 series in ax), col = all (available) images
 
             # compute what is the closest same object image to the original image with exclusion distance
-            sameobj_shapey_idx = utils.IndexingHelper.objname_ax_to_shapey_index(
+            col_sameobj_shapey_idx = utils.IndexingHelper.objname_ax_to_shapey_index(
                 obj, "all"
-            )
-            sameobj_corrmat_idx, available_sameobj_shapey_idx = (
-                corrmats[0].description[1].shapey_idx_to_corrmat_idx(sameobj_shapey_idx)
+            )  # cut column for same object
+            col_sameobj_corrmat_idx, available_sameobj_shapey_idx = (
+                corrmats_obj_ax_row_subset[0]
+                .description[1]
+                .shapey_idx_to_corrmat_idx(col_sameobj_shapey_idx)
             )
 
             # compare original to background contrast reversed image if contrast_reversed is True
+            # sameobj_corrmat_subset = row (11 images in series ax), col (all available same object images)
             if nn_analysis_config.contrast_exclusion:
-                obj_ax_corr_mat = corrmats[1].get_subset(
-                    row_corrmat_idx, sameobj_corrmat_idx
+                sameobj_corrmat_subset = corrmats_obj_ax_row_subset[1].get_subset(
+                    row_corrmat_idx, col_sameobj_corrmat_idx
                 )
             else:
-                obj_ax_corr_mat = corrmats[0].get_subset(
-                    row_corrmat_idx, sameobj_corrmat_idx
+                sameobj_corrmat_subset = corrmats_obj_ax_row_subset[0].get_subset(
+                    row_corrmat_idx, col_sameobj_corrmat_idx
                 )
 
             # compute what is the closest same object image to the original image with exclusion distance
             (
                 sameobj_top1_dists_with_xdists,
                 sameobj_top1_idxs_with_xdists,  # shapey index
-            ) = an.get_top1_sameobj_with_exclusion(
+            ) = an.ProcessData.get_top1_sameobj_with_exclusion(
                 obj,
                 ax,
-                obj_ax_corr_mat,
+                sameobj_corrmat_subset,
             )
 
             # compute the closest other object image to the original image

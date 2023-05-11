@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Sequence, Union, Tuple, List
 from bidict import bidict
 from shapeymodular import utils
+import numpy as np
 
 
 @dataclass
@@ -20,34 +21,47 @@ class AxisDescription:
         self.shapey_idxs = shapey_idxs
 
     def shapey_idx_to_corrmat_idx(
-        self, shapey_idx: Sequence[int]
-    ) -> Tuple[List[int], List[int]]:
-        corrmat_idx: List[int] = []
+        self, shapey_idx: Union[Sequence[int], int]
+    ) -> Union[Tuple[List[int], List[int]], Tuple[int, int]]:
+        if not isinstance(shapey_idx, Sequence):
+            try:
+                corrmat_idx = self.axis_idx_to_shapey_idx.inverse[shapey_idx]
+                return (corrmat_idx, shapey_idx)
+            except Exception as e:
+                raise ValueError(
+                    "axis does not contain {} (shapey_idx)".format(shapey_idx)
+                )
+        corrmat_idxs: List[int] = []
         available_shapey_idx: List[int] = []
         for shid in shapey_idx:
             try:
                 coridx = self.axis_idx_to_shapey_idx.inverse[shid]
-                corrmat_idx.append(coridx)
+                corrmat_idxs.append(coridx)
                 available_shapey_idx.append(shid)
             except KeyError:
                 continue
 
-        if len(corrmat_idx) == 0:
+        if len(corrmat_idxs) == 0:
             raise ValueError("No indices in descriptor within range of shapey_idx")
-        return corrmat_idx, available_shapey_idx
+        return corrmat_idxs, available_shapey_idx
 
-    def corrmat_idx_to_shapey_idx(self, corrmat_idx: Sequence[int]) -> List[int]:
-        shapey_idx: List[int] = []
-        for coridx in corrmat_idx:
-            try:
-                shid = self.axis_idx_to_shapey_idx[coridx]
-                shapey_idx.append(shid)
-            except KeyError:
-                continue
+    def corrmat_idx_to_shapey_idx(
+        self, corrmat_idx: Union[Sequence[int], int]
+    ) -> Union[Sequence[int], int]:
+        if not isinstance(corrmat_idx, Sequence):
+            return self.axis_idx_to_shapey_idx[corrmat_idx]
+        else:
+            shapey_idx: List[int] = []
+            for coridx in corrmat_idx:
+                try:
+                    shid = self.axis_idx_to_shapey_idx[coridx]
+                    shapey_idx.append(shid)
+                except KeyError:
+                    continue
 
-        if len(shapey_idx) == 0:
-            raise ValueError("No indices in descriptor within range of corrmat_idx")
-        return shapey_idx
+            if len(shapey_idx) == 0:
+                raise ValueError("No indices in descriptor within range of corrmat_idx")
+            return shapey_idx
 
     def __len__(self):
         return len(self.imgnames)

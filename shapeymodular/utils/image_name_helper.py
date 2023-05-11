@@ -1,5 +1,6 @@
 from typing import List, Union
 from . import constants
+import re
 
 
 class ImageNameHelper:
@@ -35,3 +36,10 @@ class ImageNameHelper:
     @staticmethod
     def objname_to_shapey_obj_idx(objname: str) -> int:
         return constants.SHAPEY200_OBJS.index(objname)
+
+    @staticmethod
+    def shapey_idx_to_series_idx(idx: int) -> int:
+        imgname = ImageNameHelper.shapey_idx_to_imgname(idx)
+        series_annotation = imgname.split("-")[1].split(".")[0]
+        series_idx = int(re.findall(r"\d+", series_annotation)[0])
+        return series_idx
