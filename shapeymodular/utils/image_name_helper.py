@@ -24,6 +24,10 @@ class ImageNameHelper:
         return objnames
 
     @staticmethod
+    def get_obj_category_from_objname(objname: str) -> str:
+        return objname.split("_")[0]
+
+    @staticmethod
     def imgname_to_shapey_idx(imgname: str) -> int:
         if "/" in imgname:
             imgname = imgname.split("/")[-1]

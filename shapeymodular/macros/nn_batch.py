@@ -112,6 +112,9 @@ def exclusion_distance_analysis_batch(
                 other_obj_corrmat, obj, distance=nn_analysis_config.distance_measure
             )
 
+            # get image rank
+            
+
             # obj_ax_key = "/" + key_head + "/" + obj + "/" + ax
             # try:
             #     hdfstore.create_group(obj_ax_key)

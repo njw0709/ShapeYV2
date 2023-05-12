@@ -111,6 +111,24 @@ class TestProcessData:
             )
             assert top1_idxs_otherobj[r, 0] not in same_obj_idx_range
 
+    def test_get_positive_match_top1_imgrank(
+        self, get_positive_match_top1_imgrank_setup
+    ):
+        (
+            top1_sameobj_dist,
+            other_obj_corrmat,
+            obj,
+            distance_measure,
+        ) = get_positive_match_top1_imgrank_setup
+        positive_match_imgrank = an.ProcessData.get_positive_match_top1_imgrank(
+            top1_sameobj_dist, other_obj_corrmat, obj, distance_measure
+        )
+        assert positive_match_imgrank.shape == (
+            utils.NUMBER_OF_VIEWS_PER_AXIS,
+            utils.NUMBER_OF_VIEWS_PER_AXIS,
+        )
+        assert positive_match_imgrank.dtype == np.int32
+
 
 class TestMaskExcluded:
     def test_create_single_axis_nan_mask(self):
