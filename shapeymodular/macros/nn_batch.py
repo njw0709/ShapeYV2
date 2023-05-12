@@ -55,6 +55,8 @@ def exclusion_distance_analysis_batch(
             col_corrmat_idx, available_col_shapey_idx = (
                 corrmats[0].description[1].shapey_idx_to_corrmat_idx(col_shapey_idx)
             )
+            row_corrmat_idx = typing.cast(List[int], row_corrmat_idx)
+            col_corrmat_idx = typing.cast(List[int], col_corrmat_idx)
 
             corrmats_obj_ax_row_subset = [
                 corrmat.get_subset(row_corrmat_idx, col_corrmat_idx)
@@ -70,6 +72,7 @@ def exclusion_distance_analysis_batch(
                 .description[1]
                 .shapey_idx_to_corrmat_idx(col_sameobj_shapey_idx)
             )
+            col_sameobj_corrmat_idx = typing.cast(List[int], col_sameobj_corrmat_idx)
 
             # compare original to background contrast reversed image if contrast_reversed is True
             # sameobj_corrmat_subset = row (11 images in series ax), col (all available same object images)
@@ -93,15 +96,20 @@ def exclusion_distance_analysis_batch(
             )
 
             # compute the closest other object image to the original image
-            other_obj_corrmat = corrmats[0]
+            other_obj_corrmat = corrmats_obj_ax_row_subset
             if (
                 nn_analysis_config.contrast_exclusion
                 and nn_analysis_config.constrast_exclusion_mode == "soft"
             ):
-                other_obj_corrmat = corrmats[1]
+                other_obj_corrmat = corrmats_obj_ax_row_subset[1]
+            else:
+                other_obj_corrmat = corrmats_obj_ax_row_subset[0]
 
-            otherobj_top1_dists, otherobj_top1_idxs = an.get_top1_other_object(
-                other_obj_corrmat, distance=nn_analysis_config.distance
+            (
+                otherobj_top1_dists,
+                otherobj_top1_shapey_idxs,
+            ) = an.ProcessData.get_top1_other_object(
+                other_obj_corrmat, obj, distance=nn_analysis_config.distance_measure
             )
 
             # obj_ax_key = "/" + key_head + "/" + obj + "/" + ax

@@ -96,6 +96,21 @@ class TestProcessData:
                 else:
                     assert top1_sameobj_idxs[r, exc_dist] == -1
 
+    def test_get_top1_other_object(self, get_top1_other_obj_setup):
+        (obj, distance_measure, other_obj_corrmat) = get_top1_other_obj_setup
+        top1_dist_otherobj, top1_idxs_otherobj = an.ProcessData.get_top1_other_object(
+            other_obj_corrmat, obj, distance_measure
+        )
+        assert top1_dist_otherobj.shape == (utils.NUMBER_OF_VIEWS_PER_AXIS, 1)
+        assert top1_idxs_otherobj.shape == (utils.NUMBER_OF_VIEWS_PER_AXIS, 1)
+        same_obj_idx_range = utils.IndexingHelper.objname_ax_to_shapey_index(obj)
+        for r in range(top1_dist_otherobj.shape[0]):
+            assert (
+                other_obj_corrmat.corrmat[r, top1_idxs_otherobj[r, 0]]
+                == top1_dist_otherobj[r, 0]
+            )
+            assert top1_idxs_otherobj[r, 0] not in same_obj_idx_range
+
 
 class TestMaskExcluded:
     def test_create_single_axis_nan_mask(self):

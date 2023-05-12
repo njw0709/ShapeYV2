@@ -170,12 +170,24 @@ class ProcessData:
 
     @staticmethod
     def get_top1_other_object(
-        other_obj_corrmat: dc.CorrMat, distance: str = "correlation"
+        other_obj_corrmat: dc.CorrMat, obj: str, distance: str = "correlation"
     ):
         assert other_obj_corrmat.corrmat.shape[0] == utils.NUMBER_OF_VIEWS_PER_AXIS
         assert other_obj_corrmat.corrmat.shape[1] == utils.SHAPEY200_NUM_IMGS
         closest_dists = np.zeros((11, 1))
         closest_idxs = np.zeros((11, 1), dtype=int)
+        # mask same obj with nan
+        sameobj_shapey_idx = utils.IndexingHelper.objname_ax_to_shapey_index(obj)
+        other_obj_corrmat_data = other_obj_corrmat.corrmat
+        other_obj_corrmat_data = typing.cast(np.ndarray, other_obj_corrmat_data)
+        other_obj_corrmat_data[:, sameobj_shapey_idx] = np.nan
+        if distance == "correlation":
+            closest_dists[:] = np.nanmax(other_obj_corrmat_data, axis=1)
+            closest_idxs[:] = np.nanargmax(other_obj_corrmat_data, axis=1)
+        else:  # distance == 'euclidean'
+            closest_dists[:, 0] = np.nanmin(other_obj_corrmat_data, axis=1)
+            closest_idxs[:, 0] = np.nanargmin(other_obj_corrmat_data, axis=1)
+        return (closest_dists, closest_idxs)
 
     @staticmethod
     def make_excluded_to_nan(

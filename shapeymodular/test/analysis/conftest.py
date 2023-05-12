@@ -102,3 +102,33 @@ def get_top1_sameobj_setup(corrmat_no_contrast, nn_analysis_config):
         )
 
     yield (obj, ax, sameobj_corrmat_subset)
+
+
+@pytest.fixture
+def get_top1_other_obj_setup(corrmat_no_contrast, nn_analysis_config):
+    corrmats = corrmat_no_contrast
+    obj = random.choice(utils.SHAPEY200_OBJS)
+    ax = random.choice(nn_analysis_config.axes)
+
+    row_shapey_idx = utils.IndexingHelper.objname_ax_to_shapey_index(obj, ax)
+    col_shapey_idx = corrmats[0].description[1].shapey_idxs
+    row_corrmat_idx, available_row_shapey_idx = (
+        corrmats[0].description[0].shapey_idx_to_corrmat_idx(row_shapey_idx)
+    )
+    col_corrmat_idx, available_col_shapey_idx = (
+        corrmats[0].description[1].shapey_idx_to_corrmat_idx(col_shapey_idx)
+    )
+
+    corrmats_obj_ax_row_subset = [
+        corrmat.get_subset(row_corrmat_idx, col_corrmat_idx) for corrmat in corrmats
+    ]  # row = original image (11 series in ax), col = all (available) images
+
+    if (
+        nn_analysis_config.contrast_exclusion
+        and nn_analysis_config.constrast_exclusion_mode == "soft"
+    ):
+        other_obj_corrmat = corrmats_obj_ax_row_subset[1]
+    else:
+        other_obj_corrmat = corrmats_obj_ax_row_subset[0]
+
+    yield (obj, nn_analysis_config.distance_measure, other_obj_corrmat)
