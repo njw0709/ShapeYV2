@@ -10,7 +10,7 @@ class TestPrepData:
         cval_mat_subset = np.random.rand(utils.NUMBER_OF_VIEWS_PER_AXIS, 3)
         col_shapey_idxs = [3, 6, 9]
 
-        result = an.PrepData.convert_subset_to_full_candidate_set(
+        result = an.PrepData.convert_column_subset_to_full_candidate_set_within_obj(
             cval_mat_subset, col_shapey_idxs
         )
         assert np.allclose(result[:, col_shapey_idxs], cval_mat_subset)
@@ -48,6 +48,42 @@ class TestPrepData:
     def test_check_necessary_data_batch(self, corrmat_no_contrast, nn_analysis_config):
         an.PrepData.check_necessary_data_batch(corrmat_no_contrast, nn_analysis_config)
 
+    def test_prep_subset_for_exclusion_analysis(
+        self, get_top1_sameobj_setup, get_top1_sameobj_subset_setup
+    ):
+        (obj, _, sameobj_corrmat_subset) = get_top1_sameobj_setup
+        cval_mat_full_np = an.PrepData.prep_subset_for_exclusion_analysis(
+            obj, sameobj_corrmat_subset
+        )
+        assert cval_mat_full_np.shape == (
+            utils.NUMBER_OF_VIEWS_PER_AXIS,
+            utils.NUMBER_OF_VIEWS_PER_AXIS * utils.NUMBER_OF_AXES,
+        )
+        # test case where you have empty columns
+
+        (
+            obj,
+            _,
+            sameobj_corrmat_subset,
+            col_sameobj_shapey_idx,
+        ) = get_top1_sameobj_subset_setup
+        cval_mat_full_np = an.PrepData.prep_subset_for_exclusion_analysis(
+            obj, sameobj_corrmat_subset
+        )
+        assert cval_mat_full_np.shape == (
+            utils.NUMBER_OF_VIEWS_PER_AXIS,
+            utils.NUMBER_OF_VIEWS_PER_AXIS * utils.NUMBER_OF_AXES,
+        )
+        obj_idx_start = (
+            utils.ImageNameHelper.objname_to_shapey_obj_idx(obj)
+            * utils.NUMBER_OF_VIEWS_PER_AXIS
+            * utils.NUMBER_OF_AXES
+        )
+        within_obj_col_idxs = [(i - obj_idx_start) for i in col_sameobj_shapey_idx]
+        all_col_idxs = list(range(cval_mat_full_np.shape[1]))
+        nan_cols = [i for i in all_col_idxs if i not in within_obj_col_idxs]
+        assert np.all(np.isnan(cval_mat_full_np[:, nan_cols]))
+
 
 class TestProcessData:
     def test_get_top1_sameobj_with_exclusion(self, get_top1_sameobj_setup):
@@ -58,24 +94,51 @@ class TestProcessData:
         ) = an.ProcessData.get_top1_sameobj_with_exclusion(
             obj, ax, sameobj_corrmat_subset
         )
-        for r in range(top1_sameobj_dist.shape[0]):
-            for exc_dist in range(top1_sameobj_dist.shape[1]):
+
+    def test_get_top1_with_all_exc_dists(self, get_top1_with_all_exc_dists_setup):
+        (
+            obj,
+            ax,
+            sameobj_corrmat_subset,
+            cval_mat_full_np,
+            nn_analysis_config,
+        ) = get_top1_with_all_exc_dists_setup
+        closest_dists, closest_shapey_idxs = an.ProcessData.get_top1_with_all_exc_dists(
+            cval_mat_full_np,
+            obj,
+            ax,
+            distance_measure=nn_analysis_config.distance_measure,
+            dist_dtype=nn_analysis_config.distance_dtype,
+        )
+        assert closest_dists.shape == (
+            utils.NUMBER_OF_VIEWS_PER_AXIS,
+            utils.NUMBER_OF_VIEWS_PER_AXIS,
+        )
+        assert closest_shapey_idxs.shape == (
+            utils.NUMBER_OF_VIEWS_PER_AXIS,
+            utils.NUMBER_OF_VIEWS_PER_AXIS,
+        )
+        # check result consistency
+        for r in range(closest_dists.shape[0]):
+            for exc_dist in range(closest_dists.shape[1]):
                 r_shapey_idx = sameobj_corrmat_subset.description[
                     0
                 ].corrmat_idx_to_shapey_idx(r)
-                if not np.isnan(top1_sameobj_dist[r, exc_dist]):
+                if not np.isnan(closest_dists[r, exc_dist]):
                     c_corrmat_idx, _ = sameobj_corrmat_subset.description[
                         1
-                    ].shapey_idx_to_corrmat_idx(top1_sameobj_idxs[r, exc_dist])
+                    ].shapey_idx_to_corrmat_idx(closest_shapey_idxs[r, exc_dist])
                     if exc_dist == 0:
                         try:
-                            assert top1_sameobj_idxs[r, exc_dist] == r_shapey_idx
+                            assert closest_shapey_idxs[r, exc_dist] == r_shapey_idx
                         except AssertionError:
                             c_corrmat_idx, _ = sameobj_corrmat_subset.description[
                                 1
-                            ].shapey_idx_to_corrmat_idx(r_shapey_idx)
+                            ].shapey_idx_to_corrmat_idx(
+                                closest_shapey_idxs[r, exc_dist]
+                            )
                             assert (
-                                top1_sameobj_dist[r, exc_dist]
+                                closest_dists[r, exc_dist]
                                 == sameobj_corrmat_subset.corrmat[r, c_corrmat_idx]
                             )
                     else:
@@ -84,19 +147,25 @@ class TestProcessData:
                         )
                         top1_series_idx = (
                             utils.ImageNameHelper.shapey_idx_to_series_idx(
-                                top1_sameobj_idxs[r, exc_dist]
+                                closest_shapey_idxs[r, exc_dist]
                             )
                         )
                         assert abs(row_series_idx - top1_series_idx) >= exc_dist
+                        series_name = utils.ImageNameHelper.shapey_idx_to_series_name(
+                            closest_shapey_idxs[r, exc_dist]
+                        )
+                        assert all([a in series_name for a in ax])
 
                     assert (
-                        top1_sameobj_dist[r, exc_dist]
+                        closest_dists[r, exc_dist]
                         == sameobj_corrmat_subset.corrmat[r, c_corrmat_idx]
                     )
                 else:
-                    assert top1_sameobj_idxs[r, exc_dist] == -1
+                    assert closest_shapey_idxs[r, exc_dist] == -1
 
-    def test_get_top1_other_object(self, get_top1_other_obj_setup):
+    def test_get_top1_other_object(
+        self, get_top1_other_obj_setup, get_top1_other_obj_subset_setup
+    ):
         (obj, distance_measure, other_obj_corrmat) = get_top1_other_obj_setup
         top1_dist_otherobj, top1_idxs_otherobj = an.ProcessData.get_top1_other_object(
             other_obj_corrmat, obj, distance_measure
@@ -110,6 +179,18 @@ class TestProcessData:
                 == top1_dist_otherobj[r, 0]
             )
             assert top1_idxs_otherobj[r, 0] not in same_obj_idx_range
+        # TODO: test when only subset of the cols are available.
+        (
+            obj,
+            distance_measure,
+            other_obj_corrmat_subset,
+        ) = get_top1_other_obj_subset_setup
+        (
+            top1_dist_otherobj_subset,
+            top1_idxs_otherobj_subset,
+        ) = an.ProcessData.get_top1_other_object(
+            other_obj_corrmat_subset, obj, distance_measure
+        )
 
     def test_get_positive_match_top1_imgrank(
         self, get_positive_match_top1_imgrank_setup
@@ -128,6 +209,47 @@ class TestProcessData:
             utils.NUMBER_OF_VIEWS_PER_AXIS,
         )
         assert positive_match_imgrank.dtype == np.int32
+
+    def test_get_top_per_obj(self, get_top1_other_obj_setup):
+        (obj, distance_measure, other_obj_corrmat) = get_top1_other_obj_setup
+        (
+            top1_per_obj_dists,
+            top1_per_obj_shapey_idxs,
+            top1_other_obj_dists,
+            top1_other_obj_idxs,
+        ) = an.ProcessData.get_top_per_object(
+            other_obj_corrmat, obj, distance=distance_measure
+        )
+
+        (
+            top1_other_obj_dists_v2,
+            top1_other_obj_idxs_v2,
+        ) = an.ProcessData.get_top1_other_object(
+            other_obj_corrmat, obj, distance_measure
+        )
+
+        assert np.allclose(top1_other_obj_dists, top1_other_obj_dists_v2)
+        assert np.allclose(top1_other_obj_idxs, top1_other_obj_idxs_v2)
+
+        assert (
+            top1_per_obj_dists.shape
+            == top1_per_obj_shapey_idxs.shape
+            == (utils.NUMBER_OF_VIEWS_PER_AXIS, utils.NUMBER_OF_OBJECTS - 1)
+        )
+        assert (
+            top1_other_obj_dists.shape
+            == top1_other_obj_idxs.shape
+            == (utils.NUMBER_OF_VIEWS_PER_AXIS, 1)
+        )
+
+    def test_get_positive_match_top1_objrank(self):
+        pass
+
+    def test_get_histogram_sameobj(self):
+        pass
+
+    def test_get_top1_sameobj_cat_with_exclusion(self):
+        pass
 
 
 class TestMaskExcluded:

@@ -47,3 +47,11 @@ class ImageNameHelper:
         series_annotation = imgname.split("-")[1].split(".")[0]
         series_idx = int(re.findall(r"\d+", series_annotation)[0])
         return series_idx
+
+    @staticmethod
+    def shapey_idx_to_series_name(idx: int) -> str:
+        imgname = ImageNameHelper.shapey_idx_to_imgname(idx)
+        series_annotation = imgname.split("-")[1].split(".")[0]
+        numbers = r"[0-9]"
+        series_name = re.sub(numbers, "", series_annotation)
+        return series_name
