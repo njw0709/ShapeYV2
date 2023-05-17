@@ -185,18 +185,25 @@ def get_top1_other_obj_subset_setup(obj_ax_selected_corrmat_subset, nn_analysis_
 
     # subsample half from column idx
     all_shapey_idxs = other_obj_corrmat.description[1].shapey_idxs
-    subsampled_cols = random.sample(all_shapey_idxs, len(all_shapey_idxs) // 3 * 2)
+    subsampled_shapey_idxs_col = random.sample(
+        all_shapey_idxs, len(all_shapey_idxs) // 3 * 2
+    )
     row_shapey_idxs = other_obj_corrmat.description[0].shapey_idxs
     row_corrmat_idxs, _ = other_obj_corrmat.description[0].shapey_idx_to_corrmat_idx(
         row_shapey_idxs
     )
     col_corrmat_idxs, _ = other_obj_corrmat.description[1].shapey_idx_to_corrmat_idx(
-        subsampled_cols
+        subsampled_shapey_idxs_col
     )
     corrmats_obj_ax_row_col_subset = other_obj_corrmat.get_subset(
         row_corrmat_idxs, col_corrmat_idxs
     )
-    yield (obj, nn_analysis_config.distance_measure, corrmats_obj_ax_row_col_subset)
+    yield (
+        obj,
+        nn_analysis_config.distance_measure,
+        corrmats_obj_ax_row_col_subset,
+        subsampled_shapey_idxs_col,
+    )
 
 
 @pytest.fixture
@@ -225,3 +232,8 @@ def get_positive_match_top1_imgrank_setup(
         obj,
         nn_analysis_config.distance_measure,
     )
+
+
+@pytest.fixture
+def get_positive_match_top1_objrank_setup():
+    return 0

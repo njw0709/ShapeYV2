@@ -179,11 +179,13 @@ class TestProcessData:
                 == top1_dist_otherobj[r, 0]
             )
             assert top1_idxs_otherobj[r, 0] not in same_obj_idx_range
+
         # TODO: test when only subset of the cols are available.
         (
             obj,
             distance_measure,
             other_obj_corrmat_subset,
+            subsampled_shapey_idxs_col,
         ) = get_top1_other_obj_subset_setup
         (
             top1_dist_otherobj_subset,
@@ -191,6 +193,21 @@ class TestProcessData:
         ) = an.ProcessData.get_top1_other_object(
             other_obj_corrmat_subset, obj, distance_measure
         )
+
+        for r in range(top1_dist_otherobj_subset.shape[0]):
+            col_corrmat_idx, _ = other_obj_corrmat_subset.description[
+                1
+            ].shapey_idx_to_corrmat_idx(top1_idxs_otherobj_subset[r, 0])
+            assert (
+                other_obj_corrmat_subset.corrmat[r, col_corrmat_idx]
+                == top1_dist_otherobj_subset[r, 0]
+            )
+            assert top1_idxs_otherobj_subset[r, 0] not in same_obj_idx_range
+            # check if unequal top1 idxs are excluded from subset
+            try:
+                assert top1_idxs_otherobj_subset[r, 0] == top1_idxs_otherobj[r, 0]
+            except AssertionError:
+                assert top1_idxs_otherobj[r, 0] not in subsampled_shapey_idxs_col
 
     def test_get_positive_match_top1_imgrank(
         self, get_positive_match_top1_imgrank_setup
@@ -209,6 +226,44 @@ class TestProcessData:
             utils.NUMBER_OF_VIEWS_PER_AXIS,
         )
         assert positive_match_imgrank.dtype == np.int32
+        for exc_dist in range(utils.NUMBER_OF_VIEWS_PER_AXIS):
+            for r in range(utils.NUMBER_OF_VIEWS_PER_AXIS):
+                if exc_dist == 0:
+                    try:
+                        assert positive_match_imgrank[r, exc_dist] == 0
+                    except AssertionError:
+                        if distance_measure == "correlation":
+                            assert top1_sameobj_dist[r, exc_dist] == 1.0
+                            assert (
+                                positive_match_imgrank[r, exc_dist]
+                                == (other_obj_corrmat.corrmat[r, :] == 1.0).sum()
+                            )
+                        else:
+                            assert top1_sameobj_dist[r, exc_dist] == 0.0
+                            assert (
+                                positive_match_imgrank[r, exc_dist]
+                                == (other_obj_corrmat.corrmat[r, :] == 0.0).sum()
+                            )
+                else:
+                    row = other_obj_corrmat.corrmat[r, :]
+                    same_obj_shapey_idxs = (
+                        utils.IndexingHelper.objname_ax_to_shapey_index(obj)
+                    )
+                    same_obj_corrmat_idxs, _ = other_obj_corrmat.description[
+                        1
+                    ].shapey_idx_to_corrmat_idx(same_obj_shapey_idxs)
+                    row[same_obj_corrmat_idxs] = np.nan
+                    if distance_measure == "correlation":
+                        num_imgs = (
+                            other_obj_corrmat.corrmat[r, :]
+                            >= top1_sameobj_dist[r, exc_dist]
+                        ).sum()
+                    else:
+                        num_imgs = (
+                            other_obj_corrmat.corrmat[r, :]
+                            <= top1_sameobj_dist[r, exc_dist]
+                        ).sum()
+                    assert positive_match_imgrank[r, exc_dist] == num_imgs
 
     def test_get_top_per_obj(self, get_top1_other_obj_setup):
         (obj, distance_measure, other_obj_corrmat) = get_top1_other_obj_setup
@@ -241,6 +296,21 @@ class TestProcessData:
             == top1_other_obj_idxs.shape
             == (utils.NUMBER_OF_VIEWS_PER_AXIS, 1)
         )
+        # check if indeed produced min / max values per object
+        col_idx = 0
+        for other_obj in utils.SHAPEY200_OBJS:
+            if other_obj == obj:
+                continue
+            other_obj_idx_range = utils.IndexingHelper.objname_ax_to_shapey_index(
+                other_obj
+            )
+            other_obj_corrmat_cutout = other_obj_corrmat.corrmat[:, other_obj_idx_range]
+            current_top1_dist = np.expand_dims(top1_per_obj_dists[:, col_idx], axis=1)
+            if distance_measure == "correlation":
+                assert (other_obj_corrmat_cutout <= current_top1_dist).all()
+            else:
+                assert (other_obj_corrmat_cutout >= current_top1_dist).all()
+            col_idx += 1
 
     def test_get_positive_match_top1_objrank(self):
         pass

@@ -266,15 +266,27 @@ class ProcessData:
             utils.NUMBER_OF_VIEWS_PER_AXIS,
             utils.NUMBER_OF_VIEWS_PER_AXIS,
         )
-        assert other_obj_corrmat.corrmat.shape == (
-            utils.NUMBER_OF_VIEWS_PER_AXIS,
-            utils.SHAPEY200_NUM_IMGS,
-        )
+        assert other_obj_corrmat.corrmat.shape[0] == utils.NUMBER_OF_VIEWS_PER_AXIS
+        if isinstance(other_obj_corrmat.corrmat, h5py.Dataset):
+            other_obj_corrmat_np = other_obj_corrmat.corrmat[:]
+        else:
+            other_obj_corrmat_np = other_obj_corrmat.corrmat
+
+        other_obj_corrmat_np = typing.cast(np.ndarray, other_obj_corrmat_np)
+        if other_obj_corrmat.corrmat.shape[1] != utils.SHAPEY200_NUM_IMGS:
+            other_obj_corrmat_np = (
+                PrepData.convert_column_subset_to_full_candidate_set_all_obj(
+                    other_obj_corrmat_np,
+                    other_obj_corrmat.description[1].shapey_idxs,
+                )
+            )
+        assert other_obj_corrmat_np.shape[1] == utils.SHAPEY200_NUM_IMGS
+
         positive_match_imgrank = np.zeros(
             (utils.NUMBER_OF_VIEWS_PER_AXIS, utils.NUMBER_OF_VIEWS_PER_AXIS),
             dtype=np.int32,
         )
-        other_obj_corrmat_data = cp.array(other_obj_corrmat.corrmat)
+        other_obj_corrmat_cp = cp.array(other_obj_corrmat_np)
         for exc_dist in range(utils.NUMBER_OF_VIEWS_PER_AXIS):
             top1_positive_with_exc_dist = top1_same_obj_with_exc_dist[:, exc_dist]
             comparison_mask = cp.tile(
@@ -283,9 +295,9 @@ class ProcessData:
             sameobj_shapey_idx = utils.IndexingHelper.objname_ax_to_shapey_index(obj)
 
             if distance_measure == "correlation":
-                comparison_result = other_obj_corrmat_data > comparison_mask
+                comparison_result = other_obj_corrmat_cp >= comparison_mask
             else:
-                comparison_result = other_obj_corrmat_data < comparison_mask
+                comparison_result = other_obj_corrmat_cp <= comparison_mask
             # make sameobj zero
             comparison_result[:, sameobj_shapey_idx] = False
             # count how many are true
@@ -376,7 +388,9 @@ class ProcessData:
         return np.array(sameobj_objrank).T
 
     @staticmethod
-    def get_histogram_sameobj():
+    def get_histogram_sameobj(
+        current_obj_corrmat_np: np.ndarray, distance_measure: str
+    ):  # -> np.ndarray
         pass
 
     @staticmethod
