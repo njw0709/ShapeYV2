@@ -235,5 +235,21 @@ def get_positive_match_top1_imgrank_setup(
 
 
 @pytest.fixture
-def get_positive_match_top1_objrank_setup():
-    return 0
+def get_positive_match_top1_objrank_setup(
+    get_top1_other_obj_setup, get_top1_sameobj_setup
+):
+    (obj, distance_measure, other_obj_corrmat) = get_top1_other_obj_setup
+    (obj, ax, sameobj_corrmat_subset) = get_top1_sameobj_setup
+    (
+        top1_per_obj_dists,
+        top1_per_obj_idxs,
+        top1_other_obj_dists,
+        top1_other_obj_idxs,
+    ) = an.ProcessData.get_top_per_object(other_obj_corrmat, obj, distance_measure)
+    (
+        closest_dists_sameobj,
+        closest_shapey_idx_sameobj,
+    ) = an.ProcessData.get_top1_sameobj_with_exclusion(
+        obj, ax, sameobj_corrmat_subset, distance_measure
+    )
+    yield (closest_dists_sameobj, top1_per_obj_dists, distance_measure)

@@ -103,7 +103,11 @@ class TestProcessData:
             cval_mat_full_np,
             nn_analysis_config,
         ) = get_top1_with_all_exc_dists_setup
-        closest_dists, closest_shapey_idxs = an.ProcessData.get_top1_with_all_exc_dists(
+        (
+            closest_dists,
+            closest_shapey_idxs,
+            _,
+        ) = an.ProcessData.get_top1_with_all_exc_dists(
             cval_mat_full_np,
             obj,
             ax,
@@ -162,6 +166,36 @@ class TestProcessData:
                     )
                 else:
                     assert closest_shapey_idxs[r, exc_dist] == -1
+
+    def test_get_top1_with_all_exc_dists_with_histogram(
+        self, get_top1_with_all_exc_dists_setup
+    ):
+        (
+            obj,
+            ax,
+            sameobj_corrmat_subset,
+            cval_mat_full_np,
+            nn_analysis_config,
+        ) = get_top1_with_all_exc_dists_setup
+        bins = np.linspace(0, 1, 101)
+        (
+            _,
+            _,
+            histogram_counts,
+        ) = an.ProcessData.get_top1_with_all_exc_dists(
+            cval_mat_full_np,
+            obj,
+            ax,
+            distance_measure=nn_analysis_config.distance_measure,
+            dist_dtype=nn_analysis_config.distance_dtype,
+            histogram=nn_analysis_config.histogram,
+            bins=bins,
+        )
+        assert len(histogram_counts) == utils.NUMBER_OF_VIEWS_PER_AXIS
+        assert histogram_counts[0].shape == (
+            utils.NUMBER_OF_VIEWS_PER_AXIS,
+            len(bins) - 1,
+        )
 
     def test_get_top1_other_object(
         self, get_top1_other_obj_setup, get_top1_other_obj_subset_setup
@@ -312,11 +346,42 @@ class TestProcessData:
                 assert (other_obj_corrmat_cutout >= current_top1_dist).all()
             col_idx += 1
 
-    def test_get_positive_match_top1_objrank(self):
-        pass
+    def test_get_positive_match_top1_objrank(
+        self, get_positive_match_top1_objrank_setup
+    ):
+        (
+            closest_dists_sameobj,
+            top1_per_obj_dists,
+            distance_measure,
+        ) = get_positive_match_top1_objrank_setup
 
-    def test_get_histogram_sameobj(self):
-        pass
+        top1_sameobj_rank = an.ProcessData.get_positive_match_top1_objrank(
+            closest_dists_sameobj, top1_per_obj_dists, distance_measure
+        )
+
+        for exc_dist in range(utils.NUMBER_OF_VIEWS_PER_AXIS):
+            for r in range(utils.NUMBER_OF_VIEWS_PER_AXIS):
+                if not np.isnan(top1_sameobj_rank[r, exc_dist]):
+                    if distance_measure == "correlation":
+                        assert (
+                            top1_sameobj_rank[r, exc_dist]
+                            == (
+                                closest_dists_sameobj[r, exc_dist]
+                                <= top1_per_obj_dists[r, :]
+                            ).sum()
+                        )
+                    else:
+                        assert (
+                            top1_sameobj_rank[r, exc_dist]
+                            == (
+                                closest_dists_sameobj[r, exc_dist]
+                                >= top1_per_obj_dists[r, :]
+                            ).sum()
+                        )
+                else:
+                    assert (r - exc_dist < 0) and (
+                        r + exc_dist > utils.NUMBER_OF_VIEWS_PER_AXIS - 1
+                    )
 
     def test_get_top1_sameobj_cat_with_exclusion(self):
         pass

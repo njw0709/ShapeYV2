@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from dataclasses_json import DataClassJsonMixin
-from typing import Union, List
+from typing import Union, List, Sequence
 
 
 @dataclass
@@ -25,3 +25,5 @@ class NNAnalysisConfig(DataClassJsonMixin):
     distances_key: Union[
         List[str], None
     ]  # if none, follows original key structure. if specified, uses the specified key to get distances.
+    histogram: bool
+    bins: Union[None, Sequence[float]]

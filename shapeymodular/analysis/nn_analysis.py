@@ -170,7 +170,7 @@ class ProcessData:
         # convert numpy array to cupy array for gpu processing
         cval_mat = cp.asarray(cval_mat_full_np)
 
-        closest_dists, closest_shapey_idxs = ProcessData.get_top1_with_all_exc_dists(
+        closest_dists, closest_shapey_idxs, _ = ProcessData.get_top1_with_all_exc_dists(
             cval_mat, obj, ax, distance, dist_dtype=dist_dtype
         )
         return closest_dists, closest_shapey_idxs
@@ -182,7 +182,9 @@ class ProcessData:
         ax: str,
         distance_measure: str = "correlation",
         dist_dtype: type = float,
-    ):
+        histogram: bool = False,
+        bins: Union[None, np.ndarray] = None,
+    ) -> Tuple[np.ndarray, np.ndarray, Sequence[np.ndarray]]:
         assert single_ax_corrmat.shape[0] == utils.NUMBER_OF_VIEWS_PER_AXIS
         assert (
             single_ax_corrmat.shape[1]
@@ -195,6 +197,12 @@ class ProcessData:
         closest_idxs = np.zeros(
             (utils.NUMBER_OF_VIEWS_PER_AXIS, utils.NUMBER_OF_VIEWS_PER_AXIS), dtype=int
         )  # 11 x 11 (first dim = images, second dim = exclusion distance)
+        hist_list: Sequence[np.ndarray] = []
+        if histogram:
+            if bins is None and distance_measure == "correlation":
+                bins = np.linspace(0, 1, 101)
+            else:
+                assert bins is not None
         if isinstance(single_ax_corrmat, np.ndarray):
             cp_single_ax_corrmat = cp.array(single_ax_corrmat)
         else:
@@ -204,6 +212,12 @@ class ProcessData:
             res: cp.ndarray = MaskExcluded.make_excluded_to_nan(
                 cp_single_ax_corrmat, ax, xdist
             )
+            if histogram:
+                cp_bins = cp.asarray(bins)
+                counts = cp.apply_along_axis(
+                    lambda r: cp.histogram(r, bins=cp_bins)[0], 1, res
+                )
+                hist_list.append(counts.get())
             if distance_measure == "correlation":
                 closest_dist_xdist = cp.nanmax(res, axis=1)
                 closest_idx_xdist = cp.nanargmax(res, axis=1)
@@ -220,7 +234,7 @@ class ProcessData:
         )
         closest_shapey_idxs = closest_idxs + obj_idx_start
         closest_shapey_idxs[closest_idxs == -1] = -1
-        return closest_dists, closest_shapey_idxs
+        return closest_dists, closest_shapey_idxs, hist_list
 
     @staticmethod
     def get_top1_other_object(
@@ -427,7 +441,11 @@ class ProcessData:
                     other_obj, curr_obj_to_other_obj_same_cat_subset
                 )
                 cval_mat_full_cp = cp.array(cval_mat_full_np)
-                closest_dists, closest_idxs = ProcessData.get_top1_with_all_exc_dists(
+                (
+                    closest_dists,
+                    closest_idxs,
+                    _,
+                ) = ProcessData.get_top1_with_all_exc_dists(
                     cval_mat_full_cp, other_obj, ax, distance_measure=distance_measure
                 )
                 list_top1_dists_obj_same_cat.append((other_obj, closest_dists))
