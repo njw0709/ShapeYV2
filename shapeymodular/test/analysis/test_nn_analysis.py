@@ -51,7 +51,7 @@ class TestPrepData:
     def test_prep_subset_for_exclusion_analysis(
         self, get_top1_sameobj_setup, get_top1_sameobj_subset_setup
     ):
-        (obj, _, sameobj_corrmat_subset) = get_top1_sameobj_setup
+        (obj, _, sameobj_corrmat_subset, nn_analysis_config) = get_top1_sameobj_setup
         cval_mat_full_np = an.PrepData.prep_subset_for_exclusion_analysis(
             obj, sameobj_corrmat_subset
         )
@@ -87,12 +87,12 @@ class TestPrepData:
 
 class TestProcessData:
     def test_get_top1_sameobj_with_exclusion(self, get_top1_sameobj_setup):
-        (obj, ax, sameobj_corrmat_subset) = get_top1_sameobj_setup
+        (obj, ax, sameobj_corrmat_subset, nn_analysis_config) = get_top1_sameobj_setup
         (
             top1_sameobj_dist,
             top1_sameobj_idxs,
         ) = an.ProcessData.get_top1_sameobj_with_exclusion(
-            obj, ax, sameobj_corrmat_subset
+            obj, ax, sameobj_corrmat_subset, nn_analysis_config
         )
 
     def test_get_top1_with_all_exc_dists(self, get_top1_with_all_exc_dists_setup):
@@ -108,11 +108,7 @@ class TestProcessData:
             closest_shapey_idxs,
             _,
         ) = an.ProcessData.get_top1_with_all_exc_dists(
-            cval_mat_full_np,
-            obj,
-            ax,
-            distance_measure=nn_analysis_config.distance_measure,
-            dist_dtype=nn_analysis_config.distance_dtype,
+            cval_mat_full_np, obj, ax, nn_analysis_config
         )
         assert closest_dists.shape == (
             utils.NUMBER_OF_VIEWS_PER_AXIS,
@@ -183,19 +179,28 @@ class TestProcessData:
             _,
             histogram_counts,
         ) = an.ProcessData.get_top1_with_all_exc_dists(
-            cval_mat_full_np,
-            obj,
-            ax,
-            distance_measure=nn_analysis_config.distance_measure,
-            dist_dtype=nn_analysis_config.distance_dtype,
-            histogram=nn_analysis_config.histogram,
-            bins=bins,
+            cval_mat_full_np, obj, ax, nn_analysis_config
         )
-        assert len(histogram_counts) == utils.NUMBER_OF_VIEWS_PER_AXIS
-        assert histogram_counts[0].shape == (
+        assert histogram_counts.shape == (
             utils.NUMBER_OF_VIEWS_PER_AXIS,
-            len(bins) - 1,
+            utils.NUMBER_OF_VIEWS_PER_AXIS,
+            bins.shape[0] - 1,
         )
+        # check result consistency
+        contain_ax = [all([c in a for c in ax]) for a in utils.ALL_AXES]
+        num_relevant_ax = sum(contain_ax)
+        for exc_dist in range(histogram_counts.shape[0]):
+            for r in range(histogram_counts.shape[1]):
+                all_counts = histogram_counts[exc_dist, r, :].sum()
+                excluded_range = np.array(
+                    range(r - (exc_dist - 1), r + (exc_dist - 1) + 1)
+                )
+                excluded_num = np.logical_and(
+                    excluded_range >= 0, excluded_range < 11
+                ).sum()
+                assert all_counts == num_relevant_ax * (
+                    utils.NUMBER_OF_VIEWS_PER_AXIS - excluded_num
+                )
 
     def test_get_top1_other_object(
         self, get_top1_other_obj_setup, get_top1_other_obj_subset_setup
@@ -383,8 +388,38 @@ class TestProcessData:
                         r + exc_dist > utils.NUMBER_OF_VIEWS_PER_AXIS - 1
                     )
 
-    def test_get_top1_sameobj_cat_with_exclusion(self):
-        pass
+    def test_get_top1_sameobj_cat_with_exclusion(
+        self, get_top1_sameobj_cat_with_exclusion_setup
+    ):
+        (
+            obj,
+            ax,
+            corrmats_obj_ax_row_subset,
+            nn_analysis_config,
+        ) = get_top1_sameobj_cat_with_exclusion_setup
+        (
+            list_top1_dists_obj_same_cat,
+            list_top1_idxs_obj_same_cat,
+            histogram,
+        ) = an.ProcessData.get_top1_sameobj_cat_with_exclusion(
+            corrmats_obj_ax_row_subset[0], obj, ax, nn_analysis_config
+        )
+
+        assert (
+            len(list_top1_dists_obj_same_cat)
+            == len(list_top1_idxs_obj_same_cat)
+            == utils.NUMBER_OF_OBJS_PER_CATEGORY - 1
+        )
+        for obj_num in range(utils.NUMBER_OF_OBJS_PER_CATEGORY - 1):
+            other_obj, other_obj_dist = list_top1_dists_obj_same_cat[obj_num]
+            _, other_obj_idx = list_top1_idxs_obj_same_cat[obj_num]
+            obj_shapey_idx_range = utils.IndexingHelper.objname_ax_to_shapey_index(
+                other_obj
+            )
+            obj_shapey_idx_min = obj_shapey_idx_range[0]
+            obj_shapey_idx_max = obj_shapey_idx_range[-1]
+            assert (other_obj_idx[other_obj_idx != -1] >= obj_shapey_idx_min).all()
+            assert (other_obj_idx[other_obj_idx != -1] <= obj_shapey_idx_max).all()
 
 
 class TestMaskExcluded:

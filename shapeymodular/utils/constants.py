@@ -31,7 +31,7 @@ DEGREES_OF_FREEDOM: int = 5
 ALL_AXES = generate_axes_of_interest()
 NUMBER_OF_OBJECTS: int = 200
 NUMBER_OF_CATEGORY: int = 20
-OBJECTS_PER_CATEGORY: int = NUMBER_OF_OBJECTS // NUMBER_OF_CATEGORY
+NUMBER_OF_OBJS_PER_CATEGORY: int = NUMBER_OF_OBJECTS // NUMBER_OF_CATEGORY
 NUMBER_OF_AXES = len(ALL_AXES)
 NUMBER_OF_VIEWS_PER_AXIS = 11
 with open(
@@ -43,3 +43,11 @@ SHAPEY200_OBJCATS = np.unique([obj.split("_")[0] for obj in SHAPEY200_OBJS])
 SHAPEY200_IMGNAMES = generate_all_imgnames(SHAPEY200_OBJS)
 SHAPEY200_IMGNAMES_DICT = bidict(enumerate(SHAPEY200_IMGNAMES))
 SHAPEY200_NUM_IMGS = len(SHAPEY200_IMGNAMES)
+KNOWN_DTYPES = {
+    "int": int,
+    "int32": np.int32,
+    "int64": np.int64,
+    "float": float,
+    "float32": np.float32,
+    "float64": np.float64,
+}

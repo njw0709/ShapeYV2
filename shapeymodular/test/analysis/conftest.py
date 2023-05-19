@@ -107,7 +107,7 @@ def get_top1_sameobj_setup(obj_ax_selected_corrmat_subset, nn_analysis_config):
             row_sameobj_corrmat_idx, col_sameobj_corrmat_idx
         )
 
-    yield (obj, ax, sameobj_corrmat_subset)
+    yield (obj, ax, sameobj_corrmat_subset, nn_analysis_config)
 
 
 @pytest.fixture
@@ -151,7 +151,7 @@ def get_top1_sameobj_subset_setup(obj_ax_selected_corrmat_subset, nn_analysis_co
 
 @pytest.fixture
 def get_top1_with_all_exc_dists_setup(get_top1_sameobj_setup, nn_analysis_config):
-    (obj, ax, sameobj_corrmat_subset) = get_top1_sameobj_setup
+    (obj, ax, sameobj_corrmat_subset, nn_analysis_config) = get_top1_sameobj_setup
     cval_mat_full_np = an.PrepData.prep_subset_for_exclusion_analysis(
         obj, sameobj_corrmat_subset
     )
@@ -208,9 +208,11 @@ def get_top1_other_obj_subset_setup(obj_ax_selected_corrmat_subset, nn_analysis_
 
 @pytest.fixture
 def get_positive_match_top1_imgrank_setup(
-    obj_ax_selected_corrmat_subset, get_top1_sameobj_setup, nn_analysis_config
+    obj_ax_selected_corrmat_subset, get_top1_sameobj_setup
 ):
-    (obj, ax, corrmats_obj_ax_row_subset) = obj_ax_selected_corrmat_subset
+    (obj, ax, sameobj_corrmat_subset, nn_analysis_config) = get_top1_sameobj_setup
+    (_, _, corrmats_obj_ax_row_subset) = obj_ax_selected_corrmat_subset
+
     if (
         nn_analysis_config.contrast_exclusion
         and nn_analysis_config.constrast_exclusion_mode == "soft"
@@ -220,11 +222,12 @@ def get_positive_match_top1_imgrank_setup(
         other_obj_corrmat = corrmats_obj_ax_row_subset[0]
 
     # top1 positive matches
-    (obj, ax, sameobj_corrmat_subset) = get_top1_sameobj_setup
     (
         top1_sameobj_dist,
         top1_sameobj_idxs,
-    ) = an.ProcessData.get_top1_sameobj_with_exclusion(obj, ax, sameobj_corrmat_subset)
+    ) = an.ProcessData.get_top1_sameobj_with_exclusion(
+        obj, ax, sameobj_corrmat_subset, nn_analysis_config
+    )
 
     yield (
         top1_sameobj_dist,
@@ -239,7 +242,7 @@ def get_positive_match_top1_objrank_setup(
     get_top1_other_obj_setup, get_top1_sameobj_setup
 ):
     (obj, distance_measure, other_obj_corrmat) = get_top1_other_obj_setup
-    (obj, ax, sameobj_corrmat_subset) = get_top1_sameobj_setup
+    (obj, ax, sameobj_corrmat_subset, nn_analysis_config) = get_top1_sameobj_setup
     (
         top1_per_obj_dists,
         top1_per_obj_idxs,
@@ -250,6 +253,14 @@ def get_positive_match_top1_objrank_setup(
         closest_dists_sameobj,
         closest_shapey_idx_sameobj,
     ) = an.ProcessData.get_top1_sameobj_with_exclusion(
-        obj, ax, sameobj_corrmat_subset, distance_measure
+        obj, ax, sameobj_corrmat_subset, nn_analysis_config
     )
     yield (closest_dists_sameobj, top1_per_obj_dists, distance_measure)
+
+
+@pytest.fixture
+def get_top1_sameobj_cat_with_exclusion_setup(
+    obj_ax_selected_corrmat_subset, nn_analysis_config
+):
+    (obj, ax, corrmats_obj_ax_row_subset) = obj_ax_selected_corrmat_subset
+    yield (obj, ax, corrmats_obj_ax_row_subset, nn_analysis_config)
