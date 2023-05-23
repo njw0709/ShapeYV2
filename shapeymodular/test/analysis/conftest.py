@@ -225,6 +225,7 @@ def get_positive_match_top1_imgrank_setup(
     (
         top1_sameobj_dist,
         top1_sameobj_idxs,
+        _,
     ) = an.ProcessData.get_top1_sameobj_with_exclusion(
         obj, ax, sameobj_corrmat_subset, nn_analysis_config
     )
@@ -248,10 +249,12 @@ def get_positive_match_top1_objrank_setup(
         top1_per_obj_idxs,
         top1_other_obj_dists,
         top1_other_obj_idxs,
-    ) = an.ProcessData.get_top_per_object(other_obj_corrmat, obj, distance_measure)
+        _,
+    ) = an.ProcessData.get_top_per_object(other_obj_corrmat, obj, nn_analysis_config)
     (
         closest_dists_sameobj,
         closest_shapey_idx_sameobj,
+        _,
     ) = an.ProcessData.get_top1_sameobj_with_exclusion(
         obj, ax, sameobj_corrmat_subset, nn_analysis_config
     )
