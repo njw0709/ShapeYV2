@@ -116,9 +116,12 @@ class HDFProcessor(dl.DataLoader[h5py.File]):
             == "top1_cvals_same_category"  # correlation (distance) of the closest image in the same category
             or data_type
             == "top1_idx_same_category"  # index (image index in alphabetical order) of the closest image in the same category
+            or data_type == "hist_with_exc_dist_same_category"
             or data_type
             == "top1_hists"  # 3D histogram matrix with exclusion (11 ref imgs x 11 exc dists x histogram counts per bin)
-            or data_type == "top1_hists_otherobj"
+            or data_type == "cval_hist_otherobj"
+            or data_type
+            == "sameobj_objrank"  # object rank of the closest within-object image (i.e. how many other objects are closer)
         ):
             if obj is None or ax is None:
                 raise ValueError("obj must be specified for analysis results")
@@ -132,12 +135,14 @@ class HDFProcessor(dl.DataLoader[h5py.File]):
                 or data_type == "top1_per_obj_cvals"
                 or data_type == "top1_per_obj_idx"
                 or data_type == "top1_hists"
-                or data_type == "top1_hists_otherobj"
+                or data_type == "cval_hist_otherobj"
+                or data_type == "sameobj_objrank"
             ):
                 key = key_head + data_type
             elif (
                 data_type == "top1_cvals_same_category"
                 or data_type == "top1_idx_same_category"
+                or data_type == "hist_with_exc_dist_same_category"
             ):
                 if other_obj_cat is None:
                     raise ValueError(
@@ -147,8 +152,10 @@ class HDFProcessor(dl.DataLoader[h5py.File]):
                     key = (
                         key_head + "/same_cat/{}/".format(other_obj_cat) + "top1_cvals"
                     )
-                else:
+                elif data_type == "top1_idx_same_category":
                     key = key_head + "/same_cat/{}/".format(other_obj_cat) + "top1_idx"
+                elif data_type == "hist_with_exc_dist_same_category":
+                    key = key_head + "/same_cat/{}/".format(other_obj_cat) + "hist"
         else:
             raise ValueError("Invalid data_type")
         return key

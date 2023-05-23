@@ -75,48 +75,16 @@ def exclusion_distance_analysis_batch(
             else:
                 other_obj_corrmat = corrmats_obj_ax_row_subset[0]
 
-            (
-                otherobj_top1_dists,
-                otherobj_top1_shapey_idxs,
-                otherobj_distance_hists,
-            ) = an.ProcessData.get_top1_other_object(
-                other_obj_corrmat, obj, nn_analysis_config
-            )
-
-
             # compute top1 per different objects
             (
                 top1_per_obj_dists,  # 11x199
                 top1_per_obj_idxs,  # 11x199
                 top1_other_obj_dists,  # top1 of all other objs 11x1
                 top1_other_obj_idxs,  # 11x1
+                other_obj_dists_hist,  # ref img (11) x histogram length (bin edges -1)
             ) = an.ProcessData.get_top_per_object(
-                other_obj_corrmat, obj, distance=nn_analysis_config.distance_measure
+                other_obj_corrmat, obj, nn_analysis_config
             )
-
-            ## save results
-            path_keys = [
-                "top1_cvals",
-                "top1_idx",
-                "top1_hists",
-                "top1_cvals_otherobj",
-                "top1_idx_otherobj",
-                "top1_hists_otherobj",
-            ]
-            save_paths = [
-                data_saver.get_data_pathway(k, nn_analysis_config, obj)
-                for k in path_keys
-            ]
-            results = [
-                sameobj_top1_dists_with_xdists,
-                sameobj_top1_idxs_with_xdists,
-                sameobj_distance_hists_with_xdists,
-                otherobj_top1_dists,
-                otherobj_top1_shapey_idxs,
-                otherobj_distance_hists,
-            ]
-            for save_path, result in zip(save_paths, results):
-                data_saver.save(save_dir, save_path, result, overwrite=overwrite)
 
             # compute image rank of the top1 same obj image per exclusion
             sameobj_imgrank = an.ProcessData.get_positive_match_top1_imgrank(
@@ -142,37 +110,70 @@ def exclusion_distance_analysis_batch(
                 corrmats_obj_ax_row_subset, obj, ax, nn_analysis_config
             )
 
-            # hdfstore[obj_ax_key + "/top1_cvals"] = cval_arr_sameobj
-            # hdfstore[obj_ax_key + "/top1_idx"] = idx_sameobj
+            ## save results
+            path_keys = [
+                "top1_cvals",
+                "top1_idx",
+                "top1_hists",
+                "top1_per_obj_cvals",
+                "top1_per_obj_idx",
+                "top1_cvals_otherobj",
+                "top1_idx_otherobj",
+                "cval_hists_otherobj",
+                "sameobj_imgrank",
+                "sameobj_objrank",
+            ]
+            save_paths = [
+                data_saver.get_data_pathway(k, nn_analysis_config, obj)
+                for k in path_keys
+            ]
+            results = [
+                sameobj_top1_dists_with_xdists,
+                sameobj_top1_idxs_with_xdists,
+                sameobj_distance_hists_with_xdists,
+                top1_per_obj_dists,
+                top1_per_obj_idxs,
+                top1_other_obj_dists,
+                top1_other_obj_idxs,
+                other_obj_dists_hist,
+                sameobj_imgrank,
+                sameobj_objrank,
+            ]
+            for save_path, result in zip(save_paths, results):
+                data_saver.save(save_dir, save_path, result, overwrite=overwrite)
 
-            # if not contrast_reversed:
-            #     cval_mat_name = "cval_matrix"
-            # else:
-            #     if exclusion_mode == "soft":
-            #         cval_mat_name = "cval_matrix"
-            #     elif exclusion_mode == "hard":
-            #         cval_mat_name = "cval_orig"
-
-            # # grab top1 for all other objects
-
-            # hdfstore[obj_ax_key + "/top1_cvals_otherobj"] = top1_cval_otherobj
-            # hdfstore[obj_ax_key + "/top1_idx_otherobj"] = top1_idx_otherobj
-            # # count how many images come before the top1 same object view with exclusion
-            # hdfstore[obj_ax_key + "/sameobj_imgrank"] = sameobj_imagerank
-
-            # hdfstore[obj_ax_key + "/top1_per_obj_cvals"] = top1_per_obj_cvals
-            # hdfstore[obj_ax_key + "/top1_per_obj_idxs"] = top1_per_obj_idxs
-
-            # hdfstore[obj_ax_key + "/sameobj_objrank"] = sameobj_objrank
-
-            # # for object category exclusion analysis
-            # same_obj_cat_key = obj_ax_key + "/same_cat"
-            # for o in objnames:
-            #     other_obj_cat = o.split("_")[0]
-            #     if other_obj_cat == obj_cat and o != obj:
-            #         hdfstore[
-            #             same_obj_cat_key + "/{}/top1_cvals".format(o)
-            #         ] = cval_arr_sameobjcat
-            #         hdfstore[
-            #             same_obj_cat_key + "/{}/top1_idx".format(o)
-            #         ] = idx_sameobjcat
+            # save category results
+            for i in range(len(list_histogram_same_cat)):
+                other_obj, top1_dists_with_xdist_samecat = list_top1_dists_obj_same_cat[
+                    i
+                ]
+                _, top1_idxs_with_xdist_samecat = list_top1_idxs_obj_same_cat[i]
+                _, histogram_same_cat = list_histogram_same_cat[i]
+                xdist_save_path = data_saver.get_data_pathway(
+                    "top1_cvals_same_category", nn_analysis_config, obj, ax, other_obj
+                )
+                idx_save_path = data_saver.get_data_pathway(
+                    "top1_idx_same_category", nn_analysis_config, obj, ax, other_obj
+                )
+                hist_save_path = data_saver.get_data_pathway(
+                    "hist_with_exc_dist_same_category",
+                    nn_analysis_config,
+                    obj,
+                    ax,
+                    other_obj,
+                )
+                data_saver.save(
+                    save_dir,
+                    xdist_save_path,
+                    top1_dists_with_xdist_samecat,
+                    overwrite=overwrite,
+                )
+                data_saver.save(
+                    save_dir,
+                    idx_save_path,
+                    top1_idxs_with_xdist_samecat,
+                    overwrite=overwrite,
+                )
+                data_saver.save(
+                    save_dir, hist_save_path, histogram_same_cat, overwrite=overwrite
+                )

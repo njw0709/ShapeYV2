@@ -296,50 +296,6 @@ class ProcessData:
         return closest_dists, closest_shapey_idxs, hist_array
 
     @staticmethod
-    def get_top1_other_object(
-        other_obj_corrmat: dc.CorrMat, obj: str, nn_analysis_config: dc.NNAnalysisConfig
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        assert other_obj_corrmat.corrmat.shape[0] == utils.NUMBER_OF_VIEWS_PER_AXIS
-        if isinstance(other_obj_corrmat.corrmat, h5py.Dataset):
-            other_obj_corrmat_np = other_obj_corrmat.corrmat[:]
-        else:
-            other_obj_corrmat_np = other_obj_corrmat.corrmat
-
-        other_obj_corrmat_np = typing.cast(np.ndarray, other_obj_corrmat_np)
-        if other_obj_corrmat.corrmat.shape[1] != utils.SHAPEY200_NUM_IMGS:
-            other_obj_corrmat_np = (
-                PrepData.convert_column_subset_to_full_candidate_set_all_obj(
-                    other_obj_corrmat_np,
-                    other_obj_corrmat.description[1].shapey_idxs,
-                )
-            )
-        assert other_obj_corrmat_np.shape[1] == utils.SHAPEY200_NUM_IMGS
-
-        closest_dists = np.zeros((11, 1))
-        closest_idxs = np.zeros((11, 1), dtype=int)
-
-        # mask same obj with nan
-        sameobj_shapey_idx = utils.IndexingHelper.objname_ax_to_shapey_index(obj)
-        other_obj_corrmat_np[:, sameobj_shapey_idx] = np.nan
-        if nn_analysis_config.histogram:
-            np_bins = np.asarray(nn_analysis_config.bins)
-            histogram = np.apply_along_axis(
-                lambda r: np.histogram(r[~np.isnan(r)], bins=np_bins)[0],
-                1,
-                other_obj_corrmat_np,
-            )
-        else:
-            histogram = np.zeros((1, 1))
-
-        if nn_analysis_config.distance_measure == "correlation":
-            closest_dists[:, 0] = np.nanmax(other_obj_corrmat_np, axis=1)
-            closest_idxs[:, 0] = np.nanargmax(other_obj_corrmat_np, axis=1)
-        else:  # distance == 'euclidean'
-            closest_dists[:, 0] = np.nanmin(other_obj_corrmat_np, axis=1)
-            closest_idxs[:, 0] = np.nanargmin(other_obj_corrmat_np, axis=1)
-        return (closest_dists, closest_idxs, histogram)
-
-    @staticmethod
     def get_positive_match_top1_imgrank(
         top1_same_obj_with_exc_dist: np.ndarray,
         other_obj_corrmat: dc.CorrMat,
@@ -391,8 +347,8 @@ class ProcessData:
 
     @staticmethod
     def get_top_per_object(
-        other_obj_corrmat: dc.CorrMat, obj: str, distance: str = "correlation"
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        other_obj_corrmat: dc.CorrMat, obj: str, nn_analysis_config: dc.NNAnalysisConfig
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         top1_cvals = []
         top1_idxs = []
         assert other_obj_corrmat.corrmat.shape[0] == utils.NUMBER_OF_VIEWS_PER_AXIS
@@ -411,6 +367,19 @@ class ProcessData:
             )
         assert other_obj_corrmat_np.shape[1] == utils.SHAPEY200_NUM_IMGS
 
+        # mask same obj with nan
+        sameobj_shapey_idx = utils.IndexingHelper.objname_ax_to_shapey_index(obj)
+        other_obj_corrmat_np[:, sameobj_shapey_idx] = np.nan
+        if nn_analysis_config.histogram:
+            np_bins = np.asarray(nn_analysis_config.bins)
+            other_obj_dists_hist = np.apply_along_axis(
+                lambda r: np.histogram(r[~np.isnan(r)], bins=np_bins)[0],
+                1,
+                other_obj_corrmat_np,
+            )
+        else:
+            other_obj_dists_hist = np.zeros((1, 1))
+
         for other_obj in utils.SHAPEY200_OBJS:
             if not other_obj == obj:
                 other_obj_idxs = utils.IndexingHelper.objname_ax_to_shapey_index(
@@ -418,7 +387,7 @@ class ProcessData:
                 )
                 cval_mat_obj = other_obj_corrmat_np[:, other_obj_idxs]
                 other_obj_idx_start = min(other_obj_idxs)
-                if distance == "correlation":
+                if nn_analysis_config.distance_measure == "correlation":
                     top1_cvals.append(np.nanmax(cval_mat_obj, axis=1))
                     top1_idxs.append(
                         np.nanargmax(cval_mat_obj, axis=1) + other_obj_idx_start
@@ -430,7 +399,7 @@ class ProcessData:
                     )
         top1_per_obj_dists = np.array(top1_cvals, dtype=float).T
         top1_per_obj_idxs = np.array(top1_idxs, dtype=np.int64).T
-        if distance == "correlation":
+        if nn_analysis_config.distance_measure == "correlation":
             top1_other_obj_dists = np.nanmax(top1_per_obj_dists, axis=1, keepdims=True)
             top1_other_obj_idxs = top1_per_obj_idxs[
                 np.arange(utils.NUMBER_OF_VIEWS_PER_AXIS),
@@ -449,6 +418,7 @@ class ProcessData:
             top1_per_obj_idxs,
             top1_other_obj_dists,
             top1_other_obj_idxs,
+            other_obj_dists_hist,
         )
 
     @staticmethod
