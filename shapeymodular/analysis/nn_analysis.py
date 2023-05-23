@@ -82,6 +82,56 @@ class PrepData:
             assert set(img_list_idx) <= set(corrmats[0].description.imgnames[0])
 
     @staticmethod
+    def cut_single_obj_ax_to_all_corrmat(
+        corrmat: dc.CorrMat, obj: str, ax: str
+    ) -> dc.CorrMat:
+        row_shapey_idx = utils.IndexingHelper.objname_ax_to_shapey_index(obj, ax)
+        col_shapey_idx = corrmat.description[1].shapey_idxs
+
+        row_corrmat_idx, available_row_shapey_idx = corrmat.description[
+            0
+        ].shapey_idx_to_corrmat_idx(row_shapey_idx)
+        col_corrmat_idx, available_col_shapey_idx = corrmat.description[
+            1
+        ].shapey_idx_to_corrmat_idx(col_shapey_idx)
+        row_corrmat_idx = typing.cast(List[int], row_corrmat_idx)
+        col_corrmat_idx = typing.cast(List[int], col_corrmat_idx)
+        return corrmat.get_subset(row_corrmat_idx, col_corrmat_idx)
+
+    @staticmethod
+    def cut_single_obj_ax_sameobj_corrmat(
+        corrmats: Sequence[dc.CorrMat],
+        obj: str,
+        ax: str,
+        nn_analysis_config: dc.NNAnalysisConfig,
+    ) -> dc.CorrMat:
+        assert corrmats[0].corrmat.shape[0] == utils.NUMBER_OF_VIEWS_PER_AXIS
+        if nn_analysis_config.contrast_exclusion:
+            assert len(corrmats) == 2
+        # compute what is the closest same object image to the original image with exclusion distance
+        col_sameobj_shapey_idx = utils.IndexingHelper.objname_ax_to_shapey_index(
+            obj, "all"
+        )  # cut column for same object
+        col_sameobj_corrmat_idx, available_sameobj_shapey_idx = (
+            corrmats[0].description[1].shapey_idx_to_corrmat_idx(col_sameobj_shapey_idx)
+        )
+        col_sameobj_corrmat_idx = typing.cast(List[int], col_sameobj_corrmat_idx)
+        row_corrmat_idx = list(range(utils.NUMBER_OF_VIEWS_PER_AXIS))
+
+        # compare original to background contrast reversed image if contrast_reversed is True
+        # sameobj_corrmat_subset = row (11 images in series ax), col (all available same object images)
+        if nn_analysis_config.contrast_exclusion:
+            sameobj_corrmat_subset = corrmats[1].get_subset(
+                row_corrmat_idx, col_sameobj_corrmat_idx
+            )
+        else:
+            sameobj_corrmat_subset = corrmats[0].get_subset(
+                row_corrmat_idx, col_sameobj_corrmat_idx
+            )
+
+        return sameobj_corrmat_subset
+
+    @staticmethod
     def prep_subset_for_exclusion_analysis(
         obj: str, obj_ax_corrmat: dc.CorrMat
     ) -> np.ndarray:
@@ -162,17 +212,21 @@ class ProcessData:
         ax: str,
         sameobj_corrmat: dc.CorrMat,
         nn_analysis_config: dc.NNAnalysisConfig,
-    ) -> Tuple[np.ndarray, np.ndarray]:  # distances, indices
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:  # distances, indices
         cval_mat_full_np = PrepData.prep_subset_for_exclusion_analysis(
             obj, sameobj_corrmat
         )
         # convert numpy array to cupy array for gpu processing
         cval_mat = cp.asarray(cval_mat_full_np)
 
-        closest_dists, closest_shapey_idxs, _ = ProcessData.get_top1_with_all_exc_dists(
+        (
+            closest_dists,
+            closest_shapey_idxs,
+            hists_with_xdists,
+        ) = ProcessData.get_top1_with_all_exc_dists(
             cval_mat, obj, ax, nn_analysis_config
         )
-        return closest_dists, closest_shapey_idxs
+        return closest_dists, closest_shapey_idxs, hists_with_xdists
 
     @staticmethod
     def get_top1_with_all_exc_dists(
@@ -222,7 +276,7 @@ class ProcessData:
                 counts = cp.apply_along_axis(
                     lambda r: cp.histogram(r[~np.isnan(r)], bins=cp_bins)[0], 1, res
                 )
-                hist_array[xdist, :, :] = counts.get()
+                hist_array[:, xdist, :] = counts.get()
             if nn_analysis_config.distance_measure == "correlation":
                 closest_dist_xdist = cp.nanmax(res, axis=1)
                 closest_idx_xdist = cp.nanargmax(res, axis=1)
@@ -243,8 +297,8 @@ class ProcessData:
 
     @staticmethod
     def get_top1_other_object(
-        other_obj_corrmat: dc.CorrMat, obj: str, distance: str = "correlation"
-    ):
+        other_obj_corrmat: dc.CorrMat, obj: str, nn_analysis_config: dc.NNAnalysisConfig
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         assert other_obj_corrmat.corrmat.shape[0] == utils.NUMBER_OF_VIEWS_PER_AXIS
         if isinstance(other_obj_corrmat.corrmat, h5py.Dataset):
             other_obj_corrmat_np = other_obj_corrmat.corrmat[:]
@@ -263,16 +317,27 @@ class ProcessData:
 
         closest_dists = np.zeros((11, 1))
         closest_idxs = np.zeros((11, 1), dtype=int)
+
         # mask same obj with nan
         sameobj_shapey_idx = utils.IndexingHelper.objname_ax_to_shapey_index(obj)
         other_obj_corrmat_np[:, sameobj_shapey_idx] = np.nan
-        if distance == "correlation":
+        if nn_analysis_config.histogram:
+            np_bins = np.asarray(nn_analysis_config.bins)
+            histogram = np.apply_along_axis(
+                lambda r: np.histogram(r[~np.isnan(r)], bins=np_bins)[0],
+                1,
+                other_obj_corrmat_np,
+            )
+        else:
+            histogram = np.zeros((1, 1))
+
+        if nn_analysis_config.distance_measure == "correlation":
             closest_dists[:, 0] = np.nanmax(other_obj_corrmat_np, axis=1)
             closest_idxs[:, 0] = np.nanargmax(other_obj_corrmat_np, axis=1)
         else:  # distance == 'euclidean'
             closest_dists[:, 0] = np.nanmin(other_obj_corrmat_np, axis=1)
             closest_idxs[:, 0] = np.nanargmin(other_obj_corrmat_np, axis=1)
-        return (closest_dists, closest_idxs)
+        return (closest_dists, closest_idxs, histogram)
 
     @staticmethod
     def get_positive_match_top1_imgrank(
@@ -388,18 +453,18 @@ class ProcessData:
 
     @staticmethod
     def get_positive_match_top1_objrank(
-        top1_sameobj_with_exc_dist: np.ndarray,
-        top1_cval_per_obj: np.ndarray,
+        sameobj_top1_dists_with_xdists: np.ndarray,
+        top1_per_obj_dists: np.ndarray,
         distance: str = "correlation",
     ) -> np.ndarray:
         sameobj_objrank = []
-        top1_cval_per_obj = cp.array(top1_cval_per_obj)
-        for col in top1_sameobj_with_exc_dist.T:
-            comparison_mask = cp.tile(col, (top1_cval_per_obj.shape[1], 1)).T
+        top1_per_obj_dists = cp.array(top1_per_obj_dists)
+        for col in sameobj_top1_dists_with_xdists.T:
+            comparison_mask = cp.tile(col, (top1_per_obj_dists.shape[1], 1)).T
             if distance == "correlation":
-                count_col = (top1_cval_per_obj > comparison_mask).sum(axis=1)
+                count_col = (top1_per_obj_dists > comparison_mask).sum(axis=1)
             else:
-                count_col = (top1_cval_per_obj < comparison_mask).sum(axis=1)
+                count_col = (top1_per_obj_dists < comparison_mask).sum(axis=1)
             count_col = count_col.get()
             count_col = count_col.astype(np.float32)
             count_col[np.isnan(col)] = np.nan
@@ -408,7 +473,7 @@ class ProcessData:
 
     @staticmethod
     def get_top1_sameobj_cat_with_exclusion(
-        corrmat_obj_ax_row_subset: dc.CorrMat,
+        list_corrmat_obj_ax_row_subset: Sequence[dc.CorrMat],
         curr_obj: str,
         ax: str,
         nn_analysis_config: dc.NNAnalysisConfig,
@@ -417,6 +482,11 @@ class ProcessData:
         Sequence[Tuple[str, np.ndarray]],
         Sequence[Tuple[str, np.ndarray]],
     ]:
+        if nn_analysis_config.contrast_exclusion:
+            corrmat_obj_ax_row_subset = list_corrmat_obj_ax_row_subset[1]
+        else:
+            corrmat_obj_ax_row_subset = list_corrmat_obj_ax_row_subset[0]
+
         list_top1_dists_obj_same_cat: Sequence[Tuple[str, np.ndarray]] = []
         list_top1_idxs_obj_same_cat: Sequence[Tuple[str, np.ndarray]] = []
         list_histogram_same_cat: Sequence[Tuple[str, np.ndarray]] = []

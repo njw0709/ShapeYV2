@@ -116,6 +116,9 @@ class HDFProcessor(dl.DataLoader[h5py.File]):
             == "top1_cvals_same_category"  # correlation (distance) of the closest image in the same category
             or data_type
             == "top1_idx_same_category"  # index (image index in alphabetical order) of the closest image in the same category
+            or data_type
+            == "top1_hists"  # 3D histogram matrix with exclusion (11 ref imgs x 11 exc dists x histogram counts per bin)
+            or data_type == "top1_hists_otherobj"
         ):
             if obj is None or ax is None:
                 raise ValueError("obj must be specified for analysis results")
@@ -128,6 +131,8 @@ class HDFProcessor(dl.DataLoader[h5py.File]):
                 or data_type == "sameobj_imgrank"
                 or data_type == "top1_per_obj_cvals"
                 or data_type == "top1_per_obj_idx"
+                or data_type == "top1_hists"
+                or data_type == "top1_hists_otherobj"
             ):
                 key = key_head + data_type
             elif (
