@@ -189,7 +189,7 @@ class TestProcessData:
         )
         # check result consistency
         contain_ax = [all([c in a for c in ax]) for a in utils.ALL_AXES]
-        num_relevant_ax = sum(contain_ax)
+        num_relevant_ax = sum(contain_ax)  # type: ignore
         for r in range(histogram_counts.shape[0]):
             for exc_dist in range(histogram_counts.shape[1]):
                 all_counts = histogram_counts[r, exc_dist, :].sum()
