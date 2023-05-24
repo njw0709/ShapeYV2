@@ -1,10 +1,8 @@
 import pytest
 import os
 import h5py
-import random
-from .. import data_classes as dc
-from .. import data_loader as dl
-from .. import utils
+import shapeymodular.data_classes as dc
+import shapeymodular.data_loader as dl
 
 file_path = os.path.realpath(__file__)
 
