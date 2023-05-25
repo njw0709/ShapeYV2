@@ -6,6 +6,7 @@ from shapeymodular import data_classes as cd
 import os
 from . import data_loader as dl
 import shapeymodular.utils as utils
+import warnings
 
 
 class FeatureDirMatProcessor(dl.DataLoader):
@@ -51,14 +52,19 @@ class FeatureDirMatProcessor(dl.DataLoader):
         return dict_hierarchy
 
     @staticmethod
-    def load(data_path: str, key: str) -> Sequence[np.ndarray]:
-        with h5py.File(os.path.join(data_path, key), "r") as f:
+    def load(data_path: str, file_name: str) -> Sequence[np.ndarray]:
+        with h5py.File(os.path.join(data_path, file_name), "r") as f:
             keys = list(f.keys())
             data = []
             for k in keys:
                 if isinstance(f[k], h5py.Dataset):
                     dataset = typing.cast(h5py.Dataset, f[k])
                     data.append(dataset[:])
+                else:
+                    warnings.warn(
+                        "The file contains nested data structure. Not loading data from key: "
+                        + k
+                    )
             return data
 
     @staticmethod
@@ -66,23 +72,22 @@ class FeatureDirMatProcessor(dl.DataLoader):
         data_path: Union[str, h5py.File],
         key: str,
         data: np.ndarray,
-        dtype: Union[None, str],
-        overwrite: bool,
+        overwrite: bool = False,
     ) -> None:
         if isinstance(data_path, str):
             if os.path.isfile(data_path):
                 if not overwrite:
-                    raise ValueError(
-                        "Cannot save to directory without overwriting existing files"
-                    )
-            with h5py.File(data_path, "w") as f:
-                f.create_dataset(key, data=data)
+                    with h5py.File(data_path, "a") as f:
+                        f.create_dataset(key, data=data, dtype=data.dtype)
+                else:
+                    with h5py.File(data_path, "w") as f:
+                        f.create_dataset(key, data=data, dtype=data.dtype)
         elif isinstance(data_path, h5py.File):
             # check if key already exists
             if key in data_path and overwrite:
                 del data_path[key]
             try:
-                data_path.create_dataset(key, data=data, dtype=dtype)
+                data_path.create_dataset(key, data=data, dtype=data.dtype)
             except Exception as e:
                 print("Cannot save with following error: ", e)
                 raise e
@@ -90,3 +95,19 @@ class FeatureDirMatProcessor(dl.DataLoader):
     @staticmethod
     def get_data_pathway(data_type: str):
         raise NotImplementedError
+
+    @staticmethod
+    def check_all_feature_file_exists(
+        data_dir: str, file_head: str = "features_", extension: str = "mat"
+    ) -> Tuple[bool, Sequence[str]]:
+        filenames = os.listdir(data_dir)
+        imgnames = []
+        features = []
+        for f in filenames:
+            if extension in f and file_head in f:
+                imgname = f.split(file_head)[1].split(".")[0] + ".png"
+                if imgname in utils.SHAPEY200_IMGNAMES:
+                    imgnames.append(imgname)
+                    features.append(f)
+        imgnames.sort()
+        return set(imgnames) == set(utils.SHAPEY200_IMGNAMES), features
