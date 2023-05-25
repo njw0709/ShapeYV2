@@ -73,6 +73,7 @@ class FeatureDirMatProcessor(dl.DataLoader):
         key: str,
         data: np.ndarray,
         overwrite: bool = False,
+        dtype: Union[type, None] = None,
     ) -> None:
         if isinstance(data_path, str):
             if os.path.isfile(data_path):

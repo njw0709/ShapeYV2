@@ -14,7 +14,10 @@ def compute_threshold_subsample(
     sample_size: int = 8000,
     orientation_axis: int = 1,
     threshold_level: float = 0.8,
+    dtype: Union[type, None] = None,
 ) -> None:
+    if dtype is None:
+        dtype = np.uint32
     if save_dir is None:
         save_dir = features_directory
     save_file_name = os.path.join(save_dir, "thresholds.mat")
@@ -42,6 +45,8 @@ def compute_threshold_subsample(
             accumulators[i], axis=orientation_axis
         )
         threshold = compute_activation_threshold(concatenated_features, threshold_level)
+        if dtype == np.uint32:
+            threshold = np.rint(threshold).astype(dtype)
         threshold = np.repeat(
             np.expand_dims(threshold, axis=orientation_axis),
             shape[1],
@@ -52,4 +57,5 @@ def compute_threshold_subsample(
             "features_threshold_{}".format(i),
             threshold,
             overwrite=False,
+            dtype=dtype,
         )
