@@ -82,6 +82,9 @@ class FeatureDirMatProcessor(dl.DataLoader):
                 else:
                     with h5py.File(data_path, "w") as f:
                         f.create_dataset(key, data=data, dtype=data.dtype)
+            else:
+                with h5py.File(data_path, "w") as f:
+                    f.create_dataset(key, data=data, dtype=data.dtype)
         elif isinstance(data_path, h5py.File):
             # check if key already exists
             if key in data_path and overwrite:

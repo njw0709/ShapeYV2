@@ -4,6 +4,7 @@ from typing import Union
 import random
 import numpy as np
 import os
+from tqdm import tqdm
 
 
 def compute_threshold_subsample(
@@ -29,7 +30,7 @@ def compute_threshold_subsample(
 
     # accumulate the subsampled features
     accumulators = [[]] * len(data)
-    for feature_file in subsampled_feature_files:
+    for feature_file in tqdm(subsampled_feature_files):
         data = data_loader.load(features_directory, feature_file)
         for i in range(len(data)):
             assert data[i].shape == shape
