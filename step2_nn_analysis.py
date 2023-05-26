@@ -1,7 +1,6 @@
 import os
 import shapeymodular.macros.nn_batch as nn_batch
 import shapeymodular.data_classes as dc
-import shapeymodular.utils as utils
 import shapeymodular.data_loader as dl
 import h5py
 
@@ -20,7 +19,7 @@ RESULTS_DIR = os.path.join(
 
 CONFIG_PATH = os.path.join(DISTANCES_DIR, "config_normal_pw.json")
 
-config = utils.load_config(CONFIG_PATH)
+config = dc.load_config(CONFIG_PATH)
 distances_mat_files = [f for f in os.listdir(DISTANCES_DIR) if f.endswith(".mat")]
 data_loader = dl.HDFProcessor()
 input_data_descriptions = (

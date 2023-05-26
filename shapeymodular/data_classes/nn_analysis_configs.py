@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from dataclasses_json import DataClassJsonMixin
 from typing import Union, List, Sequence
+import json
+from dacite import from_dict
 
 
 @dataclass
@@ -27,3 +29,10 @@ class NNAnalysisConfig(DataClassJsonMixin):
     ]  # if none, follows original key structure. if specified, uses the specified key to get distances.
     histogram: bool
     bins: Union[None, Sequence[float]]
+
+
+def load_config(json_path: str) -> NNAnalysisConfig:
+    with open(json_path, "r") as f:
+        config_dict = json.load(f)
+        config = from_dict(data_class=NNAnalysisConfig, data=config_dict)
+    return config
