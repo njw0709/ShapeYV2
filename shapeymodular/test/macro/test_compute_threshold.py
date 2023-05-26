@@ -33,7 +33,11 @@ class TestComputeThreshold:
     def test_compute_threshold_simple(self, compute_threshold_test_setup):
         (features_directory, save_dir, data_loader) = compute_threshold_test_setup
         compute_threshold_subsample(
-            features_directory, data_loader, save_dir=save_dir, sample_size=500
+            features_directory,
+            data_loader,
+            variable_name="subframe",
+            save_dir=save_dir,
+            sample_size=500,
         )
         assert os.path.exists(os.path.join(save_dir, "thresholds.mat"))
         with h5py.File(os.path.join(save_dir, "thresholds.mat")) as f:

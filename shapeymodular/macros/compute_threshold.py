@@ -10,6 +10,7 @@ from tqdm import tqdm
 def compute_threshold_subsample(
     features_directory: str,
     data_loader: dl.FeatureDirMatProcessor,
+    variable_name: str = "l2pool",
     save_dir: Union[str, None] = None,
     file_name: Union[str, None] = None,
     sample_size: int = 8000,
@@ -37,7 +38,9 @@ def compute_threshold_subsample(
     # accumulate the subsampled features
     accumulators = [[]] * len(data)
     for feature_file in tqdm(subsampled_feature_files):
-        data = data_loader.load(features_directory, feature_file, filter_key="l2pool")
+        data = data_loader.load(
+            features_directory, feature_file, filter_key=variable_name
+        )
         for i in range(len(data)):
             assert data[i].shape == shape
             accumulators[i].append(data[i])

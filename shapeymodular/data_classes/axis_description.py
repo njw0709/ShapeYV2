@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Sequence, Union, Tuple, List
 from bidict import bidict
-from shapeymodular import utils
+import shapeymodular.utils as utils
 import numpy as np
 
 

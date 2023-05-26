@@ -2,7 +2,7 @@ import h5py
 from typing import Union, Tuple, Sequence
 import typing
 import numpy as np
-from shapeymodular import data_classes as cd
+import shapeymodular.data_classes as cd
 import os
 from . import data_loader as dl
 import shapeymodular.utils as utils

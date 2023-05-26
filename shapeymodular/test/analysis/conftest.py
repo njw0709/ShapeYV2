@@ -3,10 +3,10 @@ from typing import List
 import h5py
 import pathlib
 import os
-from shapeymodular import data_loader as dl
-from shapeymodular import data_classes as dc
-from shapeymodular import analysis as an
-from shapeymodular import utils
+import shapeymodular.data_loader as dl
+import shapeymodular.data_classes as dc
+import shapeymodular.analysis as an
+import shapeymodular.utils as utils
 from dacite import from_dict
 import json
 import random
