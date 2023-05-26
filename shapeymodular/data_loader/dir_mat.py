@@ -52,9 +52,13 @@ class FeatureDirMatProcessor(dl.DataLoader):
         return dict_hierarchy
 
     @staticmethod
-    def load(data_path: str, file_name: str) -> Sequence[np.ndarray]:
+    def load(
+        data_path: str, file_name: str, filter_key: Union[None, str] = None
+    ) -> Sequence[np.ndarray]:
         with h5py.File(os.path.join(data_path, file_name), "r") as f:
             keys = list(f.keys())
+            if filter_key is not None:
+                keys = [k for k in keys if filter_key in k]
             data = []
             for k in keys:
                 if isinstance(f[k], h5py.Dataset):

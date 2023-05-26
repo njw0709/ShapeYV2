@@ -11,6 +11,7 @@ def compute_threshold_subsample(
     features_directory: str,
     data_loader: dl.FeatureDirMatProcessor,
     save_dir: Union[str, None] = None,
+    file_name: Union[str, None] = None,
     sample_size: int = 8000,
     orientation_axis: int = 1,
     threshold_level: float = 0.8,
@@ -20,7 +21,9 @@ def compute_threshold_subsample(
         dtype = np.uint32
     if save_dir is None:
         save_dir = features_directory
-    save_file_name = os.path.join(save_dir, "thresholds.mat")
+    if file_name is None:
+        file_name = "thresholds.mat"
+    save_file_name = os.path.join(save_dir, file_name)
     all_exists, feature_files = data_loader.check_all_feature_file_exists(
         features_directory
     )
@@ -34,7 +37,7 @@ def compute_threshold_subsample(
     # accumulate the subsampled features
     accumulators = [[]] * len(data)
     for feature_file in tqdm(subsampled_feature_files):
-        data = data_loader.load(features_directory, feature_file)
+        data = data_loader.load(features_directory, feature_file, filter_key="l2pool")
         for i in range(len(data)):
             assert data[i].shape == shape
             accumulators[i].append(data[i])
@@ -54,7 +57,7 @@ def compute_threshold_subsample(
         )
         data_loader.save(
             save_file_name,
-            "features_threshold_{}".format(i),
+            "features_thresholds_{}".format(i),
             threshold,
             overwrite=False,
             dtype=dtype,
