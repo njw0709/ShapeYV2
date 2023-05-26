@@ -1,5 +1,7 @@
 import os
 import shapeymodular.utils as utils
+import json
+
 
 # get all directories to run
 all_features_directories = []
@@ -15,6 +17,9 @@ for dir in datadirs:
         if "features-results-" in fd
     ]
     all_features_directories.extend(features_dir)
+all_features_directories.sort()
+# print(all_features_directories)
+# print(len(all_features_directories))
 
 imgnames_all_path = "/home/namj/projects/ShapeYTriad/data/raw/imgnames_all.txt"
 imgnames_pw_path = "/home/namj/projects/ShapeYTriad/data/raw/imgnames_pw_series.txt"
@@ -27,9 +32,17 @@ for i, dir in enumerate(all_features_directories):
     # Print the current working directory
     print("Current working directory: {0}".format(cwd))
 
-    # rename threshold file
-    cmd = ["mv", "thresholds.mat", "features_thresholds.mat"]
-    utils.execute_and_print(cmd)
+    if os.path.exists(os.path.join(dir, "thresholds.mat")):
+        with open("config.json") as f:
+            config = json.load(f)
+        assert config["featuresThresholdsFileName"] == os.path.join(
+            dir, "thresholds.mat"
+        )
+        # remove threshold file
+        # cmd = ["rm", "thresholds.mat"]
+    else:
+        raise FileNotFoundError("thresholds.mat not found")
+        # continue
 
     # copy imgname files
     cmd = ["cp", imgnames_all_path, "."]
@@ -45,7 +58,7 @@ for i, dir in enumerate(all_features_directories):
         "-f",
         "imgnames_all.txt",
         "-g",
-        "0",
+        "1",
         "--distance-name",
         "Jaccard",
         "--pairwise-dist-in",

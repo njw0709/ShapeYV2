@@ -8,7 +8,7 @@ all_features_directories = []
 base_dir = "/home/francis/nineCasesToRun/"
 datadirs = os.listdir(base_dir)
 datadirs.sort()
-datadirs = datadirs
+datadirs = datadirs[:5]
 print(datadirs)
 for dir in datadirs:
     features_dir = [
