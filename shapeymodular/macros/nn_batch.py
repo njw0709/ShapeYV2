@@ -145,7 +145,7 @@ def save_exclusion_distance_analysis_results(
         sameobj_imgrank,
         sameobj_objrank,
     ]
-    for save_path, r in zip(save_paths, single_obj_results):
+    for save_path, r in list(zip(save_paths, single_obj_results)):
         data_saver.save(save_dir, save_path, r, overwrite=overwrite)
 
     # save category results
