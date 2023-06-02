@@ -18,7 +18,7 @@ for dir in datadirs:
     ]
     all_features_directories.extend(features_dir)
 all_features_directories.sort()
-# print(all_features_directories)
+print(all_features_directories)
 # print(len(all_features_directories))
 
 imgnames_all_path = "/home/namj/projects/ShapeYTriad/data/raw/imgnames_all.txt"
@@ -32,17 +32,26 @@ for i, dir in enumerate(all_features_directories):
     # Print the current working directory
     print("Current working directory: {0}".format(cwd))
 
+    if os.path.exists(os.path.join(dir, "distances-Jaccard.mat")):
+        print("distances-Jaccard.mat exists, skipping")
+        continue
+
     if os.path.exists(os.path.join(dir, "thresholds.mat")):
         with open("config.json") as f:
             config = json.load(f)
         assert config["featuresThresholdsFileName"] == os.path.join(
             dir, "thresholds.mat"
         )
-        # remove threshold file
-        # cmd = ["rm", "thresholds.mat"]
+
     else:
-        raise FileNotFoundError("thresholds.mat not found")
-        # continue
+        if os.path.exists(os.path.join(dir, "features_thresholds.mat")):
+            cmd = ["mv", "features_thresholds.mat", "thresholds.mat"]
+            utils.execute_and_print(cmd)
+            with open("config.json") as f:
+                config = json.load(f)
+            assert config["featuresThresholdsFileName"] == os.path.join(
+                dir, "thresholds.mat"
+            )
 
     # copy imgname files
     cmd = ["cp", imgnames_all_path, "."]

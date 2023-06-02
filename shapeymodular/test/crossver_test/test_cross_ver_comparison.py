@@ -16,11 +16,16 @@ def test_cross_ver_comparison_keys_and_dims(
                     if k[-1] == "s":
                         k_v2 = k[:-1]
                         data_v2 = hdf_v2[k_v2][:]
+                        print(
+                            "Key {} not found in HDF file. Using {} instead.".format(
+                                k, k_v2
+                            )
+                        )
                     else:
                         raise KeyError(f"Key {k} not found in HDF file")
                 except KeyError:
                     raise KeyError(f"Key {k} not found in HDF file")
-            data_v1 = typing.cast(np.ndarray, data_v1)
+            data_v1 = typing.cast(np.ndarray, data_v1)  # type: ignore
             data_v2 = typing.cast(np.ndarray, data_v2)
             try:
                 assert data_v1.shape == data_v2.shape
@@ -49,8 +54,8 @@ def test_cross_ver_comparison_values(dataset_key_list, v1_v2_analysis_results_hd
                         data_v2 = hdf_v2[k_v2][:]
                 except KeyError:
                     raise KeyError("Key {} not found in HDF file".format(k))
-            data_v1 = typing.cast(np.ndarray, data_v1)
-            data_v2 = typing.cast(np.ndarray, data_v2)
+            data_v1 = typing.cast(np.ndarray, data_v1)  # type: ignore
+            data_v2 = typing.cast(np.ndarray, data_v2)  # type: ignore
             try:
                 assert np.allclose(data_v1, data_v2, equal_nan=True)
             except AssertionError:

@@ -123,7 +123,7 @@ def save_exclusion_distance_analysis_results(
         "top1_idx",
         "top1_hists",
         "top1_per_obj_cvals",
-        "top1_per_obj_idx",
+        "top1_per_obj_idxs",
         "top1_cvals_otherobj",
         "top1_idx_otherobj",
         "cval_hist_otherobj",

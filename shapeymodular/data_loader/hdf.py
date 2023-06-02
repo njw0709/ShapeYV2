@@ -111,7 +111,7 @@ class HDFProcessor(dl.DataLoader[h5py.File]):
             or data_type
             == "top1_per_obj_cvals"  # correlation (distance) of the closest images for each object (i.e. 1 per object)
             or data_type
-            == "top1_per_obj_idx"  # index (image index in alphabetical order) of the closest images for each object (i.e. 1 per object)
+            == "top1_per_obj_idxs"  # index (image index in alphabetical order) of the closest images for each object (i.e. 1 per object)
             or data_type
             == "top1_cvals_same_category"  # correlation (distance) of the closest image in the same category
             or data_type
@@ -133,7 +133,7 @@ class HDFProcessor(dl.DataLoader[h5py.File]):
                 or data_type == "top1_idx_otherobj"
                 or data_type == "sameobj_imgrank"
                 or data_type == "top1_per_obj_cvals"
-                or data_type == "top1_per_obj_idx"
+                or data_type == "top1_per_obj_idxs"
                 or data_type == "top1_hists"
                 or data_type == "cval_hist_otherobj"
                 or data_type == "sameobj_objrank"
