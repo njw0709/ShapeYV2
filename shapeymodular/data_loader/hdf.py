@@ -60,7 +60,7 @@ class HDFProcessor(dl.DataLoader[h5py.File]):
         nn_analysis_config: cd.NNAnalysisConfig,
         obj: Union[str, None] = None,
         ax: Union[str, None] = None,
-        other_obj_cat: Union[str, None] = None,
+        other_obj_in_same_cat: Union[str, None] = None,
     ) -> str:
         ## get general key head for analysis data
         key_head = "/pairwise_correlation/"
@@ -144,18 +144,28 @@ class HDFProcessor(dl.DataLoader[h5py.File]):
                 or data_type == "top1_idx_same_category"
                 or data_type == "hist_with_exc_dist_same_category"
             ):
-                if other_obj_cat is None:
+                if other_obj_in_same_cat is None:
                     raise ValueError(
                         "other_obj_cat must be specified for same category analysis results"
                     )
                 if data_type == "top1_cvals_same_category":
                     key = (
-                        key_head + "/same_cat/{}/".format(other_obj_cat) + "top1_cvals"
+                        key_head
+                        + "/same_cat/{}/".format(other_obj_in_same_cat)
+                        + "top1_cvals"
                     )
                 elif data_type == "top1_idx_same_category":
-                    key = key_head + "/same_cat/{}/".format(other_obj_cat) + "top1_idx"
+                    key = (
+                        key_head
+                        + "/same_cat/{}/".format(other_obj_in_same_cat)
+                        + "top1_idx"
+                    )
                 elif data_type == "hist_with_exc_dist_same_category":
-                    key = key_head + "/same_cat/{}/".format(other_obj_cat) + "hist"
+                    key = (
+                        key_head
+                        + "/same_cat/{}/".format(other_obj_in_same_cat)
+                        + "hist"
+                    )
         else:
             raise ValueError("Invalid data_type")
         return key

@@ -17,13 +17,17 @@ class PrepData:
         input_data_description_path: Union[Tuple[str, str], None],
         data_loader: dl.DataLoader,
         nn_analysis_config: dc.NNAnalysisConfig,
+        nan_to_zero: bool = True,
     ) -> Sequence[dc.CorrMat]:
         corrmats: Sequence[dc.CorrMat] = []
         # list of corrmats (for contrast exclusion, two corrmats)
         # get path for corrmat
         corrmat_path = data_loader.get_data_pathway("corrmat", nn_analysis_config)
         # load and append
-        data = data_loader.load(data_root_path[0], corrmat_path)
+        data = data_loader.load(data_root_path[0], corrmat_path, lazy=True)
+        if nan_to_zero:
+            data = data[:]
+            data[np.isnan(data)] = 0.0
         if input_data_description_path is None:
             row_description = dc.AxisDescription(utils.SHAPEY200_IMGNAMES)
             col_description = dc.AxisDescription(utils.SHAPEY200_IMGNAMES)

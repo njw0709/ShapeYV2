@@ -198,7 +198,11 @@ def exclusion_distance_analysis_batch(
 ) -> None:
     # get correlation (or distance) matrix
     corrmats = an.PrepData.load_corrmat_input(
-        input_data, input_data_description_path, data_loader, nn_analysis_config
+        input_data,
+        input_data_description_path,
+        data_loader,
+        nn_analysis_config,
+        nan_to_zero=True,
     )
 
     # check if all necessary data is present for requested analysis

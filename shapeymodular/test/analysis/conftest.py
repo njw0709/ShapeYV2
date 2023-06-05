@@ -45,6 +45,22 @@ def nn_analysis_config():
 
 
 @pytest.fixture
+def analysis_save_dir():
+    hdf_path = os.path.join(
+        CURR_PATH, "../test_data/cross_version_test_data/analysis_results_v2/"
+    )
+    yield hdf_path
+
+
+@pytest.fixture
+def analysis_hdf(analysis_save_dir):
+    hdfs = [f for f in os.listdir(analysis_save_dir) if f.endswith(".h5")]
+    hdf_path = os.path.join(analysis_save_dir, random.choice(hdfs))
+    with h5py.File(hdf_path, "r") as f:
+        yield f
+
+
+@pytest.fixture
 def corrmat_no_contrast(
     data_root_path, input_data_description_path, data_loader, nn_analysis_config
 ):

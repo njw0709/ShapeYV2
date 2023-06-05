@@ -28,6 +28,7 @@ class TestPrepData:
                 input_data_description_path,
                 data_loader,
                 nn_analysis_config,
+                nan_to_zero=True,
             )
             assert len(corrmats) == 1
             assert corrmats[0].corrmat.shape == (
@@ -35,6 +36,7 @@ class TestPrepData:
                 utils.SHAPEY200_NUM_IMGS,
             )
             assert corrmats[0].description.imgnames[1] == utils.SHAPEY200_IMGNAMES
+            assert np.isnan(corrmats[0].corrmat).sum() == 0
             pw_imgnames = []
             for obj in utils.SHAPEY200_OBJS:
                 pw_imgnames.extend(

@@ -15,7 +15,9 @@ class DataLoader(ABC, Generic[T]):
 
     @staticmethod
     @abstractmethod
-    def load(datadir: T, key: str) -> Union[np.ndarray, h5py.Dataset]:
+    def load(
+        datadir: T, key: str, lazy: bool = True
+    ) -> Union[np.ndarray, h5py.Dataset]:
         pass
 
     @staticmethod
@@ -32,6 +34,10 @@ class DataLoader(ABC, Generic[T]):
     @staticmethod
     @abstractmethod
     def get_data_pathway(
-        data_type: str, nn_analysis_config: Union[None, cd.NNAnalysisConfig]
+        data_type: str,
+        nn_analysis_config: Union[None, cd.NNAnalysisConfig],
+        obj: Union[str, None] = None,
+        ax: Union[str, None] = None,
+        other_obj_in_same_cat: Union[str, None] = None,
     ) -> str:
         pass
