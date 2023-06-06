@@ -14,7 +14,7 @@ RESULTS_DIR = os.path.join(
     "test",
     "test_data",
     "cross_version_test_data",
-    "analysis_results",
+    "analysis_results_v2",
 )
 
 CONFIG_PATH = os.path.join(DISTANCES_DIR, "config_normal_pw.json")

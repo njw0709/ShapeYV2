@@ -155,4 +155,4 @@ class NNClassificationError:
         num_correct_allobj = np.array(list_top1_error).sum(axis=0)
         total_count = np.array(list_total_count).sum(axis=0)
         top1_error_mean = (total_count - num_correct_allobj) / total_count
-        return top1_error_per_obj, top1_error_mean, num_correct_allobj, total_count
+        return list_top1_error, top1_error_mean, num_correct_allobj, total_count

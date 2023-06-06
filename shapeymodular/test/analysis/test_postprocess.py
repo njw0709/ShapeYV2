@@ -2,6 +2,38 @@ import shapeymodular.analysis.postprocess as pp
 import shapeymodular.utils as utils
 import random
 import numpy as np
+import pytest
+import typing
+
+
+@pytest.fixture
+def top1_excdist(data_loader, analysis_hdf, nn_analysis_config):
+    obj = random.choice(utils.SHAPEY200_OBJS)
+    ax = random.choice(nn_analysis_config.axes)
+    key_top1_obj = data_loader.get_data_pathway(
+        "top1_cvals", nn_analysis_config, obj=obj, ax=ax
+    )
+
+    top1_excdist = data_loader.load(
+        analysis_hdf, key_top1_obj, lazy=False
+    )  # 1st dim = list of imgs in series, 2nd dim = exclusion dists, vals = top1 cvals with exc dist
+    top1_excdist = typing.cast(np.ndarray, top1_excdist)
+    yield top1_excdist
+
+
+@pytest.fixture
+def top1_other(data_loader, analysis_hdf, nn_analysis_config):
+    obj = random.choice(utils.SHAPEY200_OBJS)
+    ax = random.choice(nn_analysis_config.axes)
+    key_top1_other = data_loader.get_data_pathway(
+        "top1_cvals_otherobj", nn_analysis_config, obj=obj, ax=ax
+    )
+
+    top1_other = data_loader.load(
+        analysis_hdf, key_top1_other, lazy=False
+    )  # 1st dim = list of imgs in series, vals = top1 cvals excluding the same obj
+    top1_other = typing.cast(np.ndarray, top1_other)
+    yield top1_other
 
 
 class TestNNClassificationError:
@@ -28,6 +60,21 @@ class TestNNClassificationError:
                     top1_sameobj_cvals, same_objcat_cvals[i], equal_nan=True
                 )
 
+    def test_compare_same_obj_with_top1_other_obj(
+        self, top1_excdist, top1_other, nn_analysis_config
+    ):
+        top1_error_sameobj = (
+            pp.NNClassificationError.compare_same_obj_with_top1_other_obj(
+                top1_excdist, top1_other, nn_analysis_config.distance_measure
+            )
+        )
+        assert top1_error_sameobj.shape == (11, 11)
+
+        for i in range(utils.NUMBER_OF_VIEWS_PER_AXIS):
+            top1_cval_excdist = top1_excdist[:, i]
+            correct = top1_cval_excdist > top1_other.flatten()
+            assert (correct == top1_error_sameobj[:, i]).all()
+
     def test_generate_top1_error_data_obj(
         self, data_loader, analysis_hdf, nn_analysis_config
     ):
@@ -40,4 +87,16 @@ class TestNNClassificationError:
         ) = pp.NNClassificationError.generate_top1_error_data(
             data_loader, analysis_hdf, ax, nn_analysis_config
         )
-        pass
+
+        (
+            top1_error_per_obj,
+            top1_error_mean,
+            num_correct_allobj,
+            total_count,
+        ) = pp.NNClassificationError.generate_top1_error_data(
+            data_loader,
+            analysis_hdf,
+            ax,
+            nn_analysis_config,
+            within_category_error=True,
+        )
