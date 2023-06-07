@@ -45,12 +45,17 @@ def top1_other(data_loader, analysis_hdf, nn_analysis_config):
 
 
 @pytest.fixture
-def same_objcat_cvals(data_loader, analysis_hdf, random_obj_ax, nn_analysis_config):
+def same_objcat_cvals_and_idxs(
+    data_loader, analysis_hdf, random_obj_ax, nn_analysis_config
+):
     obj, ax = random_obj_ax
-    same_objcat_cvals = pp.NNClassificationError.gather_info_same_obj_cat(
+    (
+        same_objcat_cvals,
+        same_objcat_idxs,
+    ) = pp.NNClassificationError.gather_info_same_obj_cat(
         data_loader, analysis_hdf, obj, ax, nn_analysis_config
     )
-    yield same_objcat_cvals
+    yield same_objcat_cvals, same_objcat_idxs
 
 
 @pytest.fixture
@@ -72,7 +77,7 @@ class TestNNClassificationError:
     ):
         obj = random.choice(utils.SHAPEY200_OBJS)
         ax = "pw"
-        same_objcat_cvals = pp.NNClassificationError.gather_info_same_obj_cat(
+        same_objcat_cvals, _ = pp.NNClassificationError.gather_info_same_obj_cat(
             data_loader,
             typing.cast(h5py.File, analysis_hdf),
             obj,
@@ -110,9 +115,14 @@ class TestNNClassificationError:
             assert (correct == top1_error_sameobj[:, i]).all()
 
     def test_compare_same_obj_with_top1_per_obj(
-        self, same_objcat_cvals, top_per_obj_cvals, random_obj_ax, nn_analysis_config
+        self,
+        same_objcat_cvals_and_idxs,
+        top_per_obj_cvals,
+        random_obj_ax,
+        nn_analysis_config,
     ):
         obj, ax = random_obj_ax
+        same_objcat_cvals, _ = same_objcat_cvals_and_idxs
         correct_counts = (
             pp.NNClassificationError.compare_same_obj_cat_with_top1_other_obj_cat(
                 same_objcat_cvals,
@@ -121,6 +131,8 @@ class TestNNClassificationError:
                 distance=nn_analysis_config.distance_measure,
             )
         )
+        assert correct_counts.shape == (10, 11, 11)
+        correct_counts = (correct_counts.sum(axis=0)) > 0
         assert correct_counts.shape == (11, 11)
         for i in range(utils.NUMBER_OF_VIEWS_PER_AXIS):
             top1_same_objcat_cvals = same_objcat_cvals[:, :, i].max(axis=0)
@@ -156,6 +168,8 @@ class TestNNClassificationError:
         )
         assert isinstance(graph_data_category, dc.GraphData)
 
+
+class TestDistanceHistogram:
     def test_gather_histogram_data(
         self, data_loader, random_obj_ax, analysis_hdf, nn_analysis_config
     ):
@@ -163,7 +177,7 @@ class TestNNClassificationError:
         (
             hist_data_group_sameobj,
             hist_data_other_obj,
-        ) = pp.NNClassificationError.gather_histogram_data(
+        ) = pp.DistanceHistogram.gather_histogram_data(
             data_loader,
             analysis_hdf,
             obj,
@@ -179,7 +193,7 @@ class TestNNClassificationError:
         (
             hist_data_group_sameobj_cat,
             hist_data_other_obj_cat,
-        ) = pp.NNClassificationError.gather_histogram_data(
+        ) = pp.DistanceHistogram.gather_histogram_data(
             data_loader,
             analysis_hdf,
             obj,
@@ -193,3 +207,6 @@ class TestNNClassificationError:
             hist_data_group_sameobj_cat[0].x == np.array(nn_analysis_config.bins)
         ).all()
         assert (hist_data_other_obj_cat.x == np.array(nn_analysis_config.bins)).all()  # type: ignore
+
+
+# class TestErrorDisplay:

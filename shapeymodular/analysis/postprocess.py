@@ -16,8 +16,9 @@ class NNClassificationError:
         obj: str,
         ax: str,
         nn_analysis_config: cd.NNAnalysisConfig,
-    ) -> np.ndarray:
+    ) -> Tuple[np.ndarray, np.ndarray]:
         same_objcat_cvals = []
+        same_objcat_idxs = []
         obj_cat = utils.ImageNameHelper.get_obj_category_from_objname(obj)
         objs_same_cat = [
             other_obj for other_obj in utils.SHAPEY200_OBJS if obj_cat in other_obj
@@ -31,15 +32,29 @@ class NNClassificationError:
                     ax=ax,
                     other_obj_in_same_cat=other_obj,
                 )
+                key_idx = data_loader.get_data_pathway(
+                    "top1_idx_same_category",
+                    nn_analysis_config,
+                    obj=obj,
+                    ax=ax,
+                    other_obj_in_same_cat=other_obj,
+                )
                 other_obj_cval = data_loader.load(save_dir, key, lazy=False)
+                other_obj_idx = data_loader.load(save_dir, key_idx, lazy=False)
                 same_objcat_cvals.append(other_obj_cval)
+                same_objcat_idxs.append(other_obj_idx)
             else:
                 key = data_loader.get_data_pathway(
                     "top1_cvals", nn_analysis_config, obj=obj, ax=ax
                 )
+                key_idx = data_loader.get_data_pathway(
+                    "top1_idx", nn_analysis_config, obj=obj, ax=ax
+                )
                 top1_sameobj_cvals = data_loader.load(save_dir, key, lazy=False)
+                top1_sameobj_idx = data_loader.load(save_dir, key_idx, lazy=False)
                 same_objcat_cvals.append(top1_sameobj_cvals)
-        return np.array(same_objcat_cvals)
+                same_objcat_idxs.append(top1_sameobj_idx)
+        return np.array(same_objcat_cvals), np.array(same_objcat_idxs)
 
     @staticmethod
     def compare_same_obj_with_top1_other_obj(
@@ -56,12 +71,7 @@ class NNClassificationError:
         return correct_counts
 
     @staticmethod
-    def compare_same_obj_cat_with_top1_other_obj_cat(
-        same_objcat_cvals: np.ndarray,
-        top_per_obj_cvals: np.ndarray,
-        obj: str,
-        distance: str = "correlation",
-    ) -> np.ndarray:
+    def mask_same_obj_cat(top_per_obj_cvals: np.ndarray, obj: str) -> np.ndarray:
         obj_cat = utils.ImageNameHelper.get_obj_category_from_objname(obj)
         in_same_objcat = np.array(
             [
@@ -75,20 +85,50 @@ class NNClassificationError:
         same_obj_mask = np.tile(in_same_objcat, (11, 1))
         # zero out objs in same obj category
         top_per_obj_cvals[same_obj_mask] = np.nan
+        return top_per_obj_cvals
+
+    @staticmethod
+    def get_top1_dists_and_idx_other_obj_cat(
+        top_per_obj_cvals: np.ndarray,
+        top_per_obj_idxs: np.ndarray,
+        obj: str,
+        distance="correlation",
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        top_per_obj_cvals_masked = NNClassificationError.mask_same_obj_cat(
+            top_per_obj_cvals, obj
+        )
+        if distance == "correlation":
+            top1_dists_other_obj_cat = np.nanmax(top_per_obj_cvals_masked, axis=1)
+            top1_idxs_other_obj_cat = np.nanargmax(top_per_obj_cvals_masked, axis=1)
+        else:
+            top1_dists_other_obj_cat = np.nanmin(top_per_obj_cvals_masked, axis=1)
+            top1_idxs_other_obj_cat = np.nanargmin(top_per_obj_cvals_masked, axis=1)
+        # shapey index
+        top1_idxs_other_obj_cat = top_per_obj_idxs[
+            np.arange(utils.NUMBER_OF_VIEWS_PER_AXIS), top1_idxs_other_obj_cat
+        ]
+        return top1_dists_other_obj_cat, top1_idxs_other_obj_cat
+
+    @staticmethod
+    def compare_same_obj_cat_with_top1_other_obj_cat(
+        same_objcat_cvals: np.ndarray,
+        top_per_obj_cvals: np.ndarray,
+        obj: str,
+        distance: str = "correlation",
+    ) -> np.ndarray:
+        top_per_obj_cvals_masked = NNClassificationError.mask_same_obj_cat(
+            top_per_obj_cvals, obj
+        )
         if distance == "correlation":
             # top 1 other object category
-            top1_other_cat_cvals = np.nanmax(top_per_obj_cvals, axis=1)
+            top1_other_cat_cvals = np.nanmax(top_per_obj_cvals_masked, axis=1)
             comparison_mask = np.tile(top1_other_cat_cvals, (11, 1)).T
-            # top 1 same obj category with exclusion
-            top1_same_cat_cvals = np.nanmax(same_objcat_cvals, axis=0)
-            correct_counts = np.greater(top1_same_cat_cvals, comparison_mask)
+            correct_counts = np.greater(same_objcat_cvals, comparison_mask)
         else:
             # top 1 other object category
-            top1_other_cat_cvals = np.nanmin(top_per_obj_cvals, axis=1)
+            top1_other_cat_cvals = np.nanmin(top_per_obj_cvals_masked, axis=1)
             comparison_mask = np.tile(top1_other_cat_cvals, (11, 1)).T
-            # top 1 same obj category with exclusion
-            top1_same_cat_cvals = np.nanmin(same_objcat_cvals, axis=0)
-            correct_counts = np.less(top1_same_cat_cvals, comparison_mask)
+            correct_counts = np.less(same_objcat_cvals, comparison_mask)
         return correct_counts
 
     @staticmethod
@@ -119,7 +159,7 @@ class NNClassificationError:
 
         # if within_category_error = True, you consider a match to another obj in the same obj category a correct answer
         if within_category_error:
-            same_objcat_cvals = NNClassificationError.gather_info_same_obj_cat(
+            same_objcat_cvals, _ = NNClassificationError.gather_info_same_obj_cat(
                 data_loader, save_dir, obj, ax, nn_analysis_config
             )  # 1st dim = different objs in same obj cat, 2nd dim = imgs, 3rd dim = exclusion dist in ax
 
@@ -135,6 +175,9 @@ class NNClassificationError:
                     same_objcat_cvals, top_per_obj_cvals, obj, distance=distance
                 )
             )
+            # consolidate across all objects in same obj category.
+            # if any one of them is correct (above zero after summing), then it's correct.
+            correct_counts = (correct_counts.sum(axis=0)) > 0
         else:
             correct_counts = NNClassificationError.compare_same_obj_with_top1_other_obj(
                 top1_excdist, top1_other, distance=distance
@@ -166,6 +209,8 @@ class NNClassificationError:
         )
         return graph_data
 
+
+class DistanceHistogram:
     @staticmethod
     def gather_histogram_data(
         data_loader: dl.DataLoader,
@@ -252,3 +297,117 @@ class NNClassificationError:
             label="negative match candidates counts",
         )
         return graph_data_group_sameobj_xdist, hist_data_otherobj
+
+
+class ErrorDisplay:
+    @staticmethod
+    def get_list_of_errors(
+        data_loader: dl.DataLoader,
+        save_dir: Union[h5py.File, str],
+        obj: str,
+        ax: str,
+        exc_dist: int,
+        nn_analysis_config: cd.NNAnalysisConfig,
+        within_category_error=False,
+    ):
+        # Load necessary data
+        if not within_category_error:
+            key_top1_dists_sameobj = data_loader.get_data_pathway(
+                "top1_cvals", nn_analysis_config, obj=obj, ax=ax
+            )
+            key_top1_dists_otherobj = data_loader.get_data_pathway(
+                "top1_cvals_otherobj", nn_analysis_config, obj=obj, ax=ax
+            )
+            key_top1_idxs_sameobj = data_loader.get_data_pathway(
+                "top1_idxs", nn_analysis_config, obj=obj, ax=ax
+            )
+            key_top1_idxs_otherobj = data_loader.get_data_pathway(
+                "top1_idx_otherobj", nn_analysis_config, obj=obj, ax=ax
+            )
+
+            top1_dists_sameobj = typing.cast(
+                np.ndarray,
+                data_loader.load(save_dir, key_top1_dists_sameobj, lazy=False),
+            )
+            top1_dists_otherobj = typing.cast(
+                np.ndarray,
+                data_loader.load(save_dir, key_top1_dists_otherobj, lazy=False),
+            )
+            top1_idxs_sameobj = typing.cast(
+                np.ndarray,
+                data_loader.load(save_dir, key_top1_idxs_sameobj, lazy=False),
+            )
+            top1_idxs_otherobj = typing.cast(
+                np.ndarray,
+                data_loader.load(save_dir, key_top1_idxs_otherobj, lazy=False),
+            )
+            # Get NN correct results
+            correct = NNClassificationError.compare_same_obj_with_top1_other_obj(
+                top1_dists_sameobj,
+                top1_dists_otherobj,
+                nn_analysis_config.distance_measure,
+            )
+            # cut out exc_dist
+            incorrect = ~correct[:, exc_dist]
+            # ignore nan values
+            incorrect[np.isnan(top1_dists_sameobj[:, exc_dist])] = False
+            top1_idxs_sameobj_excdist = top1_idxs_sameobj[:, exc_dist]
+            best_positive_match_shapey_idxs = top1_idxs_sameobj_excdist[incorrect]
+            incorrect_match_shapey_idxs = top1_idxs_otherobj[incorrect]
+            best_positive_match_dists = top1_dists_sameobj[:, exc_dist][incorrect]
+            incorrect_match_dists = top1_dists_otherobj[incorrect]
+        else:
+            (
+                same_objcat_dists,
+                same_objcat_idxs,
+            ) = NNClassificationError.gather_info_same_obj_cat(
+                data_loader, save_dir, obj, ax, nn_analysis_config
+            )  # 1st dim = different objs in same obj cat, 2nd dim = imgs, 3rd dim = exclusion dist in axis
+            key_top_per_obj_cvals = data_loader.get_data_pathway(
+                "top1_per_obj_cvals", nn_analysis_config, obj=obj, ax=ax
+            )
+            key_top_per_obj_idxs = data_loader.get_data_pathway(
+                "top1_per_obj_idxs", nn_analysis_config, obj=obj, ax=ax
+            )
+            top_per_obj_cvals = typing.cast(
+                np.ndarray,
+                data_loader.load(save_dir, key_top_per_obj_cvals, lazy=False),
+            )  # 1st dim = refimgs, 2nd dim = objs (199)
+            top_per_obj_idxs = typing.cast(
+                np.ndarray, data_loader.load(save_dir, key_top_per_obj_idxs, lazy=False)
+            )
+            # get top1 dists and idxs for other objs in other obj categories
+            (
+                top1_dists_other_obj_cat,
+                top1_idxs_other_obj_cat,
+            ) = NNClassificationError.get_top1_dists_and_idx_other_obj_cat(
+                top_per_obj_cvals,
+                top_per_obj_idxs,
+                obj,
+                nn_analysis_config.distance_measure,
+            )
+
+            correct = (
+                NNClassificationError.compare_same_obj_cat_with_top1_other_obj_cat(
+                    same_objcat_dists,
+                    top_per_obj_cvals,
+                    obj,
+                    distance=nn_analysis_config.distance_measure,
+                )
+            )
+            # cut out exc_dist
+            incorrect = ~correct[:, :, exc_dist]
+            incorrect[np.isnan(same_objcat_dists[:, :, exc_dist])] = False
+            same_objcat_idxs_excdist = same_objcat_idxs[:, :, exc_dist]
+            best_positive_match_shapey_idxs = same_objcat_idxs_excdist[incorrect]
+            best_positive_match_dists = same_objcat_dists[:, :, exc_dist][incorrect]
+            incorrect_match_shapey_idxs = top1_idxs_other_obj_cat[incorrect]
+            incorrect_match_dists = top1_dists_other_obj_cat[incorrect]
+
+        return (
+            (best_positive_match_shapey_idxs, best_positive_match_dists),
+            (
+                incorrect_match_shapey_idxs,
+                incorrect_match_dists,
+            ),
+        )
