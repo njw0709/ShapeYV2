@@ -55,3 +55,9 @@ class ImageNameHelper:
         numbers = r"[0-9]"
         series_name = re.sub(numbers, "", series_annotation)
         return series_name
+
+    @staticmethod
+    def shorten_objname(objname: str) -> str:
+        obj_parse = objname.split("_")
+        shortened_objname = obj_parse[0] + "_" + obj_parse[1][0:4]
+        return shortened_objname

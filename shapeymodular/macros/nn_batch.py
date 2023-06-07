@@ -50,6 +50,7 @@ def exclusion_distance_analysis_single_obj_ax(
         top1_other_obj_dists,  # top1 of all other objs 11x1
         top1_other_obj_idxs,  # 11x1
         other_obj_dists_hist,  # ref img (11) x histogram length (bin edges -1)
+        other_obj_dists_with_category_hist,
     ) = an.ProcessData.get_top_per_object(other_obj_corrmat, obj, nn_analysis_config)
 
     # compute image rank of the top1 same obj image per exclusion
@@ -85,6 +86,7 @@ def exclusion_distance_analysis_single_obj_ax(
         top1_other_obj_dists,
         top1_other_obj_idxs,
         other_obj_dists_hist,
+        other_obj_dists_with_category_hist,
         sameobj_imgrank,
         sameobj_objrank,
         list_top1_dists_obj_same_cat,
@@ -111,6 +113,7 @@ def save_exclusion_distance_analysis_results(
         top1_other_obj_dists,
         top1_other_obj_idxs,
         other_obj_dists_hist,
+        other_obj_dists_with_category_hist,
         sameobj_imgrank,
         sameobj_objrank,
         list_top1_dists_obj_same_cat,
@@ -127,6 +130,7 @@ def save_exclusion_distance_analysis_results(
         "top1_cvals_otherobj",
         "top1_idx_otherobj",
         "cval_hist_otherobj",
+        "hist_category_other_cat_objs",
         "sameobj_imgrank",
         "sameobj_objrank",
     ]
@@ -142,6 +146,7 @@ def save_exclusion_distance_analysis_results(
         top1_other_obj_dists,
         top1_other_obj_idxs,
         other_obj_dists_hist,
+        other_obj_dists_with_category_hist,
         sameobj_imgrank,
         sameobj_objrank,
     ]

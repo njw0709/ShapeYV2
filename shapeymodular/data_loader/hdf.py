@@ -117,6 +117,7 @@ class HDFProcessor(dl.DataLoader[h5py.File]):
             or data_type
             == "top1_idx_same_category"  # index (image index in alphabetical order) of the closest image in the same category
             or data_type == "hist_with_exc_dist_same_category"
+            or data_type == "hist_category_other_cat_objs"
             or data_type
             == "top1_hists"  # 3D histogram matrix with exclusion (11 ref imgs x 11 exc dists x histogram counts per bin)
             or data_type == "cval_hist_otherobj"
@@ -137,6 +138,7 @@ class HDFProcessor(dl.DataLoader[h5py.File]):
                 or data_type == "top1_hists"
                 or data_type == "cval_hist_otherobj"
                 or data_type == "sameobj_objrank"
+                or data_type == "hist_category_other_cat_objs"
             ):
                 key = key_head + data_type
             elif (

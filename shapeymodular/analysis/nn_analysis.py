@@ -352,7 +352,7 @@ class ProcessData:
     @staticmethod
     def get_top_per_object(
         other_obj_corrmat: dc.CorrMat, obj: str, nn_analysis_config: dc.NNAnalysisConfig
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         top1_cvals = []
         top1_idxs = []
         assert other_obj_corrmat.corrmat.shape[0] == utils.NUMBER_OF_VIEWS_PER_AXIS
@@ -381,8 +381,27 @@ class ProcessData:
                 1,
                 other_obj_corrmat_np,
             )
+            # zero out same obj cat
+            other_obj_corrmat_np_same_cat_masked = other_obj_corrmat_np.copy()
+            obj_cat = utils.ImageNameHelper.get_obj_category_from_objname(obj)
+            for other_obj in utils.SHAPEY200_OBJS:
+                if not other_obj == obj:
+                    other_obj_cat = utils.ImageNameHelper.get_obj_category_from_objname(
+                        other_obj
+                    )
+                    if other_obj_cat == obj_cat:
+                        other_obj_idxs = (
+                            utils.IndexingHelper.objname_ax_to_shapey_index(other_obj)
+                        )
+                        other_obj_corrmat_np_same_cat_masked[:, other_obj_idxs] = np.nan
+            other_obj_dists_with_category_hist = np.apply_along_axis(
+                lambda r: np.histogram(r[~np.isnan(r)], bins=np_bins)[0],
+                1,
+                other_obj_corrmat_np_same_cat_masked,
+            )
         else:
             other_obj_dists_hist = np.zeros((1, 1))
+            other_obj_dists_with_category_hist = np.zeros((1, 1))
 
         for other_obj in utils.SHAPEY200_OBJS:
             if not other_obj == obj:
@@ -423,6 +442,7 @@ class ProcessData:
             top1_other_obj_dists,
             top1_other_obj_idxs,
             other_obj_dists_hist,
+            other_obj_dists_with_category_hist,
         )
 
     @staticmethod

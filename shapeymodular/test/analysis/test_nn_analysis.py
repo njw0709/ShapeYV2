@@ -269,6 +269,7 @@ class TestProcessData:
             top1_other_obj_dists,
             top1_other_obj_idxs,
             _,
+            _,
         ) = an.ProcessData.get_top_per_object(
             other_obj_corrmat, obj, nn_analysis_config
         )
