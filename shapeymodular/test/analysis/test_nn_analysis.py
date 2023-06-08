@@ -47,8 +47,8 @@ class TestPrepData:
         except Exception as e:
             raise (e)
 
-    def test_check_necessary_data_batch(self, corrmat_no_contrast, nn_analysis_config):
-        an.PrepData.check_necessary_data_batch(corrmat_no_contrast, nn_analysis_config)
+    def test_check_necessary_data_batch(self, crossver_corrmat, nn_analysis_config):
+        an.PrepData.check_necessary_data_batch(crossver_corrmat, nn_analysis_config)
 
     def test_prep_subset_for_exclusion_analysis(
         self, get_top1_sameobj_setup, get_top1_sameobj_subset_setup
@@ -299,6 +299,18 @@ class TestProcessData:
             else:
                 assert (other_obj_corrmat_cutout >= current_top1_dist).all()
             col_idx += 1
+
+        # check if index is correct
+        other_objs = utils.SHAPEY200_OBJS.copy()
+        other_objs.remove(obj)
+        for col_num, other_obj in enumerate(other_objs):
+            if other_obj == obj:
+                continue
+            top1_other_obj_idx = top1_per_obj_shapey_idxs[:, col_num]
+            comparison_results = other_obj_corrmat.corrmat[
+                np.arange(utils.NUMBER_OF_VIEWS_PER_AXIS), top1_other_obj_idx
+            ]
+            assert (comparison_results == top1_per_obj_dists[:, col_num]).all()
 
     def test_get_positive_match_top1_objrank(
         self, get_positive_match_top1_objrank_setup

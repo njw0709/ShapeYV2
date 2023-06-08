@@ -71,6 +71,17 @@ def top_per_obj_cvals(data_loader, analysis_hdf, random_obj_ax, nn_analysis_conf
     yield top_per_obj_cvals
 
 
+@pytest.fixture
+def top_per_obj_idxs(data_loader, analysis_hdf, random_obj_ax, nn_analysis_config):
+    obj, ax = random_obj_ax
+    key_top_per_obj_idxs = data_loader.get_data_pathway(
+        "top1_per_obj_idxs", nn_analysis_config, obj=obj, ax=ax
+    )
+    top_per_obj_idxs = data_loader.load(analysis_hdf, key_top_per_obj_idxs, lazy=False)
+    top_per_obj_idxs = typing.cast(np.ndarray, top_per_obj_idxs)
+    yield top_per_obj_idxs
+
+
 class TestNNClassificationError:
     def test_gather_info_same_obj_cat(
         self, data_loader, analysis_hdf, nn_analysis_config
@@ -167,6 +178,42 @@ class TestNNClassificationError:
             within_category_error=True,
         )
         assert isinstance(graph_data_category, dc.GraphData)
+
+    def test_get_top1_dists_and_idx_other_obj_cat(
+        self,
+        top_per_obj_cvals,
+        top_per_obj_idxs,
+        random_obj_ax,
+        nn_analysis_config,
+        crossver_corrmat,
+    ):
+        obj, ax = random_obj_ax
+        (
+            top1_dists_other_obj_cat,
+            top1_idxs_other_obj_cat,
+        ) = pp.NNClassificationError.get_top1_dists_and_idx_other_obj_cat(
+            top_per_obj_cvals,
+            top_per_obj_idxs,
+            obj,
+            distance=nn_analysis_config.distance_measure,
+        )
+        assert top1_dists_other_obj_cat.shape == (11,)
+        assert top1_idxs_other_obj_cat.shape == (11,)
+        row_shapey_idx = utils.IndexingHelper.objname_ax_to_shapey_index(obj, ax)
+        col_shapey_idx = crossver_corrmat[0].description[1].shapey_idxs
+        row_corrmat_idx, available_row_shapey_idx = (
+            crossver_corrmat[0].description[0].shapey_idx_to_corrmat_idx(row_shapey_idx)
+        )
+        col_corrmat_idx, available_col_shapey_idx = (
+            crossver_corrmat[0].description[1].shapey_idx_to_corrmat_idx(col_shapey_idx)
+        )
+        corrmat_subset = crossver_corrmat[0].get_subset(
+            row_corrmat_idx, col_corrmat_idx
+        )
+        comparison_dists = corrmat_subset.corrmat[
+            np.arange(utils.NUMBER_OF_VIEWS_PER_AXIS), top1_idxs_other_obj_cat
+        ]
+        assert np.allclose(top1_dists_other_obj_cat, comparison_dists)
 
 
 class TestDistanceHistogram:

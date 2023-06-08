@@ -53,11 +53,46 @@ def analysis_save_dir():
 
 
 @pytest.fixture
-def analysis_hdf(analysis_save_dir):
-    hdfs = [f for f in os.listdir(analysis_save_dir) if f.endswith(".h5")]
-    hdf_path = os.path.join(analysis_save_dir, random.choice(hdfs))
+def distance_save_dir():
+    distance_path = os.path.join(CURR_PATH, "../test_data/cross_version_test_data/")
+    yield distance_path
+
+
+@pytest.fixture
+def random_chosen_result_and_dist(distance_save_dir):
+    distance_hdfs = [f for f in os.listdir(distance_save_dir) if f.endswith(".mat")]
+    chosen_hdf = random.choice(distance_hdfs)
+    chosen_result_hdf = chosen_hdf.split(".")[0] + "_results.h5"
+    yield (chosen_hdf, chosen_result_hdf)
+
+
+@pytest.fixture
+def analysis_hdf(random_chosen_result_and_dist, analysis_save_dir):
+    (_, chosen_result_hdf) = random_chosen_result_and_dist
+    hdf_path = os.path.join(analysis_save_dir, chosen_result_hdf)
     with h5py.File(hdf_path, "r") as f:
         yield f
+
+
+@pytest.fixture
+def distance_hdf(random_chosen_result_and_dist, distance_save_dir):
+    (chosen_hdf, chosen_result_hdf) = random_chosen_result_and_dist
+    hdf_path = os.path.join(distance_save_dir, chosen_hdf)
+    with h5py.File(hdf_path, "r") as f:
+        yield [f]
+
+
+@pytest.fixture
+def crossver_corrmat(
+    distance_hdf, input_data_description_path, data_loader, nn_analysis_config
+):
+    corrmats = an.PrepData.load_corrmat_input(
+        distance_hdf,
+        input_data_description_path,
+        data_loader,
+        nn_analysis_config,
+    )
+    yield corrmats
 
 
 @pytest.fixture
