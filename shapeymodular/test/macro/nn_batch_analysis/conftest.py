@@ -48,7 +48,7 @@ def nn_analysis_config(test_data_dir):
     json_path = os.path.join(test_data_dir, "config_normal_pw.json")
     f = open(json_path, "r")
     config_dict = json.load(f)
-    config = from_dict(data_class=dc.NNAnalysisConfig, data=config_dict)
+    config = from_dict(dc.NNAnalysisConfig, config_dict)
     yield config
     f.close()
 

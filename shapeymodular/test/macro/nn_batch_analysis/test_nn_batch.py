@@ -1,6 +1,4 @@
 import shapeymodular.macros.nn_batch as nn_batch
-import shapeymodular.utils as utils
-import random
 import time
 
 

@@ -3,7 +3,7 @@ import h5py
 import shapeymodular.macros.nn_batch as nn_batch
 
 
-def test_make_analyiss_results(make_analysis_results_setup):
+def test_make_analysis_results(make_analysis_results_setup):
     (
         distance_samples,
         crossver_distance_samples_dir,

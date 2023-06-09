@@ -2,7 +2,7 @@ import numpy as np
 from shapeymodular.analysis.preprocess import *
 
 
-class TestActivationClass:
+class TestActivationThreshold:
     def test_compute_activation_threshold(self):
         # float valued
         activations = np.random.exponential(size=(10, 200000))
