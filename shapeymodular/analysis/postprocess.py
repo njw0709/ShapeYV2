@@ -309,7 +309,12 @@ class ErrorDisplay:
         exc_dist: int,
         nn_analysis_config: cd.NNAnalysisConfig,
         within_category_error=False,
-    ):
+    ) -> Tuple[
+        np.ndarray, Tuple[np.ndarray, np.ndarray], Tuple[np.ndarray, np.ndarray]
+    ]:
+        ref_img_shapey_idxs = np.array(
+            utils.IndexingHelper.objname_ax_to_shapey_index(obj, ax)
+        )
         # Load necessary data
         if not within_category_error:
             key_top1_dists_sameobj = data_loader.get_data_pathway(
@@ -319,7 +324,7 @@ class ErrorDisplay:
                 "top1_cvals_otherobj", nn_analysis_config, obj=obj, ax=ax
             )
             key_top1_idxs_sameobj = data_loader.get_data_pathway(
-                "top1_idxs", nn_analysis_config, obj=obj, ax=ax
+                "top1_idx", nn_analysis_config, obj=obj, ax=ax
             )
             key_top1_idxs_otherobj = data_loader.get_data_pathway(
                 "top1_idx_otherobj", nn_analysis_config, obj=obj, ax=ax
@@ -332,7 +337,7 @@ class ErrorDisplay:
             top1_dists_otherobj = typing.cast(
                 np.ndarray,
                 data_loader.load(save_dir, key_top1_dists_otherobj, lazy=False),
-            )
+            ).flatten()
             top1_idxs_sameobj = typing.cast(
                 np.ndarray,
                 data_loader.load(save_dir, key_top1_idxs_sameobj, lazy=False),
@@ -340,22 +345,14 @@ class ErrorDisplay:
             top1_idxs_otherobj = typing.cast(
                 np.ndarray,
                 data_loader.load(save_dir, key_top1_idxs_otherobj, lazy=False),
-            )
+            ).flatten()
             # Get NN correct results
             correct = NNClassificationError.compare_same_obj_with_top1_other_obj(
                 top1_dists_sameobj,
                 top1_dists_otherobj,
                 nn_analysis_config.distance_measure,
             )
-            # cut out exc_dist
-            incorrect = ~correct[:, exc_dist]
-            # ignore nan values
-            incorrect[np.isnan(top1_dists_sameobj[:, exc_dist])] = False
-            top1_idxs_sameobj_excdist = top1_idxs_sameobj[:, exc_dist]
-            best_positive_match_shapey_idxs = top1_idxs_sameobj_excdist[incorrect]
-            incorrect_match_shapey_idxs = top1_idxs_otherobj[incorrect]
-            best_positive_match_dists = top1_dists_sameobj[:, exc_dist][incorrect]
-            incorrect_match_dists = top1_dists_otherobj[incorrect]
+
         else:
             (
                 same_objcat_dists,
@@ -395,16 +392,43 @@ class ErrorDisplay:
                     distance=nn_analysis_config.distance_measure,
                 )
             )
-            # cut out exc_dist
-            incorrect = ~correct[:, :, exc_dist]
-            incorrect[np.isnan(same_objcat_dists[:, :, exc_dist])] = False
-            same_objcat_idxs_excdist = same_objcat_idxs[:, :, exc_dist]
-            best_positive_match_shapey_idxs = same_objcat_idxs_excdist[incorrect]
-            best_positive_match_dists = same_objcat_dists[:, :, exc_dist][incorrect]
-            incorrect_match_shapey_idxs = top1_idxs_other_obj_cat[incorrect]
-            incorrect_match_dists = top1_dists_other_obj_cat[incorrect]
+            # consolidate across objs in same category
+            correct = correct.sum(axis=0) > 0
+            if nn_analysis_config.distance_measure == "correlation":
+                same_objcat_dists_nan_to_zero = same_objcat_dists.copy()
+                same_objcat_dists_nan_to_zero[np.isnan(same_objcat_dists)] = 0
+                top1_dists_sameobj = np.nanmax(same_objcat_dists, axis=0)
+                best_positive_match_arg = np.nanargmax(
+                    same_objcat_dists_nan_to_zero, axis=0
+                )
+            else:
+                data_type = same_objcat_dists.dtype
+                same_objcat_dists_nan_to_large = same_objcat_dists.copy()
+                same_objcat_dists_nan_to_large[np.isnan(same_objcat_dists)] = np.iinfo(
+                    data_type
+                ).max
+                top1_dists_sameobj = np.nanmin(same_objcat_dists, axis=0)
+                best_positive_match_arg = np.nanargmin(
+                    same_objcat_dists_nan_to_large, axis=0
+                )
 
+            best_positive_match_arg[np.isnan(top1_dists_sameobj)] = -1
+            j, k = np.indices(best_positive_match_arg.shape)
+            top1_idxs_sameobj = same_objcat_idxs[best_positive_match_arg, j, k]
+            top1_idxs_otherobj = top1_idxs_other_obj_cat
+            top1_dists_otherobj = top1_dists_other_obj_cat
+
+        # cut out exc_dist
+        incorrect = ~correct[:, exc_dist]
+        # ignore nan values
+        incorrect[np.isnan(top1_dists_sameobj[:, exc_dist])] = False
+        top1_idxs_sameobj_excdist = top1_idxs_sameobj[:, exc_dist]
+        best_positive_match_shapey_idxs = top1_idxs_sameobj_excdist[incorrect]
+        incorrect_match_shapey_idxs = top1_idxs_otherobj[incorrect]
+        best_positive_match_dists = top1_dists_sameobj[:, exc_dist][incorrect]
+        incorrect_match_dists = top1_dists_otherobj[incorrect]
         return (
+            ref_img_shapey_idxs[incorrect],
             (best_positive_match_shapey_idxs, best_positive_match_dists),
             (
                 incorrect_match_shapey_idxs,

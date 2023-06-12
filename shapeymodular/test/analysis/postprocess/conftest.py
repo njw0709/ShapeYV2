@@ -8,3 +8,8 @@ def random_obj_ax(nn_analysis_config):
     obj = random.choice(utils.SHAPEY200_OBJS)
     ax = random.choice(nn_analysis_config.axes)
     yield obj, ax
+
+
+@pytest.fixture
+def random_exclusion_distance():
+    yield random.randint(1, 10)

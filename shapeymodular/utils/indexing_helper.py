@@ -35,6 +35,25 @@ class IndexingHelper:
             )
             return obj_mat_shapey_idxs
 
+    @staticmethod
+    def all_shapey_idxs_containing_ax(
+        obj_name: str, ax: str, category: bool = False
+    ) -> Sequence[int]:
+        all_axes_containing_ax = [a for a in ALL_AXES if all([f in a for f in ax])]
+        all_shapey_idxs_containing_ax = []
+        if category:
+            objcat = ImageNameHelper.get_obj_category_from_objname(obj_name)
+            objs = ImageNameHelper.get_all_objs_in_category(objcat)
+        else:
+            objs = [obj_name]
+        for obj in objs:
+            for a in all_axes_containing_ax:
+                all_shapey_idxs_containing_ax.extend(
+                    IndexingHelper.objname_ax_to_shapey_index(obj, a)
+                )
+        all_shapey_idxs_containing_ax.sort()
+        return all_shapey_idxs_containing_ax
+
     # # select columns where the exclusion axes are present. (i.e., if ax = "pw", then select all that has "pw" in it - pwr, pwy, pwx, prw, etc.)
     # contain_ax = np.array(
     #     [[all([c in a for c in ax])] * 11 for a in ALL_AXES], dtype=int
