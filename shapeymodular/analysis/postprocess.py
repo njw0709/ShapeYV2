@@ -685,11 +685,3 @@ class ErrorDisplay:
                     )
             graph_data_row_list.append(graph_data_row)
         return graph_data_row_list
-
-    @staticmethod
-    def get_all_candidates_sorted():
-        pass
-
-    @staticmethod
-    def get_all_candidates_sorted_category():
-        pass
