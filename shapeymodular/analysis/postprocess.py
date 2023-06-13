@@ -6,6 +6,7 @@ import h5py
 from typing import Union, Sequence, Tuple, List
 import typing
 import shapeymodular.data_classes as dc
+import nn_analysis
 
 
 class NNClassificationError:
@@ -299,6 +300,7 @@ class DistanceHistogram:
         return graph_data_group_sameobj_xdist, hist_data_otherobj
 
 
+# TODO: Testing needed.
 class ErrorDisplay:
     @staticmethod
     def get_list_of_errors(
@@ -551,8 +553,8 @@ class ErrorDisplay:
             other_objcat_candidate_idxs,
         ) = ErrorDisplay.filter_top_per_obj_other_obj_cat(
             top_per_obj_cvals, top_per_obj_idxs, obj
-        )  # 180 x 11
-        assert other_objcat_candidate_dists.shape == (180, 11)
+        )  # 190 x 11
+        assert other_objcat_candidate_dists.shape == (190, 11)
         all_candidate_dists = np.concatenate(
             [same_objcat_candidate_dists, other_objcat_candidate_dists], axis=0
         )  # 200 x 11
@@ -685,3 +687,52 @@ class ErrorDisplay:
                     )
             graph_data_row_list.append(graph_data_row)
         return graph_data_row_list
+
+
+class TuningCurve:
+    @staticmethod
+    def get_tuning_curve(
+        obj: str,
+        ax: str,
+        sameobj_corrmat: dc.CorrMat,
+        nn_analysis_config: dc.NNAnalysisConfig,
+    ):
+        obj_ax_cutout_corrmat = nn_analysis.PrepData.cut_single_obj_ax_to_all_corrmat(
+            sameobj_corrmat, obj, ax
+        )
+        col_shapey_idxs = utils.IndexingHelper.objname_ax_to_shapey_index(obj, ax)
+        col_corrmat_idxs, available_shapey_idxs = obj_ax_cutout_corrmat.description[
+            1
+        ].shapey_idx_to_corrmat_idx(col_shapey_idxs)
+        col_corrmat_idxs = typing.cast(List[int], col_corrmat_idxs)
+        row_shapey_idxs = utils.IndexingHelper.objname_ax_to_shapey_index(obj, ax)
+        row_corrmat_idxs, available_shapey_idxs = obj_ax_cutout_corrmat.description[
+            0
+        ].shapey_idx_to_corrmat_idx(row_shapey_idxs)
+        row_corrmat_idxs = typing.cast(List[int], row_corrmat_idxs)
+        assert row_corrmat_idxs == list(range(utils.NUMBER_OF_VIEWS_PER_AXIS))
+        sameobj_ax_corrmat = obj_ax_cutout_corrmat.get_subset(
+            row_corrmat_idxs, col_corrmat_idxs
+        )
+        sameobj_ax_corrmat_np = sameobj_ax_corrmat.corrmat
+        assert sameobj_ax_corrmat_np.shape == (
+            utils.NUMBER_OF_VIEWS_PER_AXIS,
+            utils.NUMBER_OF_VIEWS_PER_AXIS,
+        )
+        # save out as graphdata
+        graph_data_list: List[dc.GraphData] = []
+        for r in range(11):
+            parsed_imgname = utils.ImageNameHelper.parse_shapey_idx(row_shapey_idxs[r])
+            tuning_curve = dc.GraphData(
+                x_label="series idx",
+                y_label=nn_analysis_config.distance_measure,
+                x=np.arange(1, utils.NUMBER_OF_VIEWS_PER_AXIS + 1, 1),
+                y=np.array([0, 1]),
+                data=sameobj_ax_corrmat_np[r, :],
+                label="{}-{}".format(
+                    parsed_imgname["ax"], parsed_imgname["series_idx"]
+                ),
+            )
+            graph_data_list.append(tuning_curve)
+        graph_group = dc.GraphDataGroup(data=graph_data_list)
+        return graph_group

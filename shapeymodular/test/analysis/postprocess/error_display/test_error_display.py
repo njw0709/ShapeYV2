@@ -1,5 +1,7 @@
 import shapeymodular.analysis as an
 import shapeymodular.utils as utils
+import numpy as np
+import typing
 
 # TODO: test if the top negative match is the first element of the sorted candidates
 
@@ -12,8 +14,13 @@ class TestErrorDisplay:
         random_obj_ax,
         random_exclusion_distance,
         nn_analysis_config,
+        crossver_corrmat,
     ):
         obj, ax = random_obj_ax
+        obj_ax_corrmat = an.PrepData.cut_single_obj_ax_to_all_corrmat(
+            crossver_corrmat[0], obj, ax
+        )
+        obj_ax_corrmat_np = typing.cast(np.ndarray, obj_ax_corrmat.corrmat)
         (
             ref_img_shapey_idxs,
             positive_match_candidate_exemplar,
@@ -61,6 +68,10 @@ class TestErrorDisplay:
             negative_match_candidate_shapey_idxs,
             negative_match_candidate_dists,
         ) = best_matches_error_exemplar
+        (
+            sorted_candidates_shapey_idxs,
+            sorted_candidates_dists,
+        ) = sorted_candidates
 
         assert (
             positive_match_candidate_shapey_idxs.shape
@@ -85,6 +96,26 @@ class TestErrorDisplay:
         )
 
         assert (positive_match_candidate_dists < negative_match_candidate_dists).all()
+        # check if output result is consistent with the corrmat
+        assert self.check_consistency_with_corrmat(
+            obj_ax_corrmat_np,
+            ref_img_shapey_idxs,
+            positive_match_candidate_dists,
+            positive_match_candidate_shapey_idxs,
+        )
+        assert self.check_consistency_with_corrmat(
+            obj_ax_corrmat_np,
+            ref_img_shapey_idxs,
+            negative_match_candidate_dists,
+            negative_match_candidate_shapey_idxs,
+        )
+        for col in range(sorted_candidates_shapey_idxs.shape[1]):
+            assert self.check_consistency_with_corrmat(
+                obj_ax_corrmat_np,
+                np.array(utils.IndexingHelper.objname_ax_to_shapey_index(obj, ax=ax)),
+                sorted_candidates_dists[:, col],
+                sorted_candidates_shapey_idxs[:, col],
+            )
 
     def test_get_list_of_errors_category(
         self,
@@ -93,8 +124,13 @@ class TestErrorDisplay:
         random_obj_ax,
         random_exclusion_distance,
         nn_analysis_config,
+        crossver_corrmat,
     ):
         obj, ax = random_obj_ax
+        obj_ax_corrmat = an.PrepData.cut_single_obj_ax_to_all_corrmat(
+            crossver_corrmat[0], obj, ax
+        )
+        obj_ax_corrmat_np = typing.cast(np.ndarray, obj_ax_corrmat.corrmat)
         (
             ref_img_shapey_idxs,
             positive_match_candidate_exemplar,
@@ -141,6 +177,10 @@ class TestErrorDisplay:
             negative_match_candidate_shapey_idxs,
             negative_match_candidate_dists,
         ) = best_matches_error_exemplar
+        (
+            sorted_candidates_shapey_idxs,
+            sorted_candidates_dists,
+        ) = sorted_candidates
 
         assert (
             positive_match_candidate_shapey_idxs.shape
@@ -165,3 +205,48 @@ class TestErrorDisplay:
         )
 
         assert (positive_match_candidate_dists < negative_match_candidate_dists).all()
+        # check if output result is consistent with the corrmat
+        assert self.check_consistency_with_corrmat(
+            obj_ax_corrmat_np,
+            ref_img_shapey_idxs,
+            positive_match_candidate_dists,
+            positive_match_candidate_shapey_idxs,
+        )
+        assert self.check_consistency_with_corrmat(
+            obj_ax_corrmat_np,
+            ref_img_shapey_idxs,
+            negative_match_candidate_dists,
+            negative_match_candidate_shapey_idxs,
+        )
+        for col in range(sorted_candidates_shapey_idxs.shape[1]):
+            assert self.check_consistency_with_corrmat(
+                obj_ax_corrmat_np,
+                np.array(utils.IndexingHelper.objname_ax_to_shapey_index(obj, ax=ax)),
+                sorted_candidates_dists[:, col],
+                sorted_candidates_shapey_idxs[:, col],
+            )
+
+    @staticmethod
+    def check_consistency_with_corrmat(
+        obj_ax_cutout_corrmat: np.ndarray,
+        row_idxs: np.ndarray,
+        dists: np.ndarray,
+        shapey_idxs: np.ndarray,
+    ) -> bool:
+        isconsistent = True
+        for i, r in enumerate(row_idxs):
+            series_idx = utils.ImageNameHelper.shapey_idx_to_series_idx(r) - 1
+            dist = dists[i]
+            shapey_idx = shapey_idxs[i]
+            if np.isnan(dist):
+                assert shapey_idx == -1
+                continue
+            expected_dist = obj_ax_cutout_corrmat[series_idx, shapey_idx]
+            if expected_dist != dist:
+                print(
+                    "expected dist:{}, wrong dist:{}, at row:{} col:{}".format(
+                        expected_dist, dist, r, shapey_idx
+                    )
+                )
+                isconsistent = False
+        return isconsistent

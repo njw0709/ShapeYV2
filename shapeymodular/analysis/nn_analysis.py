@@ -104,20 +104,24 @@ class PrepData:
 
     @staticmethod
     def cut_single_obj_ax_sameobj_corrmat(
-        corrmats: Sequence[dc.CorrMat],
+        obj_ax_cutout_corrmats: Sequence[dc.CorrMat],
         obj: str,
         ax: str,
         nn_analysis_config: dc.NNAnalysisConfig,
     ) -> dc.CorrMat:
-        assert corrmats[0].corrmat.shape[0] == utils.NUMBER_OF_VIEWS_PER_AXIS
+        assert (
+            obj_ax_cutout_corrmats[0].corrmat.shape[0] == utils.NUMBER_OF_VIEWS_PER_AXIS
+        )
         if nn_analysis_config.contrast_exclusion:
-            assert len(corrmats) == 2
+            assert len(obj_ax_cutout_corrmats) == 2
         # compute what is the closest same object image to the original image with exclusion distance
         col_sameobj_shapey_idx = utils.IndexingHelper.objname_ax_to_shapey_index(
             obj, "all"
         )  # cut column for same object
         col_sameobj_corrmat_idx, available_sameobj_shapey_idx = (
-            corrmats[0].description[1].shapey_idx_to_corrmat_idx(col_sameobj_shapey_idx)
+            obj_ax_cutout_corrmats[0]
+            .description[1]
+            .shapey_idx_to_corrmat_idx(col_sameobj_shapey_idx)
         )
         col_sameobj_corrmat_idx = typing.cast(List[int], col_sameobj_corrmat_idx)
         row_corrmat_idx = list(range(utils.NUMBER_OF_VIEWS_PER_AXIS))
@@ -125,11 +129,11 @@ class PrepData:
         # compare original to background contrast reversed image if contrast_reversed is True
         # sameobj_corrmat_subset = row (11 images in series ax), col (all available same object images)
         if nn_analysis_config.contrast_exclusion:
-            sameobj_corrmat_subset = corrmats[1].get_subset(
+            sameobj_corrmat_subset = obj_ax_cutout_corrmats[1].get_subset(
                 row_corrmat_idx, col_sameobj_corrmat_idx
             )
         else:
-            sameobj_corrmat_subset = corrmats[0].get_subset(
+            sameobj_corrmat_subset = obj_ax_cutout_corrmats[0].get_subset(
                 row_corrmat_idx, col_sameobj_corrmat_idx
             )
 
