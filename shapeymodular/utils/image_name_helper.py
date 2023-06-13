@@ -42,6 +42,14 @@ class ImageNameHelper:
         return constants.SHAPEY200_IMGNAMES[idx]
 
     @staticmethod
+    def shapey_idx_to_objname(idx: int) -> str:
+        imgname = ImageNameHelper.shapey_idx_to_imgname(idx)
+        objname = imgname.split("-")[0]
+        if "/" in objname:
+            objname = objname.split("/")[-1]
+        return objname
+
+    @staticmethod
     def objname_to_shapey_obj_idx(objname: str) -> int:
         return constants.SHAPEY200_OBJS.index(objname)
 

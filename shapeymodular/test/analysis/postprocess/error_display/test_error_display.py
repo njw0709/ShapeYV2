@@ -1,6 +1,8 @@
 import shapeymodular.analysis as an
 import shapeymodular.utils as utils
 
+# TODO: test if the top negative match is the first element of the sorted candidates
+
 
 class TestErrorDisplay:
     def test_get_list_of_errors_object(
@@ -16,6 +18,7 @@ class TestErrorDisplay:
             ref_img_shapey_idxs,
             positive_match_candidate_exemplar,
             best_matches_error_exemplar,
+            sorted_candidates,
         ) = an.ErrorDisplay.get_list_of_errors(
             data_loader,
             analysis_hdf,
@@ -36,6 +39,7 @@ class TestErrorDisplay:
             ref_img_shapey_idxs,
             positive_match_candidate_exemplar,
             best_matches_error_exemplar,
+            sorted_candidates,
         ) = an.ErrorDisplay.get_list_of_errors(
             data_loader,
             analysis_hdf,
@@ -95,6 +99,7 @@ class TestErrorDisplay:
             ref_img_shapey_idxs,
             positive_match_candidate_exemplar,
             best_matches_error_exemplar,
+            sorted_candidates,
         ) = an.ErrorDisplay.get_list_of_errors(
             data_loader,
             analysis_hdf,
@@ -114,6 +119,7 @@ class TestErrorDisplay:
             ref_img_shapey_idxs,
             positive_match_candidate_exemplar,
             best_matches_error_exemplar,
+            sorted_candidates,
         ) = an.ErrorDisplay.get_list_of_errors(
             data_loader,
             analysis_hdf,
