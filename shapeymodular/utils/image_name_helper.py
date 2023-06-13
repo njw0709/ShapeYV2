@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Union, Dict
 from . import constants
 import re
 
@@ -73,3 +73,26 @@ class ImageNameHelper:
         obj_parse = objname.split("_")
         shortened_objname = obj_parse[0] + "_" + obj_parse[1][0:4]
         return shortened_objname
+
+    @staticmethod
+    def shorten_imgname(imgname: str) -> str:
+        objname = imgname.split("-")[0]
+        shortened_objname = ImageNameHelper.shorten_objname(objname)
+        shortened_imgname = imgname.replace(objname, shortened_objname)
+        shortened_imgname = shortened_imgname.split(".")[0]
+        return shortened_imgname
+
+    @staticmethod
+    def parse_shapey_idx(idx: int) -> Dict[str, str]:
+        imgname = ImageNameHelper.shapey_idx_to_imgname(idx)
+        objname = ImageNameHelper.shapey_idx_to_objname(idx)
+        series_idx = ImageNameHelper.shapey_idx_to_series_idx(idx)
+        ax = ImageNameHelper.shapey_idx_to_series_name(idx)
+        obj_cat = ImageNameHelper.get_obj_category_from_objname(objname)
+        return {
+            "imgname": imgname,
+            "objname": objname,
+            "series_idx": str(series_idx),
+            "ax": ax,
+            "obj_cat": obj_cat,
+        }

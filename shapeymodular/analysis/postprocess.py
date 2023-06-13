@@ -3,7 +3,7 @@ import shapeymodular.data_loader as dl
 import shapeymodular.utils as utils
 import shapeymodular.data_classes as cd
 import h5py
-from typing import Union, Sequence, Tuple
+from typing import Union, Sequence, Tuple, List
 import typing
 import shapeymodular.data_classes as dc
 
@@ -310,13 +310,17 @@ class ErrorDisplay:
         nn_analysis_config: cd.NNAnalysisConfig,
         within_category_error=False,
     ) -> Tuple[
-        np.ndarray,
-        Tuple[np.ndarray, np.ndarray],
-        Tuple[np.ndarray, np.ndarray],
-        Tuple[np.ndarray, np.ndarray],
+        np.ndarray,  # ref img shapey idx
+        Tuple[
+            np.ndarray, np.ndarray
+        ],  # (best matching correct img idxs, best matching correct img dists)
+        Tuple[
+            np.ndarray, np.ndarray
+        ],  # (best matching incorrect obj img idxs, best matching incorrect obj img dists)
+        Tuple[
+            np.ndarray, np.ndarray
+        ],  # (all candidates idx sorted per obj, all candidates dists sorted per obj)
     ]:
-        # returns (ref img idxs, (best matching correct img idxs, best matching correct img dists), (best matching incorrect obj img idxs, best matching incorrect obj img dists))
-
         # Load necessary data
         key_top1_dists_sameobj = data_loader.get_data_pathway(
             "top1_cvals", nn_analysis_config, obj=obj, ax=ax
@@ -376,7 +380,7 @@ class ErrorDisplay:
             (
                 all_candidates_sorted_dists,
                 all_candidates_sorted_idxs,
-            ) = ErrorDisplay.get_all_candidates_sorted(
+            ) = ErrorDisplay.get_all_candidates_sorted_top_per_obj(
                 top1_dists_sameobj,
                 top1_idxs_sameobj,
                 top_per_obj_cvals,
@@ -395,7 +399,7 @@ class ErrorDisplay:
             (
                 top1_dists_sameobj,
                 top1_idxs_sameobj,
-            ) = ErrorDisplay.get_top1_dists_and_idx_same_obj_cat(
+            ) = ErrorDisplay.consolidate_same_obj_cat_candidates(
                 same_objcat_dists,
                 same_objcat_idxs,
                 distance=nn_analysis_config.distance_measure,
@@ -427,7 +431,7 @@ class ErrorDisplay:
             (
                 all_candidates_sorted_dists,
                 all_candidates_sorted_idxs,
-            ) = ErrorDisplay.get_all_candidates_sorted_category(
+            ) = ErrorDisplay.get_all_candidates_sorted_category_top_per_obj(
                 same_objcat_dists,
                 same_objcat_idxs,
                 top_per_obj_cvals,
@@ -436,31 +440,49 @@ class ErrorDisplay:
                 exc_dist,
             )
 
+        assert all_candidates_sorted_dists.shape == (11, 200)
         # cut out exc_dist
         incorrect = ~correct[:, exc_dist]
         # ignore nan values
         incorrect[np.isnan(top1_dists_sameobj[:, exc_dist])] = False
+
         top1_idxs_sameobj_excdist = top1_idxs_sameobj[:, exc_dist]
-        best_positive_match_shapey_idxs = top1_idxs_sameobj_excdist[incorrect]
-        incorrect_match_shapey_idxs = top1_idxs_otherobj[incorrect]
-        best_positive_match_dists = top1_dists_sameobj[:, exc_dist][incorrect]
-        incorrect_match_dists = top1_dists_otherobj[incorrect]
+        top1_dists_sameobj_excdist = top1_dists_sameobj[:, exc_dist]
+
+        # get only the incorrect examples
+        incorrect_example_ref_img_shapey_idxs = ref_img_shapey_idxs[incorrect]
+
+        incorrect_example_best_positive_match_shapey_idxs = top1_idxs_sameobj_excdist[
+            incorrect
+        ]
+        incorrect_example_best_positive_match_dists = top1_dists_sameobj_excdist[
+            incorrect
+        ]
+
+        incorrect_example_best_other_obj_shapey_idxs = top1_idxs_otherobj[incorrect]
+        incorrect_example_best_other_obj_dists = top1_dists_otherobj[incorrect]
+
         return (
-            ref_img_shapey_idxs[incorrect],
-            (best_positive_match_shapey_idxs, best_positive_match_dists),
+            incorrect_example_ref_img_shapey_idxs,
             (
-                incorrect_match_shapey_idxs,
-                incorrect_match_dists,
+                incorrect_example_best_positive_match_shapey_idxs,
+                incorrect_example_best_positive_match_dists,
+            ),
+            (
+                incorrect_example_best_other_obj_shapey_idxs,
+                incorrect_example_best_other_obj_dists,
             ),
             (all_candidates_sorted_idxs, all_candidates_sorted_dists),
         )
 
     @staticmethod
-    def get_top1_dists_and_idx_same_obj_cat(
+    def consolidate_same_obj_cat_candidates(
         same_objcat_dists: np.ndarray,
         same_objcat_idxs: np.ndarray,
         distance: str = "correlation",
-    ) -> Tuple[np.ndarray, np.ndarray]:
+    ) -> Tuple[
+        np.ndarray, np.ndarray
+    ]:  # output: top1 dists and idxs for every candidate in same obj category with exclusion dists (11x11)
         # same_objcat_dists: 1st dim: different objs in same obj cat, 2nd dim: imgs, 3rd dim: exclusion dist in axis
         assert same_objcat_dists.shape == (10, 11, 11)
         assert same_objcat_idxs.shape == (10, 11, 11)
@@ -484,10 +506,12 @@ class ErrorDisplay:
         best_positive_match_arg[np.isnan(top1_dists_sameobj)] = -1
         j, k = np.indices(best_positive_match_arg.shape)
         top1_idxs_sameobj = same_objcat_idxs[best_positive_match_arg, j, k]
+        assert top1_idxs_sameobj.shape == (11, 11)
+        assert top1_dists_sameobj.shape == (11, 11)
         return top1_dists_sameobj, top1_idxs_sameobj
 
     @staticmethod
-    def get_all_candidates_sorted(
+    def get_all_candidates_sorted_top_per_obj(
         same_obj_dists: np.ndarray,
         same_obj_idxs: np.ndarray,
         top_per_obj_cvals: np.ndarray,
@@ -499,17 +523,18 @@ class ErrorDisplay:
 
         all_candidate_dists = np.concatenate(
             [same_obj_dists, top_per_obj_cvals], axis=1
-        )
+        )  # 11 x 200
         all_candidate_idxs = np.concatenate([same_obj_idxs, top_per_obj_idxs], axis=1)
         all_candidate_dists_sorted = np.sort(all_candidate_dists, axis=1)
         ind_sorted = np.argsort(all_candidate_dists, axis=1)
         all_candidate_idxs_sorted = np.take_along_axis(
             all_candidate_idxs, ind_sorted, axis=1
         )
+        assert all_candidate_dists_sorted.shape == (11, 200)
         return all_candidate_dists_sorted, all_candidate_idxs_sorted
 
     @staticmethod
-    def get_all_candidates_sorted_category(
+    def get_all_candidates_sorted_category_top_per_obj(
         same_objcat_dists: np.ndarray,  # 1st dim = different objs in same obj cat, 2nd dim = imgs, 3rd dim = exclusion dist in axis
         same_objcat_idxs: np.ndarray,
         top_per_obj_cvals: np.ndarray,
@@ -520,15 +545,17 @@ class ErrorDisplay:
         # get sorted top1 per object for all candidates available.
         same_objcat_candidate_dists = same_objcat_dists[:, :, exc_dist]  # 10 x 11
         same_objcat_candidate_idxs = same_objcat_idxs[:, :, exc_dist]
+        assert same_objcat_candidate_dists.shape == (10, 11)
         (
             other_objcat_candidate_dists,
             other_objcat_candidate_idxs,
-        ) = ErrorDisplay.get_top_per_obj_other_obj_cat(
+        ) = ErrorDisplay.filter_top_per_obj_other_obj_cat(
             top_per_obj_cvals, top_per_obj_idxs, obj
-        )  # 90 x 11
+        )  # 180 x 11
+        assert other_objcat_candidate_dists.shape == (180, 11)
         all_candidate_dists = np.concatenate(
             [same_objcat_candidate_dists, other_objcat_candidate_dists], axis=0
-        )
+        )  # 200 x 11
         all_candidate_idxs = np.concatenate(
             [same_objcat_candidate_idxs, other_objcat_candidate_idxs], axis=0
         )
@@ -537,10 +564,11 @@ class ErrorDisplay:
         sorted_all_candidate_idxs = np.take_along_axis(
             all_candidate_idxs, ind_sorted, axis=0
         )
-        return sorted_all_candidate_dists, sorted_all_candidate_idxs
+        assert sorted_all_candidate_dists.shape == (200, 11)
+        return sorted_all_candidate_dists.T, sorted_all_candidate_idxs.T
 
     @staticmethod
-    def get_top_per_obj_other_obj_cat(
+    def filter_top_per_obj_other_obj_cat(
         top_per_obj_cvals: np.ndarray, top_per_obj_idxs: np.ndarray, obj: str
     ) -> Tuple[np.ndarray, np.ndarray]:
         obj_cat = utils.ImageNameHelper.get_obj_category_from_objname(obj)
@@ -557,3 +585,111 @@ class ErrorDisplay:
                     other_obj_idxs.append(top_per_obj_idxs[:, other_obj_idx])
                 other_obj_idx += 1
         return np.array(other_obj_dists), np.array(other_obj_idxs)
+
+    @staticmethod
+    def error_examples_to_graph_data_list(
+        incorrect_example_ref_img_shapey_idxs: np.ndarray,
+        incorrect_example_best_positive_match_shapey_idxs: np.ndarray,
+        incorrect_example_best_positive_match_dists: np.ndarray,
+        all_candidates_sorted_idxs: np.ndarray,
+        all_candidates_sorted_dists: np.ndarray,
+        within_category_error: bool = False,
+        truncate_to: int = 10,
+    ) -> List[List[dc.GraphData]]:
+        # save and arrange into graph data
+        graph_data_row_list: List[List[dc.GraphData]] = []
+        for r, ref_img_shapey_idx in enumerate(incorrect_example_ref_img_shapey_idxs):
+            graph_data_row = []
+            # add reference image
+            parsed_ref_img = utils.ImageNameHelper.parse_shapey_idx(ref_img_shapey_idx)
+            ref_label = utils.ImageNameHelper.shorten_objname(parsed_ref_img["objname"])
+            graph_data_row.append(
+                dc.GraphData(
+                    x="img_x",
+                    y="img_y",
+                    x_label="reference",
+                    y_label="{}{:02d}".format(
+                        parsed_ref_img["ax"], parsed_ref_img["series_idx"]
+                    ),
+                    data=parsed_ref_img["imgname"],
+                    label=ref_label,
+                )
+            )
+            # add best matching positive match candidate
+            parsed_best_positive_match = utils.ImageNameHelper.parse_shapey_idx(
+                incorrect_example_best_positive_match_shapey_idxs[r]
+            )
+            shortened_objname = utils.ImageNameHelper.shorten_objname(
+                parsed_best_positive_match["objname"]
+            )
+            graph_data_row.append(
+                dc.GraphData(
+                    x="img_x",
+                    y="img_y",
+                    x_label="best positive match",
+                    y_label="{}{:02d}".format(
+                        parsed_best_positive_match["ax"],
+                        parsed_best_positive_match["series_idx"],
+                    ),
+                    data=parsed_best_positive_match["imgname"],
+                    label=shortened_objname,
+                    supplementary_data={
+                        "distance": incorrect_example_best_positive_match_dists[r]
+                    },
+                )
+            )
+            # then add sorted candidates
+            series_row_num = int(parsed_ref_img["series_idx"]) - 1
+            row_all_candidates_sorted_dists = all_candidates_sorted_dists[
+                series_row_num, :
+            ]
+            row_all_candidates_sorted_idxs = all_candidates_sorted_idxs[
+                series_row_num, :
+            ]
+            for i, candidate_shapey_idx in enumerate(row_all_candidates_sorted_idxs):
+                if i < truncate_to - 2:
+                    parsed_candidate_name = utils.ImageNameHelper.parse_shapey_idx(
+                        candidate_shapey_idx
+                    )
+                    shortened_objname = utils.ImageNameHelper.shorten_objname(
+                        parsed_candidate_name["objname"]
+                    )
+
+                    if within_category_error:
+                        correct_match = (
+                            parsed_ref_img["obj_cat"]
+                            == parsed_candidate_name["obj_cat"]
+                        )
+                    else:
+                        correct_match = (
+                            parsed_ref_img["objname"]
+                            == parsed_candidate_name["objname"]
+                        )
+
+                    graph_data_row.append(
+                        dc.GraphData(
+                            x="img_x",
+                            y="img_y",
+                            x_label="candidates top per obj",
+                            y_label="{}{:02d}".format(
+                                parsed_candidate_name["ax"],
+                                parsed_candidate_name["series_idx"],
+                            ),
+                            data=parsed_candidate_name["imgname"],
+                            label=shortened_objname,
+                            supplementary_data={
+                                "distance": row_all_candidates_sorted_dists[i],
+                                "correct_match": correct_match,
+                            },
+                        )
+                    )
+            graph_data_row_list.append(graph_data_row)
+        return graph_data_row_list
+
+    @staticmethod
+    def get_all_candidates_sorted():
+        pass
+
+    @staticmethod
+    def get_all_candidates_sorted_category():
+        pass
