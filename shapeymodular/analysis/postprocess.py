@@ -6,7 +6,7 @@ import h5py
 from typing import Union, Sequence, Tuple, List
 import typing
 import shapeymodular.data_classes as dc
-import nn_analysis
+from . import nn_analysis as nn
 
 
 class NNClassificationError:
@@ -611,7 +611,7 @@ class ErrorDisplay:
                     y="img_y",
                     x_label="reference",
                     y_label="{}{:02d}".format(
-                        parsed_ref_img["ax"], parsed_ref_img["series_idx"]
+                        parsed_ref_img["ax"], int(parsed_ref_img["series_idx"])
                     ),
                     data=parsed_ref_img["imgname"],
                     label=ref_label,
@@ -631,7 +631,7 @@ class ErrorDisplay:
                     x_label="best positive match",
                     y_label="{}{:02d}".format(
                         parsed_best_positive_match["ax"],
-                        parsed_best_positive_match["series_idx"],
+                        int(parsed_best_positive_match["series_idx"]),
                     ),
                     data=parsed_best_positive_match["imgname"],
                     label=shortened_objname,
@@ -675,7 +675,7 @@ class ErrorDisplay:
                             x_label="candidates top per obj",
                             y_label="{}{:02d}".format(
                                 parsed_candidate_name["ax"],
-                                parsed_candidate_name["series_idx"],
+                                int(parsed_candidate_name["series_idx"]),
                             ),
                             data=parsed_candidate_name["imgname"],
                             label=shortened_objname,
@@ -697,7 +697,7 @@ class TuningCurve:
         sameobj_corrmat: dc.CorrMat,
         nn_analysis_config: dc.NNAnalysisConfig,
     ):
-        obj_ax_cutout_corrmat = nn_analysis.PrepData.cut_single_obj_ax_to_all_corrmat(
+        obj_ax_cutout_corrmat = nn.PrepData.cut_single_obj_ax_to_all_corrmat(
             sameobj_corrmat, obj, ax
         )
         col_shapey_idxs = utils.IndexingHelper.objname_ax_to_shapey_index(obj, ax)
@@ -729,8 +729,8 @@ class TuningCurve:
                 x=np.arange(1, utils.NUMBER_OF_VIEWS_PER_AXIS + 1, 1),
                 y=np.array([0, 1]),
                 data=sameobj_ax_corrmat_np[r, :],
-                label="{}-{}".format(
-                    parsed_imgname["ax"], parsed_imgname["series_idx"]
+                label="{}-{:2d}".format(
+                    parsed_imgname["ax"], int(parsed_imgname["series_idx"])
                 ),
             )
             graph_data_list.append(tuning_curve)

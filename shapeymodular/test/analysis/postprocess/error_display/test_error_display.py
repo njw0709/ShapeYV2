@@ -226,6 +226,42 @@ class TestErrorDisplay:
                 sorted_candidates_shapey_idxs[:, col],
             )
 
+    def test_error_examples_to_graph_data_list_obj(self, list_of_errors_obj):
+        (
+            ref_img_shapey_idxs,
+            positive_match_candidate_exemplar,
+            best_matches_error_exemplar,
+            sorted_candidates,
+        ) = list_of_errors_obj
+
+        list_graph_data = an.ErrorDisplay.error_examples_to_graph_data_list(
+            ref_img_shapey_idxs,
+            positive_match_candidate_exemplar[0],
+            positive_match_candidate_exemplar[1],
+            sorted_candidates[0],
+            sorted_candidates[1],
+            within_category_error=False,
+        )
+        assert len(list_graph_data[0]) <= 10
+
+    def test_error_examples_to_graph_data_list_category(self, list_of_errors_category):
+        (
+            ref_img_shapey_idxs,
+            positive_match_candidate_exemplar,
+            best_matches_error_exemplar,
+            sorted_candidates,
+        ) = list_of_errors_category
+
+        list_graph_data = an.ErrorDisplay.error_examples_to_graph_data_list(
+            ref_img_shapey_idxs,
+            positive_match_candidate_exemplar[0],
+            positive_match_candidate_exemplar[1],
+            sorted_candidates[0],
+            sorted_candidates[1],
+            within_category_error=True,
+        )
+        assert len(list_graph_data[0]) <= 10
+
     @staticmethod
     def check_consistency_with_corrmat(
         obj_ax_cutout_corrmat: np.ndarray,
