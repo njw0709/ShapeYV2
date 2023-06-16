@@ -16,6 +16,10 @@ class GraphData:
     label: str
     supplementary_data: Union[Dict[str, Any], None] = None
 
+    def __post_init__(self):
+        if isinstance(self.x, np.ndarray):
+            assert len(self.data) == len(self.x)
+
 
 @dataclass
 class GraphDataGroup:
@@ -39,6 +43,12 @@ class GraphDataGroup:
 
     def __iter__(self):
         return iter(self.data)
+
+    def get_data_from_label(self, label: str) -> GraphData:
+        for graph_data in self.data:
+            if graph_data.label == label:
+                return graph_data
+        raise ValueError(f"Label {label} not found")
 
     def compute_statistics(self) -> None:
         assert self.x is not None
