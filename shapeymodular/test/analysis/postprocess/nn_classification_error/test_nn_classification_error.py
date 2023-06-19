@@ -100,6 +100,24 @@ class TestNNClassificationError:
             obj,
             ax,
             nn_analysis_config,
+            within_category_error=False,
+        )
+        assert isinstance(graph_data_category, dc.GraphData)
+
+    def test_generate_top1_error_data_category(
+        self, data_loader, random_obj_ax, analysis_hdf, nn_analysis_config
+    ):
+        obj, ax = random_obj_ax
+        graph_data = pp.NNClassificationError.generate_top1_error_data(
+            data_loader, analysis_hdf, obj, ax, nn_analysis_config
+        )
+        assert isinstance(graph_data, dc.GraphData)
+        graph_data_category = pp.NNClassificationError.generate_top1_error_data(
+            data_loader,
+            analysis_hdf,
+            obj,
+            ax,
+            nn_analysis_config,
             within_category_error=True,
         )
         assert isinstance(graph_data_category, dc.GraphData)

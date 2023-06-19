@@ -8,6 +8,8 @@ __pycache__/
 *.mat
 *.h5
 *.hdf5
+*.png
+*.json
 
 # C extensions
 *.so

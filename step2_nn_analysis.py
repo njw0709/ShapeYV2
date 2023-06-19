@@ -3,35 +3,49 @@ import shapeymodular.macros.nn_batch as nn_batch
 import shapeymodular.data_classes as dc
 import shapeymodular.data_loader as dl
 import h5py
+import shapeymodular.utils as utils
 
 FILE_DIR = os.path.dirname(os.path.abspath(__file__))
-DISTANCES_DIR = os.path.join(
-    FILE_DIR, "shapeymodular", "test", "test_data", "cross_version_test_data"
-)
-RESULTS_DIR = os.path.join(
-    FILE_DIR,
-    "shapeymodular",
-    "test",
-    "test_data",
-    "cross_version_test_data",
-    "analysis_results_v2",
-)
+# get all directories to run
+all_features_directories = []
+base_dir = "/home/francis/nineCasesToRun/"
+datadirs = os.listdir(base_dir)
+datadirs.sort()
+for dir in datadirs:
+    features_dir = [
+        os.path.join(base_dir, dir, fd)
+        for fd in os.listdir(os.path.join(base_dir, dir))
+        if "features-results-" in fd
+    ]
+    all_features_directories.extend(features_dir)
+all_features_directories.sort()
 
-CONFIG_PATH = os.path.join(DISTANCES_DIR, "config_normal_pw.json")
+CONFIG_PATH = os.path.join(FILE_DIR, "config_normal_pw.json")
 
-config = dc.load_config(CONFIG_PATH)
-distances_mat_files = [f for f in os.listdir(DISTANCES_DIR) if f.endswith(".mat")]
 data_loader = dl.HDFProcessor()
-input_data_descriptions = (
-    os.path.join(DISTANCES_DIR, "imgnames_pw_series.txt"),
-    os.path.join(DISTANCES_DIR, "imgnames_all.txt"),
-)
 
-for distances_mat_file in distances_mat_files:
-    save_name = os.path.join(
-        RESULTS_DIR, distances_mat_file.split(".")[0] + "_results.h5"
+for feature_directory in all_features_directories:
+    os.chdir(feature_directory)
+    cwd = os.getcwd()
+    # Print the current working directory
+    print("Current working directory: {0}".format(cwd))
+
+    # copy config file to feature directory
+    cmd = ["cp", CONFIG_PATH, "."]
+    utils.execute_and_print(cmd)
+
+    # copy config file to feature directory
+    distance_mat_file = os.path.join(feature_directory, "distances-Jaccard.mat")
+
+    input_data_descriptions = (
+        os.path.join(feature_directory, "imgnames_pw_series.txt"),
+        os.path.join(feature_directory, "imgnames_all.txt"),
     )
-    with h5py.File(os.path.join(DISTANCES_DIR, distances_mat_file), "r") as f:
+
+    config = dc.load_config(os.path.join(feature_directory, "config_normal_pw.json"))
+
+    save_name = os.path.join(feature_directory, "analysis_results.h5")
+    with h5py.File(distance_mat_file, "r") as f:
         input_data = [f]
         save_file = h5py.File(save_name, "w")
         nn_batch.exclusion_distance_analysis_batch(

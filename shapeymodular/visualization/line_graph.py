@@ -37,7 +37,6 @@ class LineGraph:
             ax.set_ylim(*graph_data.y)
         if isinstance(graph_data.x, np.ndarray):
             ax.set_xlim(graph_data.x.min() - 0.5, graph_data.x.max() + 0.5)
-        ax.legend(labels=graph_data.label)
         return fig, ax
 
     @staticmethod
