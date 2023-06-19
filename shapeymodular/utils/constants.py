@@ -34,8 +34,9 @@ NUMBER_OF_CATEGORY: int = 20
 NUMBER_OF_OBJS_PER_CATEGORY: int = NUMBER_OF_OBJECTS // NUMBER_OF_CATEGORY
 NUMBER_OF_AXES = len(ALL_AXES)
 NUMBER_OF_VIEWS_PER_AXIS = 11
+CURR_FILE_DIR = os.path.dirname(os.path.realpath(__file__))
 with open(
-    os.path.join(os.path.dirname(os.path.realpath(__file__)), "ShapeY200_objs.json"),
+    os.path.join(CURR_FILE_DIR, "ShapeY200_objs.json"),
     "r",
 ) as f:
     SHAPEY200_OBJS = json.load(f)
@@ -51,3 +52,7 @@ KNOWN_DTYPES = {
     "float32": np.float32,
     "float64": np.float64,
 }
+PATH_CONFIG_PW_NO_CR = os.path.join(CURR_FILE_DIR, "analysis_config_pw_no_cr.json")
+PATH_CONFIG_PW_CR = os.path.join(CURR_FILE_DIR, "analysis_config_pw_cr.json")
+PATH_IMGLIST_ALL = os.path.join(CURR_FILE_DIR, "imgnames_all.txt")
+PATH_IMGLIST_PW = os.path.join(CURR_FILE_DIR, "imgnames_pw_series.txt")

@@ -1,6 +1,5 @@
 import os
-import shapeymodular.utils as utils
-import json
+import shapeymodular.macros.compute_distance as compute_distance
 
 
 # get all directories to run
@@ -18,57 +17,8 @@ for dir in datadirs:
     ]
     all_features_directories.extend(features_dir)
 
-# print(all_features_directories)
-# print(len(all_features_directories))
-
-imgnames_all_path = "/home/namj/projects/ShapeYTriad/data/raw/imgnames_all.txt"
-imgnames_pw_path = "/home/namj/projects/ShapeYTriad/data/raw/imgnames_pw_series.txt"
 
 # compute distances
 for i, dir in enumerate(all_features_directories):
-    os.chdir(dir)
-    cwd = os.getcwd()
-
-    # Print the current working directory
-    print("Current working directory: {0}".format(cwd))
-
-    if os.path.exists(os.path.join(dir, "thresholds.mat")):
-        with open("config.json") as f:
-            config = json.load(f)
-        assert config["featuresThresholdsFileName"] == os.path.join(
-            dir, "thresholds.mat"
-        )
-        # remove threshold file
-        # cmd = ["rm", "thresholds.mat"]
-    else:
-        raise FileNotFoundError("thresholds.mat not found")
-        # continue
-
-    # copy imgname files
-    cmd = ["cp", imgnames_all_path, "."]
-    utils.execute_and_print(cmd)
-    cmd = ["cp", imgnames_pw_path, "."]
-    utils.execute_and_print(cmd)
-
-    # compute distances
-    cmd = [
-        "/home/dcuser/bin/imagepop_lsh",
-        "-s",
-        "256x256",
-        "-f",
-        "imgnames_all.txt",
-        "-g",
-        "0",
-        "--distance-name",
-        "Jaccard",
-        "--pairwise-dist-in",
-        "imgnames_pw_series.txt",
-        "--normalizer-name",
-        "Threshold",
-        "--pairwise-dist-out",
-        "distances-Jaccard.mat",
-        "-c",
-        "config.json",
-    ]
-    utils.execute_and_print(cmd)
-    print("Done")
+    compute_distance.check_and_prep_for_distance_computation(dir)
+    compute_distance.compute_distance(dir)

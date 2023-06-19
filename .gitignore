@@ -9,7 +9,6 @@ __pycache__/
 *.h5
 *.hdf5
 *.png
-*.json
 
 # C extensions
 *.so

@@ -5,6 +5,42 @@ import shapeymodular.data_classes as cd
 import shapeymodular.analysis as an
 import shapeymodular.utils as utils
 from tqdm import tqdm
+import os
+
+
+def run_exclusion_analysis(dirname: str) -> None:
+    # Prep required files
+    os.chdir(dirname)
+    cwd = os.getcwd()
+    # Print the current working directory
+    print("Current working directory: {0}".format(cwd))
+
+    # copy config file to feature directory
+    cmd = ["cp", utils.PATH_CONFIG_PW_CR, "."]
+    utils.execute_and_print(cmd)
+
+    config_filename = os.path.basename(utils.PATH_CONFIG_PW_CR)
+    data_loader = de.HDFProcessor()
+    distance_mat_file = os.path.join(dirname, "distances-Jaccard.mat")
+    input_data_descriptions = (
+        os.path.join(dirname, "imgnames_pw_series.txt"),
+        os.path.join(dirname, "imgnames_all.txt"),
+    )
+    config = cd.load_config(os.path.join(dirname, config_filename))
+    save_name = os.path.join(dirname, "analysis_results.h5")
+
+    with h5py.File(distance_mat_file, "r") as f:
+        with h5py.File(save_name, "w") as save_file:
+            input_data = [f]
+            exclusion_distance_analysis_batch(
+                input_data,
+                input_data_descriptions,
+                data_loader,
+                save_file,
+                data_loader,
+                config,
+                overwrite=True,
+            )
 
 
 def exclusion_distance_analysis_single_obj_ax(
