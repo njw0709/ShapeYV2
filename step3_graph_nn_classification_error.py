@@ -40,10 +40,7 @@ for feature_directory in all_features_directories:
     config = dc.load_config(os.path.join(feature_directory, "config_normal_pw.json"))
 
     analysis_hdf_path = os.path.join(feature_directory, "analysis_results.h5")
-    if os.path.exists(analysis_hdf_path):
-        analysis_hdf = h5py.File(analysis_hdf_path, "r")
-    else:
-        continue
+    analysis_hdf = h5py.File(analysis_hdf_path, "r")
     axes = typing.cast(List, config.axes)
     # post process data for graphing
     graph_data_list_obj_error = []

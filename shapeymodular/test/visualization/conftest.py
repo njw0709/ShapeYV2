@@ -4,6 +4,7 @@ import os
 import shapeymodular.analysis as an
 import shapeymodular.data_loader as dl
 import shapeymodular.data_classes as dc
+import shapeymodular.utils as utils
 import random
 from dacite import from_dict
 import json
@@ -103,3 +104,19 @@ def crossver_corrmat(
         nn_analysis_config,
     )
     yield corrmats
+
+
+@pytest.fixture
+def test_fig_output_dir():
+    # current file path
+    filepath = os.path.realpath(__file__)
+    dirname = os.path.dirname(filepath)
+    output_dir = os.path.join(dirname, "testfig_output")
+    yield output_dir
+
+
+@pytest.fixture
+def random_obj_ax(nn_analysis_config):
+    obj = random.choice(utils.SHAPEY200_OBJS)
+    ax = random.choice(nn_analysis_config.axes)
+    yield obj, ax

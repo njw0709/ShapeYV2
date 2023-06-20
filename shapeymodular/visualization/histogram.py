@@ -1,106 +1,81 @@
+import matplotlib.figure as mplfig
+import matplotlib.axes as mplax
+import shapeymodular.data_classes as dc
+from typing import Tuple, Union
 import numpy as np
-from h5py import File
-from typing import Tuple
+import typing
+from .styles import *
 
 
-class ImageRankHistogram:
-    def __init__(self, hdfstore: File) -> None:
-        self.imgnames = hdfstore["/feature_output/imgname"][:].astype("U")
-        self.objnames = np.unique(np.array([c.split("-")[0] for c in self.imgnames]))
-
-    def get_imagerank_histogram(
-        self,
-        hdfstore: File,
-        ax: str,
-        num_objs: int = 200,
-        post_processed: bool = False,
-        pp_exclusion: str = "soft",
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        if post_processed:
-            key_head = "/pairwise_correlation/postprocessed/{}".format(pp_exclusion)
-            key_head2 = "postprocessed_{}/{}".format(num_objs, pp_exclusion)
-        else:
-            key_head = "/pairwise_correlation/original"
-            key_head2 = "original_{}".format(num_objs)
-
-        obj_idxs = hdfstore[key_head + "_{}_obj_idx".format(num_objs)][:]
-        objs = self.objnames[obj_idxs]
-
-        all_imagerank_data = []
-        for obj in objs:
-            obj_ax_key = "/{}/{}/{}".format(key_head2, obj, ax)
-            imagerank = hdfstore[obj_ax_key + "/sameobj_imgrank"][:]
-            all_imagerank_data.append(imagerank)
-
-        all_imagerank_data = np.concatenate(all_imagerank_data)
-
-        stdev = np.nanstd(all_imagerank_data[all_imagerank_data != 0])
-        avg = np.nanstd(all_imagerank_data[all_imagerank_data != 0])
-        max_range = int(avg + 3 * stdev)
-        # if max_range > 50:
-        #     # bins = np.linspace(1, int(avg+3*stdev), 50)
-        #     # all_imagerank_data[all_imagerank_data> int(avg+3*stdev)] = int(avg+3*stdev)
-
-        # else:
-        bins = np.linspace(1, 40, 40)
-        all_imagerank_data[all_imagerank_data > 40] = 40
-
-        bins = np.insert(bins, 0, 0)
-
-        histcounts = np.apply_along_axis(
-            lambda a: np.histogram(a, bins=bins)[0], 0, all_imagerank_data
-        ).T
-
-        def normalize_histogram(histcount, bins):
-            dx = np.diff(bins)
-            total_area = np.multiply(histcount, dx).sum()
-            return histcount / total_area
-
-        density_hist = np.apply_along_axis(
-            lambda a: normalize_histogram(a, bins), 1, histcounts
+class DistanceHistogram:
+    @staticmethod
+    def draw_horizontal_histogram(
+        fig: mplfig.Figure,
+        ax: mplax.Axes,
+        x_pos: float,
+        histdata: dc.GraphData,
+        scale: float = 1.0,
+        color: Union[Tuple[float, float, float, float], str] = "blue",
+    ) -> Tuple[mplfig.Figure, mplax.Axes]:
+        binned_data = typing.cast(np.ndarray, histdata.data)
+        bins = typing.cast(np.ndarray, histdata.x)
+        heights = np.diff(bins)
+        centers = bins[:-1] + heights / 2
+        lefts = x_pos - 0.5 * binned_data * scale
+        ax.barh(
+            centers,
+            binned_data * scale,
+            height=heights,
+            left=lefts,
+            color=color,
         )
-        return histcounts, density_hist, bins
+        return fig, ax
 
-    def get_objrank_histogram(
-        self,
-        hdfstore: File,
-        ax: str,
-        num_objs: int = 200,
-        post_processed: bool = False,
-        pp_exclusion: str = "soft",
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        if post_processed:
-            key_head = "/pairwise_correlation/postprocessed/{}".format(pp_exclusion)
-            key_head2 = "postprocessed_{}/{}".format(num_objs, pp_exclusion)
-        else:
-            key_head = "/pairwise_correlation/original"
-            key_head2 = "original_{}".format(num_objs)
-
-        obj_idxs = hdfstore[key_head + "_{}_obj_idx".format(num_objs)][:]
-        objs = self.objnames[obj_idxs]
-
-        all_objrank_data = []
-        for obj in objs:
-            obj_ax_key = "/{}/{}/{}".format(key_head2, obj, ax)
-            objrank = hdfstore[obj_ax_key + "/sameobj_objrank"][:]
-            all_objrank_data.append(objrank)
-
-        all_objrank_data = np.concatenate(all_objrank_data)
-        bins = np.linspace(1, 40, 40)
-        all_objrank_data[all_objrank_data > 40] = 40
-
-        bins = np.insert(bins, 0, 0)
-
-        histcounts = np.apply_along_axis(
-            lambda a: np.histogram(a, bins=bins)[0], 0, all_objrank_data
-        ).T
-
-        def normalize_histogram(histcount, bins):
-            dx = np.diff(bins)
-            total_area = np.multiply(histcount, dx).sum()
-            return histcount / total_area
-
-        density_hist = np.apply_along_axis(
-            lambda a: normalize_histogram(a, bins), 1, histcounts
+    @staticmethod
+    def draw_all_distance_histograms_with_xdists(
+        fig: mplfig.Figure,
+        ax: mplax.Axes,
+        graph_data_group_histogram_xdists: dc.GraphDataGroup,
+        graph_data_otherobj: dc.GraphData,
+    ):
+        for histogram_xdist in graph_data_group_histogram_xdists:
+            max_hist = typing.cast(np.ndarray, histogram_xdist.data).max()
+            scale = 0.9 / max_hist
+            x_pos = (
+                typing.cast(dict, histogram_xdist.supplementary_data)[
+                    "exclusion distance"
+                ]
+                - 1
+            )  # calibrating to exclusion radius
+            color = COLORS(x_pos + 1)
+            fig, ax = DistanceHistogram.draw_horizontal_histogram(
+                fig, ax, x_pos, histogram_xdist, scale=scale, color=color
+            )
+        # draw other obj
+        max_hist = typing.cast(np.ndarray, graph_data_otherobj.data).max()
+        scale = 0.9 / max_hist
+        x_pos = 11
+        fig, ax = DistanceHistogram.draw_horizontal_histogram(
+            fig, ax, x_pos, graph_data_otherobj, scale=scale, color="red"
         )
-        return histcounts, density_hist, bins
+
+        # style
+        ax.set_xticks(list(range(-1, 12)))
+        ax.set_yticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
+        ax.tick_params(axis="both", labelsize=15)
+        ax.grid(linestyle="--", alpha=0.5)
+        fig.canvas.draw()
+        xticklabels = [item.get_text() for item in ax.get_xticklabels()]
+        xticklabels[0] = ""
+        xticklabels[-1] = "other\nobj"
+        xticklabels[-2] = ""
+        ax.set_xticklabels(xticklabels)
+        ax.set_xlim(-1.5, 12)
+        ax.set_ylim(-0.05, 1.05)
+        # draw horizontal line
+        bins = typing.cast(np.ndarray, graph_data_otherobj.x)[1:]
+        nonzero_values = bins[typing.cast(np.ndarray, graph_data_otherobj.data) > 0]
+        ax.axhline(nonzero_values.max(), color="red", linestyle="-.")
+        ax.set_xlabel("exclusion radius", fontsize=15)
+        ax.set_ylabel("Jaccard distance", fontsize=15)
+        return fig, ax

@@ -220,6 +220,7 @@ class DistanceHistogram:
         ax: str,
         nn_analysis_config: cd.NNAnalysisConfig,
         within_category_error=False,
+        img_idx: Union[int, None] = None,
     ) -> Tuple[dc.GraphDataGroup, dc.GraphData]:
         if not within_category_error:
             key_top1_hists = data_loader.get_data_pathway(
@@ -229,11 +230,18 @@ class DistanceHistogram:
                 "cval_hist_otherobj", nn_analysis_config, obj=obj, ax=ax
             )
             top1_hists = data_loader.load(save_dir, key_top1_hists, lazy=False)
-            same_obj_hists = typing.cast(np.ndarray, top1_hists).sum(axis=0)
             cval_hist_otherobj = data_loader.load(
                 save_dir, key_cval_hist_otherobj, lazy=False
             )
-            other_obj_hist = typing.cast(np.ndarray, cval_hist_otherobj).sum(axis=0)
+            if img_idx is None:
+                same_obj_hists = typing.cast(np.ndarray, top1_hists).sum(axis=0)
+                other_obj_hist = typing.cast(np.ndarray, cval_hist_otherobj).sum(axis=0)
+            else:
+                # 1st dim = series index, 2nd dim = exclusion dist, 3rd dim = histogram bins
+                same_obj_hists = typing.cast(np.ndarray, top1_hists)[img_idx, :, :]
+                other_obj_hist = typing.cast(np.ndarray, cval_hist_otherobj)[
+                    img_idx, :, :
+                ]
         else:
             key_hist_cat_other_category = data_loader.get_data_pathway(
                 "hist_category_other_cat_objs", nn_analysis_config, obj=obj, ax=ax
@@ -262,12 +270,20 @@ class DistanceHistogram:
             # sum over all other objs
             hist_cat_same_category = np.array(hist_cat_same_category).sum(axis=0)
             # sum over all imgs in series
-            hist_cat_same_category = typing.cast(
-                np.ndarray, hist_cat_same_category
-            ).sum(axis=0)
-            hist_cat_other_category = typing.cast(
-                np.ndarray, hist_cat_other_category
-            ).sum(axis=0)
+            if img_idx is None:
+                hist_cat_same_category = typing.cast(
+                    np.ndarray, hist_cat_same_category
+                ).sum(axis=0)
+                hist_cat_other_category = typing.cast(
+                    np.ndarray, hist_cat_other_category
+                ).sum(axis=0)
+            else:
+                hist_cat_same_category = typing.cast(
+                    np.ndarray, hist_cat_same_category
+                )[img_idx, :, :]
+                hist_cat_other_category = typing.cast(
+                    np.ndarray, hist_cat_other_category
+                )[img_idx, :, :]
             same_obj_hists = hist_cat_same_category
             other_obj_hist = hist_cat_other_category
 
@@ -283,6 +299,7 @@ class DistanceHistogram:
                     data=same_obj_hists[xdist, :],
                     label="positive match candidates counts with exclusion",
                     supplementary_data={"exclusion distance": np.array(xdist)},
+                    hist=True,
                 )
             )
         graph_data_group_sameobj_xdist = dc.GraphDataGroup(
@@ -296,6 +313,7 @@ class DistanceHistogram:
             y_label="counts",
             data=other_obj_hist,
             label="negative match candidates counts",
+            hist=True,
         )
         return graph_data_group_sameobj_xdist, hist_data_otherobj
 

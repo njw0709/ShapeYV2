@@ -15,10 +15,14 @@ class GraphData:
     data: Union[np.ndarray, str]
     label: str
     supplementary_data: Union[Dict[str, Any], None] = None
+    hist: bool = False
 
     def __post_init__(self):
         if isinstance(self.x, np.ndarray):
-            assert len(self.data) == len(self.x)
+            if self.hist:
+                assert len(self.data) == len(self.x) - 1
+            else:
+                assert len(self.data) == len(self.x)
 
 
 @dataclass
