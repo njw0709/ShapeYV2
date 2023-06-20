@@ -7,7 +7,7 @@ import matplotlib.cm as cm
 import shapeymodular.data_classes as dc
 from typing import Tuple
 import typing
-from .styles import MARKER_STYLES, COLORS
+from .styles import MARKER_STYLES, COLORS, LABEL_FONT_SIZE
 
 
 class LineGraph:
@@ -31,8 +31,8 @@ class LineGraph:
             alpha=alpha,
             linewidth=linewidth,
         )
-        ax.set_xlabel(graph_data.x_label)
-        ax.set_ylabel(graph_data.y_label)
+        ax.set_xlabel(graph_data.x_label, fontsize=LABEL_FONT_SIZE)
+        ax.set_ylabel(graph_data.y_label, fontsize=LABEL_FONT_SIZE)
         if isinstance(graph_data.y, np.ndarray):
             ax.set_ylim(*graph_data.y)
         if isinstance(graph_data.x, np.ndarray):

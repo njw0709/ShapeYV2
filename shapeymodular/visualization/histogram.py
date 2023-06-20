@@ -62,7 +62,7 @@ class DistanceHistogram:
         # style
         ax.set_xticks(list(range(-1, 12)))
         ax.set_yticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
-        ax.tick_params(axis="both", labelsize=15)
+        ax.tick_params(axis="both", labelsize=TICK_FONT_SIZE)
         ax.grid(linestyle="--", alpha=0.5)
         fig.canvas.draw()
         xticklabels = [item.get_text() for item in ax.get_xticklabels()]
@@ -76,6 +76,6 @@ class DistanceHistogram:
         bins = typing.cast(np.ndarray, graph_data_otherobj.x)[1:]
         nonzero_values = bins[typing.cast(np.ndarray, graph_data_otherobj.data) > 0]
         ax.axhline(nonzero_values.max(), color="red", linestyle="-.")
-        ax.set_xlabel("exclusion radius", fontsize=15)
-        ax.set_ylabel("Jaccard distance", fontsize=15)
+        ax.set_xlabel("exclusion radius", fontsize=LABEL_FONT_SIZE)
+        ax.set_ylabel("Jaccard distance", fontsize=LABEL_FONT_SIZE)
         return fig, ax

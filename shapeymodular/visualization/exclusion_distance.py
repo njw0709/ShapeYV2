@@ -4,6 +4,7 @@ import matplotlib.axes as mplax
 import shapeymodular.data_classes as dc
 from typing import Tuple
 from .line_graph import LineGraph
+from .styles import *
 import typing
 
 
@@ -22,14 +23,7 @@ class NNClassificationError(LineGraph):
             typing.cast(np.ndarray, graph_data.x) - 1
         )  # calibrate to exclusion radius
         fig, ax = NNClassificationError.draw(fig, ax, graph_data, order=order)
-        ax.set_xticks(list(range(-1, 10)))
-        ax.set_yticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
-        ax.tick_params(axis="both", labelsize=20)
-        ax.grid(linestyle="--", alpha=0.5)
-        fig.canvas.draw()
-        xticklabels = [item.get_text() for item in ax.get_xticklabels()]
-        xticklabels[0] = ""
-        ax.set_xticklabels(xticklabels)
+        fig, ax = format_xdist_graph(fig, ax)
         return fig, ax
 
     @staticmethod
@@ -43,12 +37,5 @@ class NNClassificationError(LineGraph):
             typing.cast(np.ndarray, graph_data.x) - 1
         )  # calibrate to exclusion radius
         fig, ax = NNClassificationError.draw(fig, ax, graph_data, order=order)
-        ax.set_xticks(list(range(-1, 10)))
-        ax.set_yticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
-        ax.tick_params(axis="both", labelsize=20)
-        ax.grid(linestyle="--", alpha=0.5)
-        fig.canvas.draw()
-        xticklabels = [item.get_text() for item in ax.get_xticklabels()]
-        xticklabels[0] = ""
-        ax.set_xticklabels(xticklabels)
+        fig, ax = format_xdist_graph(fig, ax)
         return fig, ax
