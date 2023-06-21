@@ -4,7 +4,12 @@ import matplotlib.axes as mplax
 import os
 from typing import Tuple, List
 from PIL import Image
-from .styles import SHAPEY_IMG_DIR, ANNOTATION_FONT_SIZE
+from .styles import (
+    SHAPEY_IMG_DIR,
+    ANNOTATION_FONT_SIZE,
+    CORRECT_MATCH_COLOR,
+    CORRECT_MATCH_BORDER_WIDTH,
+)
 from mpl_toolkits.axes_grid1 import ImageGrid as MplImageGrid
 
 
@@ -42,12 +47,22 @@ class ImageDisplay:
                 if "correct_match" in data.supplementary_data.keys():
                     if data.supplementary_data["correct_match"]:
                         # highlight with border
-                        ax.spines["top"].set_color("blue")
-                        ax.spines["bottom"].set_color("blue")
-                        ax.spines["left"].set_color("blue")
-                        ax.spines["right"].set_color("blue")
-
+                        ImageDisplay.highlight_border(
+                            ax, CORRECT_MATCH_COLOR, CORRECT_MATCH_BORDER_WIDTH
+                        )
         return fig, ax
+
+    @staticmethod
+    def highlight_border(ax: mplax.Axes, color: str, width: int) -> None:
+        ax.spines["top"].set_color(color)
+        ax.spines["bottom"].set_color(color)
+        ax.spines["left"].set_color(color)
+        ax.spines["right"].set_color(color)
+        ax.spines["top"].set_linewidth(width)
+        ax.spines["bottom"].set_linewidth(width)
+        ax.spines["left"].set_linewidth(width)
+        ax.spines["right"].set_linewidth(width)
+        return
 
 
 class ImageGrid(ImageDisplay):
