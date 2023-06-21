@@ -318,10 +318,9 @@ class DistanceHistogram:
         return graph_data_group_sameobj_xdist, hist_data_otherobj
 
 
-# TODO: Testing needed.
 class ErrorDisplay:
     @staticmethod
-    def get_list_of_errors(
+    def get_list_of_errors_single_obj(
         data_loader: dl.DataLoader,
         save_dir: Union[h5py.File, str],
         obj: str,
@@ -545,11 +544,14 @@ class ErrorDisplay:
             [same_obj_dists, top_per_obj_cvals], axis=1
         )  # 11 x 200
         all_candidate_idxs = np.concatenate([same_obj_idxs, top_per_obj_idxs], axis=1)
-        all_candidate_dists_sorted = np.sort(all_candidate_dists, axis=1)
-        ind_sorted = np.argsort(all_candidate_dists, axis=1)
+        ind_sorted = np.argsort(-all_candidate_dists, axis=1)  # descending order
         all_candidate_idxs_sorted = np.take_along_axis(
             all_candidate_idxs, ind_sorted, axis=1
         )
+        all_candidate_dists_sorted = np.take_along_axis(
+            all_candidate_dists, ind_sorted, axis=1
+        )
+
         assert all_candidate_dists_sorted.shape == (11, 200)
         return all_candidate_dists_sorted, all_candidate_idxs_sorted
 
@@ -579,11 +581,16 @@ class ErrorDisplay:
         all_candidate_idxs = np.concatenate(
             [same_objcat_candidate_idxs, other_objcat_candidate_idxs], axis=0
         )
-        sorted_all_candidate_dists = np.sort(all_candidate_dists, axis=0)
-        ind_sorted = np.argsort(all_candidate_dists, axis=0)
+        ind_sorted = np.argsort(
+            -all_candidate_dists, axis=0
+        )  # sort in descending order
         sorted_all_candidate_idxs = np.take_along_axis(
             all_candidate_idxs, ind_sorted, axis=0
         )
+        sorted_all_candidate_dists = np.take_along_axis(
+            all_candidate_dists, ind_sorted, axis=0
+        )
+
         assert sorted_all_candidate_dists.shape == (200, 11)
         return sorted_all_candidate_dists.T, sorted_all_candidate_idxs.T
 
@@ -615,7 +622,7 @@ class ErrorDisplay:
         all_candidates_sorted_dists: np.ndarray,
         within_category_error: bool = False,
         truncate_to: int = 10,
-    ) -> List[List[dc.GraphData]]:
+    ) -> List[List[dc.GraphData]]:  # ref img, best match, top 10 candidates
         # save and arrange into graph data
         graph_data_row_list: List[List[dc.GraphData]] = []
         for r, ref_img_shapey_idx in enumerate(incorrect_example_ref_img_shapey_idxs):

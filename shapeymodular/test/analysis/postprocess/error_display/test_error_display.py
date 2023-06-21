@@ -26,7 +26,7 @@ class TestErrorDisplay:
             positive_match_candidate_exemplar,
             best_matches_error_exemplar,
             sorted_candidates,
-        ) = an.ErrorDisplay.get_list_of_errors(
+        ) = an.ErrorDisplay.get_list_of_errors_single_obj(
             data_loader,
             analysis_hdf,
             obj,
@@ -47,7 +47,7 @@ class TestErrorDisplay:
             positive_match_candidate_exemplar,
             best_matches_error_exemplar,
             sorted_candidates,
-        ) = an.ErrorDisplay.get_list_of_errors(
+        ) = an.ErrorDisplay.get_list_of_errors_single_obj(
             data_loader,
             analysis_hdf,
             obj,
@@ -136,7 +136,7 @@ class TestErrorDisplay:
             positive_match_candidate_exemplar,
             best_matches_error_exemplar,
             sorted_candidates,
-        ) = an.ErrorDisplay.get_list_of_errors(
+        ) = an.ErrorDisplay.get_list_of_errors_single_obj(
             data_loader,
             analysis_hdf,
             obj,
@@ -156,7 +156,7 @@ class TestErrorDisplay:
             positive_match_candidate_exemplar,
             best_matches_error_exemplar,
             sorted_candidates,
-        ) = an.ErrorDisplay.get_list_of_errors(
+        ) = an.ErrorDisplay.get_list_of_errors_single_obj(
             data_loader,
             analysis_hdf,
             obj,

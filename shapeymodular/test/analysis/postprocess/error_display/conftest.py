@@ -16,7 +16,7 @@ def list_of_errors_obj(
         positive_match_candidate_exemplar,
         best_matches_error_exemplar,
         sorted_candidates,
-    ) = an.ErrorDisplay.get_list_of_errors(
+    ) = an.ErrorDisplay.get_list_of_errors_single_obj(
         data_loader,
         analysis_hdf,
         obj,
@@ -47,7 +47,7 @@ def list_of_errors_category(
         positive_match_candidate_exemplar,
         best_matches_error_exemplar,
         sorted_candidates,
-    ) = an.ErrorDisplay.get_list_of_errors(
+    ) = an.ErrorDisplay.get_list_of_errors_single_obj(
         data_loader,
         analysis_hdf,
         obj,

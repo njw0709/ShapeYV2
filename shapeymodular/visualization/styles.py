@@ -12,6 +12,8 @@ LINE_STYLES = ["-", "--", "-.", ":"]
 LABEL_FONT_SIZE = 15
 TITLE_FONT_SIZE = 17
 TICK_FONT_SIZE = 15
+SHAPEY_IMG_DIR = "/home/namj/projects/ShapeYAnalysis/data/ShapeY200/dataset/"
+ANNOTATION_FONT_SIZE = 7
 
 
 def format_xdist_graph(
