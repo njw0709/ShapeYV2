@@ -302,7 +302,9 @@ def plot_error_panels(feature_directory: str) -> None:
                 fig = image_panel_display.fill_grid(graph_data_row_list_obj)
                 fig = image_panel_display.format_panel(graph_data_row_list_obj)
                 fig = image_panel_display.set_title(
-                    "Error Panel, obj: {}, series: {} - Object error".format(obj, ax)
+                    "Error Panel, obj: {}, series: {} - Object error".format(
+                        utils.ImageNameHelper.shorten_objname(obj), ax
+                    )
                 )
                 fig.savefig(
                     os.path.join(
@@ -319,7 +321,9 @@ def plot_error_panels(feature_directory: str) -> None:
                 fig = image_panel_display.fill_grid(graph_data_row_list_cat)
                 fig = image_panel_display.format_panel(graph_data_row_list_cat)
                 fig = image_panel_display.set_title(
-                    "Error Panel, obj: {}, series: {} - Category error".format(obj, ax)
+                    "Error Panel, obj: {}, series: {} - Category error".format(
+                        utils.ImageNameHelper.shorten_objname(obj), ax
+                    )
                 )
                 fig.savefig(
                     os.path.join(
