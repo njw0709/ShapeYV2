@@ -16,10 +16,10 @@ def run_exclusion_analysis(dirname: str) -> None:
     print("Current working directory: {0}".format(cwd))
 
     # copy config file to feature directory
-    cmd = ["cp", utils.PATH_CONFIG_PW_CR, "."]
+    cmd = ["cp", utils.PATH_CONFIG_PW_NO_CR, "."]
     utils.execute_and_print(cmd)
 
-    config_filename = os.path.basename(utils.PATH_CONFIG_PW_CR)
+    config_filename = os.path.basename(utils.PATH_CONFIG_PW_NO_CR)
     data_loader = de.HDFProcessor()
     distance_mat_file = os.path.join(dirname, "distances-Jaccard.mat")
     input_data_descriptions = (

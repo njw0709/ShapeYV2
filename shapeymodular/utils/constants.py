@@ -1,6 +1,6 @@
 from itertools import combinations
 import functools
-from typing import List
+from typing import List, Dict
 import json
 import os
 import numpy as np
@@ -27,6 +27,23 @@ def generate_all_imgnames(objnames: List[str]) -> List[str]:
     return imgnames
 
 
+def create_shapey_cat_to_obj_dict() -> Dict[str, List[str]]:
+    cat_to_obj_dict = {}
+    for obj in SHAPEY200_OBJS:
+        obj_cat = obj.split("_")[0]
+        if obj_cat not in cat_to_obj_dict.keys():
+            cat_to_obj_dict[obj_cat] = []
+        cat_to_obj_dict[obj_cat].append(obj)
+    return cat_to_obj_dict
+
+
+def sampled_one_obj_per_cat(sample_idx: int = 3) -> List[str]:
+    sampled_objs = []
+    for cat in SHAPEY200_OBJCATS:
+        sampled_objs.append(SHAPEY200_CAT_TO_OBJ_DICT[cat][sample_idx])
+    return sampled_objs
+
+
 DEGREES_OF_FREEDOM: int = 5
 ALL_AXES = generate_axes_of_interest()
 NUMBER_OF_OBJECTS: int = 200
@@ -41,6 +58,9 @@ with open(
 ) as f:
     SHAPEY200_OBJS = json.load(f)
 SHAPEY200_OBJCATS = np.unique([obj.split("_")[0] for obj in SHAPEY200_OBJS])
+SHAPEY200_CAT_TO_OBJ_DICT = create_shapey_cat_to_obj_dict()
+ONE_PER_OBJ_SAMPLE_IDX = 3
+SHAPEY200_SAMPLED_OBJS = sampled_one_obj_per_cat(sample_idx=ONE_PER_OBJ_SAMPLE_IDX)
 SHAPEY200_IMGNAMES = generate_all_imgnames(SHAPEY200_OBJS)
 SHAPEY200_IMGNAMES_DICT = bidict(enumerate(SHAPEY200_IMGNAMES))
 SHAPEY200_NUM_IMGS = len(SHAPEY200_IMGNAMES)
@@ -56,3 +76,7 @@ PATH_CONFIG_PW_NO_CR = os.path.join(CURR_FILE_DIR, "analysis_config_pw_no_cr.jso
 PATH_CONFIG_PW_CR = os.path.join(CURR_FILE_DIR, "analysis_config_pw_cr.json")
 PATH_IMGLIST_ALL = os.path.join(CURR_FILE_DIR, "imgnames_all.txt")
 PATH_IMGLIST_PW = os.path.join(CURR_FILE_DIR, "imgnames_pw_series.txt")
+
+XRADIUS_TO_PLOT_ERR_PANEL = (
+    2  # exclusion radius, add 1 to get the actual index (exclusion distance)
+)
