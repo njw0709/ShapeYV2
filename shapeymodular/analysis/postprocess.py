@@ -318,6 +318,231 @@ class DistanceHistogram:
         return graph_data_group_sameobj_xdist, hist_data_otherobj
 
 
+# WIP
+class Sampler:
+    def __init__(
+        self,
+        data_loader: dl.DataLoader,
+        corrmats: List[dc.CorrMat],
+        analysis_dir: Union[h5py.File, str],
+        nn_analysis_config: cd.NNAnalysisConfig,
+    ):
+        self.data_loader = data_loader
+        self.corrmats = corrmats
+        self.analysis_dir = analysis_dir
+        self.nn_analysis_config = nn_analysis_config
+
+    def load_data(
+        self,
+        data_type: str,
+        obj: str,
+        ax: str,
+        other_obj: Union[None, str] = None,
+    ) -> np.ndarray:
+        key = self.data_loader.get_data_pathway(
+            data_type,
+            self.nn_analysis_config,
+            obj=obj,
+            ax=ax,
+            other_obj_in_same_cat=other_obj,
+        )
+        data = self.data_loader.load(self.analysis_dir, key, lazy=False)
+        return typing.cast(np.ndarray, data)
+
+    def get_top1_positive_match_candidate(
+        self,
+        obj: str,
+        ax: str,
+        category: bool = False,
+        exc_dist: Union[None, int] = None,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        # pull necessary data
+        top1_dists_sameobj = self.load_data("top1_cvals", obj, ax)
+        top1_idxs_sameobj = self.load_data("top1_idx", obj, ax)
+
+        if category:
+            (
+                same_objcat_dists,
+                same_objcat_idxs,
+            ) = NNClassificationError.gather_info_same_obj_cat(
+                self.data_loader, self.analysis_dir, obj, ax, self.nn_analysis_config
+            )  # 1st dim = different objs in same obj cat, 2nd dim = imgs, 3rd dim = exclusion dist in axis
+
+            (
+                top1_dists_sameobj,
+                top1_idxs_sameobj,
+            ) = Sampler.pull_top1_same_obj_cat_candidates(
+                same_objcat_dists,
+                same_objcat_idxs,
+                distance=self.nn_analysis_config.distance_measure,
+            )
+        if exc_dist is not None:
+            top1_dists_sameobj = top1_dists_sameobj[:, exc_dist]
+            top1_idxs_sameobj = top1_idxs_sameobj[:, exc_dist]
+        return top1_dists_sameobj, top1_idxs_sameobj
+
+    def get_all_candidates_top1_per_obj_sorted(
+        self,
+        obj: str,
+        ax: str,
+        exc_dist: int,
+        category: bool = False,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        top_per_obj_cvals = self.load_data("top_per_obj_cvals", obj, ax)
+        top_per_obj_idxs = self.load_data("top_per_obj_idxs", obj, ax)
+        if not category:
+            top1_dists_sameobj = self.load_data("top1_cvals", obj, ax)
+            top1_idxs_sameobj = self.load_data("top1_idx", obj, ax)
+
+            (
+                all_candidates_sorted_dists,
+                all_candidates_sorted_idxs,
+            ) = Sampler.get_all_candidates_sorted_top_per_obj(
+                top1_dists_sameobj,
+                top1_idxs_sameobj,
+                top_per_obj_cvals,
+                top_per_obj_idxs,
+                exc_dist,
+            )
+        else:
+            (
+                same_objcat_dists,
+                same_objcat_idxs,
+            ) = NNClassificationError.gather_info_same_obj_cat(
+                self.data_loader, self.analysis_dir, obj, ax, self.nn_analysis_config
+            )  # 1st dim = different objs in same obj cat, 2nd dim = imgs, 3rd dim = exclusion dist in axis
+            (
+                all_candidates_sorted_dists,
+                all_candidates_sorted_idxs,
+            ) = ErrorDisplay.get_all_candidates_sorted_category_top_per_obj(
+                same_objcat_dists,
+                same_objcat_idxs,
+                top_per_obj_cvals,
+                top_per_obj_idxs,
+                obj,
+                exc_dist,
+            )
+        return all_candidates_sorted_dists, all_candidates_sorted_idxs
+
+    def get_top1_negative_match_candidate(self, obj, ax, category=False):
+        if not category:
+            top1_dists_otherobj = self.load_data("top1_cvals_otherobj", obj, ax)
+            top1_idxs_otherobj = self.load_data("top1_idx_otherobj", obj, ax)
+        else:
+            top_per_obj_cvals = self.load_data("top_per_obj_cvals", obj, ax)
+            top_per_obj_idxs = self.load_data("top_per_obj_idxs", obj, ax)
+            (
+                top1_dists_otherobj,
+                top1_idxs_otherobj,
+            ) = NNClassificationError.get_top1_dists_and_idx_other_obj_cat(
+                top_per_obj_cvals,
+                top_per_obj_idxs,
+                obj,
+                self.nn_analysis_config.distance_measure,
+            )
+        return top1_dists_otherobj, top1_idxs_otherobj
+
+    @staticmethod
+    def pull_top1_same_obj_cat_candidates(
+        same_objcat_dists: np.ndarray,
+        same_objcat_idxs: np.ndarray,
+        distance: str = "correlation",
+    ) -> Tuple[
+        np.ndarray, np.ndarray
+    ]:  # output: top1 dists and idxs for every candidate in same obj category with exclusion dists (11x11)
+        # same_objcat_dists: 1st dim: different objs in same obj cat, 2nd dim: imgs, 3rd dim: exclusion dist in axis
+        assert same_objcat_dists.shape == (10, 11, 11)
+        assert same_objcat_idxs.shape == (10, 11, 11)
+        if distance == "correlation":
+            same_objcat_dists_nan_to_zero = same_objcat_dists.copy()
+            same_objcat_dists_nan_to_zero[np.isnan(same_objcat_dists)] = 0
+            top1_dists_sameobj = np.nanmax(same_objcat_dists, axis=0)
+            best_positive_match_arg = np.nanargmax(
+                same_objcat_dists_nan_to_zero, axis=0
+            )
+        else:
+            data_type = same_objcat_dists.dtype
+            same_objcat_dists_nan_to_large = same_objcat_dists.copy()
+            same_objcat_dists_nan_to_large[np.isnan(same_objcat_dists)] = np.iinfo(
+                data_type
+            ).max
+            top1_dists_sameobj = np.nanmin(same_objcat_dists, axis=0)
+            best_positive_match_arg = np.nanargmin(
+                same_objcat_dists_nan_to_large, axis=0
+            )
+        best_positive_match_arg[np.isnan(top1_dists_sameobj)] = -1
+        j, k = np.indices(best_positive_match_arg.shape)
+        top1_idxs_sameobj = same_objcat_idxs[best_positive_match_arg, j, k]
+        assert top1_idxs_sameobj.shape == (11, 11)
+        assert top1_dists_sameobj.shape == (11, 11)
+        return top1_dists_sameobj, top1_idxs_sameobj
+
+    @staticmethod
+    def get_all_candidates_sorted_top_per_obj(
+        same_obj_dists: np.ndarray,
+        same_obj_idxs: np.ndarray,
+        top_per_obj_cvals: np.ndarray,
+        top_per_obj_idxs: np.ndarray,
+        exc_dist: int,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        same_obj_dists = np.expand_dims(same_obj_dists[:, exc_dist], axis=1)
+        same_obj_idxs = np.expand_dims(same_obj_idxs[:, exc_dist], axis=1)
+
+        all_candidate_dists = np.concatenate(
+            [same_obj_dists, top_per_obj_cvals], axis=1
+        )  # 11 x 200
+        all_candidate_idxs = np.concatenate([same_obj_idxs, top_per_obj_idxs], axis=1)
+        ind_sorted = np.argsort(-all_candidate_dists, axis=1)  # descending order
+        all_candidate_idxs_sorted = np.take_along_axis(
+            all_candidate_idxs, ind_sorted, axis=1
+        )
+        all_candidate_dists_sorted = np.take_along_axis(
+            all_candidate_dists, ind_sorted, axis=1
+        )
+
+        assert all_candidate_dists_sorted.shape == (11, 200)
+        return all_candidate_dists_sorted, all_candidate_idxs_sorted
+
+    @staticmethod
+    def get_all_candidates_sorted_category_top_per_obj(
+        same_objcat_dists: np.ndarray,  # 1st dim = different objs in same obj cat, 2nd dim = imgs, 3rd dim = exclusion dist in axis
+        same_objcat_idxs: np.ndarray,
+        top_per_obj_cvals: np.ndarray,
+        top_per_obj_idxs: np.ndarray,
+        obj: str,
+        exc_dist: int,
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        # get sorted top1 per object for all candidates available.
+        same_objcat_candidate_dists = same_objcat_dists[:, :, exc_dist]  # 10 x 11
+        same_objcat_candidate_idxs = same_objcat_idxs[:, :, exc_dist]
+        assert same_objcat_candidate_dists.shape == (10, 11)
+        (
+            other_objcat_candidate_dists,
+            other_objcat_candidate_idxs,
+        ) = ErrorDisplay.filter_top_per_obj_other_obj_cat(
+            top_per_obj_cvals, top_per_obj_idxs, obj
+        )  # 190 x 11
+        assert other_objcat_candidate_dists.shape == (190, 11)
+        all_candidate_dists = np.concatenate(
+            [same_objcat_candidate_dists, other_objcat_candidate_dists], axis=0
+        )  # 200 x 11
+        all_candidate_idxs = np.concatenate(
+            [same_objcat_candidate_idxs, other_objcat_candidate_idxs], axis=0
+        )
+        ind_sorted = np.argsort(
+            -all_candidate_dists, axis=0
+        )  # sort in descending order
+        sorted_all_candidate_idxs = np.take_along_axis(
+            all_candidate_idxs, ind_sorted, axis=0
+        )
+        sorted_all_candidate_dists = np.take_along_axis(
+            all_candidate_dists, ind_sorted, axis=0
+        )
+
+        assert sorted_all_candidate_dists.shape == (200, 11)
+        return sorted_all_candidate_dists.T, sorted_all_candidate_idxs.T
+
+
 class ErrorDisplay:
     @staticmethod
     def get_list_of_errors_single_obj(
