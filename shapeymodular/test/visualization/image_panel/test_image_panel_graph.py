@@ -8,9 +8,10 @@ class TestImagePanelDisplay:
         if num_rows == 0:
             return
         num_cols = len(list_of_errors_obj[0])
-        image_panel_display = vis.ImageGrid(num_rows, num_cols)
+        image_panel_display = vis.ErrorPanel(num_rows, num_cols)
         fig = image_panel_display.fill_grid(list_of_errors_obj)
-        fig.suptitle("Error Panels - Object Error", fontsize=15, y=0.9)
+        fig = image_panel_display.format_panel(list_of_errors_obj)
+        fig = image_panel_display.set_title("Error Panels - Object Error")
         fig.savefig(
             os.path.join(test_fig_output_dir, "test_error_display_obj.png"),
             bbox_inches="tight",
@@ -21,9 +22,10 @@ class TestImagePanelDisplay:
         if num_rows == 0:
             return
         num_cols = len(list_of_errors_cat[0])
-        image_panel_display = vis.ImageGrid(num_rows, num_cols)
+        image_panel_display = vis.ErrorPanel(num_rows, num_cols)
         fig = image_panel_display.fill_grid(list_of_errors_cat)
-        fig.suptitle("Error Panels - Within Category Error", fontsize=15, y=0.9)
+        fig = image_panel_display.format_panel(list_of_errors_cat)
+        fig = image_panel_display.set_title("Error Panels - Within Category Error")
         fig.savefig(
             os.path.join(test_fig_output_dir, "test_error_display_cat.png"),
             bbox_inches="tight",
