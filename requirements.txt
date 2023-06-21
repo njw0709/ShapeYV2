@@ -11,3 +11,5 @@ mypy
 numpy==1.21
 bidict
 dacite
+Pillow>=9.5.0
+
