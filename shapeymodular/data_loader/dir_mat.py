@@ -59,6 +59,8 @@ class FeatureDirMatProcessor(dl.DataLoader):
             keys = list(f.keys())
             if filter_key is not None:
                 keys = [k for k in keys if filter_key in k]
+                if len(keys) == 0:
+                    raise KeyError("No key found with filter: " + filter_key)
             data = []
             for k in keys:
                 if isinstance(f[k], h5py.Dataset):
