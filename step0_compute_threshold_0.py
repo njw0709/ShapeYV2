@@ -1,5 +1,4 @@
 import os
-import shapeymodular.utils as utils
 import shapeymodular.data_loader as dl
 from shapeymodular.macros.compute_threshold import compute_threshold_subsample
 
@@ -8,7 +7,7 @@ all_features_directories = []
 base_dir = "/home/francis/nineCasesToRun/"
 datadirs = os.listdir(base_dir)
 datadirs.sort()
-datadirs = datadirs[:5]
+datadirs = datadirs
 
 # compute threshold for all directories
 
@@ -21,5 +20,7 @@ for dir in datadirs:
     ]
     for features_directory in features_dir:
         print("Computing threshold for {}".format(features_directory))
-        compute_threshold_subsample(features_directory, data_loader)
+        compute_threshold_subsample(
+            features_directory, data_loader, variable_name="l2pool"
+        )
         print("Done")

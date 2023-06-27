@@ -7,6 +7,7 @@ from typing import Union, Sequence, Tuple, List
 import typing
 import shapeymodular.data_classes as dc
 from . import nn_analysis as nn
+import os
 
 
 class NNClassificationError:
@@ -553,6 +554,7 @@ class ErrorDisplay:
         exc_dist: int,
         nn_analysis_config: cd.NNAnalysisConfig,
         within_category_error=False,
+        incorrect_only=False,
     ) -> Tuple[
         np.ndarray,  # ref img shapey idx
         Tuple[
@@ -685,8 +687,12 @@ class ErrorDisplay:
             )
 
         assert all_candidates_sorted_dists.shape == (11, 200)
-        # cut out exc_dist
-        incorrect = ~correct[:, exc_dist]
+        if incorrect_only:
+            # cut out exc_dist
+            incorrect = ~correct[:, exc_dist]
+        else:
+            incorrect = np.ones(correct.shape, dtype=bool)[:, exc_dist]
+
         # ignore nan values
         incorrect[np.isnan(top1_dists_sameobj[:, exc_dist])] = False
 
@@ -839,6 +845,10 @@ class ErrorDisplay:
         return np.array(other_obj_dists), np.array(other_obj_idxs)
 
     @staticmethod
+    def get_closest_physical_match(ref_shapey_idxs: np.ndarray, exc_dists: int):
+        pass
+
+    @staticmethod
     def error_examples_to_graph_data_list(
         incorrect_example_ref_img_shapey_idxs: np.ndarray,
         incorrect_example_best_positive_match_shapey_idxs: np.ndarray,
@@ -846,7 +856,7 @@ class ErrorDisplay:
         all_candidates_sorted_idxs: np.ndarray,
         all_candidates_sorted_dists: np.ndarray,
         within_category_error: bool = False,
-        truncate_to: int = 10,
+        truncate_to: int = 13,
     ) -> List[List[dc.GraphData]]:  # ref img, best match, top 10 candidates
         # save and arrange into graph data
         graph_data_row_list: List[List[dc.GraphData]] = []
@@ -867,29 +877,7 @@ class ErrorDisplay:
                     label=ref_label,
                 )
             )
-            # add best matching positive match candidate
-            parsed_best_positive_match = utils.ImageNameHelper.parse_shapey_idx(
-                incorrect_example_best_positive_match_shapey_idxs[r]
-            )
-            shortened_objname = utils.ImageNameHelper.shorten_objname(
-                parsed_best_positive_match["objname"]
-            )
-            graph_data_row.append(
-                dc.GraphData(
-                    x="img_x",
-                    y="img_y",
-                    x_label="best positive match",
-                    y_label="{}{:02d}".format(
-                        parsed_best_positive_match["ax"],
-                        int(parsed_best_positive_match["series_idx"]),
-                    ),
-                    data=parsed_best_positive_match["imgname"],
-                    label=shortened_objname,
-                    supplementary_data={
-                        "distance": incorrect_example_best_positive_match_dists[r]
-                    },
-                )
-            )
+
             # then add sorted candidates
             series_row_num = int(parsed_ref_img["series_idx"]) - 1
             row_all_candidates_sorted_dists = all_candidates_sorted_dists[
@@ -899,7 +887,7 @@ class ErrorDisplay:
                 series_row_num, :
             ]
             for i, candidate_shapey_idx in enumerate(row_all_candidates_sorted_idxs):
-                if i < truncate_to - 2:
+                if i < truncate_to - 3:
                     parsed_candidate_name = utils.ImageNameHelper.parse_shapey_idx(
                         candidate_shapey_idx
                     )
@@ -935,6 +923,50 @@ class ErrorDisplay:
                             },
                         )
                     )
+            # add best matching positive match candidate
+            parsed_best_positive_match = utils.ImageNameHelper.parse_shapey_idx(
+                incorrect_example_best_positive_match_shapey_idxs[r]
+            )
+            shortened_objname = utils.ImageNameHelper.shorten_objname(
+                parsed_best_positive_match["objname"]
+            )
+            graph_data_row.append(
+                dc.GraphData(
+                    x="img_x",
+                    y="img_y",
+                    x_label="best positive match",
+                    y_label="{}{:02d}".format(
+                        parsed_best_positive_match["ax"],
+                        int(parsed_best_positive_match["series_idx"]),
+                    ),
+                    data=parsed_best_positive_match["imgname"],
+                    label=shortened_objname,
+                    supplementary_data={
+                        "distance": incorrect_example_best_positive_match_dists[r]
+                    },
+                )
+            )
+            # add closest physical match
+            # parsed_closest_physical_match = utils.ImageNameHelper.parse_shapey_idx(
+            #     closest_physical_match_shapey_idxs[r]
+            # )
+            # shortened_objname = utils.ImageNameHelper.shorten_objname(
+            #     parsed_closest_physical_match["objname"]
+            # )
+            # graph_data_row.append(
+            #     dc.GraphData(
+            #         x="img_x",
+            #         y="img_y",
+            #         x_label="closest physical match",
+            #         y_label="{}{:02d}".format(
+            #             parsed_closest_physical_match["ax"],
+            #             int(parsed_closest_physical_match["series_idx"]),
+            #         ),
+            #         data=parsed_closest_physical_match["imgname"],
+            #         label=shortened_objname,
+            #         supplementary_data={"distance": closest_physical_match_dists[r]},
+            #     )
+            # )
             graph_data_row_list.append(graph_data_row)
         return graph_data_row_list
 
@@ -986,3 +1018,17 @@ class TuningCurve:
             graph_data_list.append(tuning_curve)
         graph_group = dc.GraphDataGroup(data=graph_data_list)
         return graph_group
+
+
+class FeatureActivationLevel:
+    @staticmethod
+    def get_feature_activation_level(
+        thresholds: List[np.ndarray], raw_features: List[np.ndarray]
+    ) -> List[float]:
+        assert len(thresholds) == len(raw_features)
+        feature_activation_level_list = []
+        for i, th in enumerate(thresholds):
+            feature = raw_features[i]
+            feature_activation_level = np.sum(feature > th) / feature.size
+            feature_activation_level_list.append(feature_activation_level)
+        return feature_activation_level_list

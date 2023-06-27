@@ -1,6 +1,7 @@
 from typing import List, Union, Dict
 from . import constants
 import re
+import random
 
 
 class ImageNameHelper:
@@ -96,3 +97,22 @@ class ImageNameHelper:
             "ax": ax,
             "obj_cat": obj_cat,
         }
+
+    @staticmethod
+    def get_closest_physical_image(ref_shapey_idx: int, exc_dist: int) -> int:
+        series_idx = ImageNameHelper.shapey_idx_to_series_idx(ref_shapey_idx)
+        choices = []
+        closest_series_idx_high = series_idx + exc_dist
+        closest_series_idx_low = series_idx - exc_dist
+        if closest_series_idx_high <= 11:
+            choices.append(exc_dist)
+
+        if closest_series_idx_low >= 1:
+            choices.append(-exc_dist)
+
+        if len(choices) == 0:
+            return -1
+        elif len(choices) == 1:
+            return ref_shapey_idx + choices[0]
+        else:
+            return ref_shapey_idx + random.choice(choices)

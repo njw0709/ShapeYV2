@@ -1,9 +1,5 @@
 import os
 import shapeymodular.macros.nn_batch as nn_batch
-import shapeymodular.data_classes as dc
-import shapeymodular.data_loader as dl
-import h5py
-import shapeymodular.utils as utils
 
 FILE_DIR = os.path.dirname(os.path.abspath(__file__))
 # get all directories to run

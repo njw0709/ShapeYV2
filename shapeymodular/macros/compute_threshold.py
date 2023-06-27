@@ -25,6 +25,9 @@ def compute_threshold_subsample(
     if file_name is None:
         file_name = "thresholds.mat"
     save_file_name = os.path.join(save_dir, file_name)
+    # check if save file exists
+    if os.path.isfile(save_file_name):
+        os.rename(save_file_name, os.path.join(save_dir, "old_" + file_name))
     all_exists, feature_files = data_loader.check_all_feature_file_exists(
         features_directory
     )
@@ -32,7 +35,9 @@ def compute_threshold_subsample(
     # randomly select 5000 from feature files (out of 68500)
     subsampled_feature_files = random.sample(feature_files, sample_size)
     # check dimensions of a file
-    data = data_loader.load(features_directory, subsampled_feature_files[0])
+    data = data_loader.load(
+        features_directory, subsampled_feature_files[0], filter_key=variable_name
+    )
     shape = data[0].shape
 
     # accumulate the subsampled features
