@@ -2,8 +2,9 @@ import numpy as np
 import shapeymodular.data_loader as dl
 import shapeymodular.utils as utils
 import shapeymodular.data_classes as cd
+import shapeymodular.visualization as vis
 import h5py
-from typing import Union, Sequence, Tuple, List
+from typing import Union, Sequence, Tuple, List, Dict
 import typing
 import shapeymodular.data_classes as dc
 from . import nn_analysis as nn
@@ -946,29 +947,62 @@ class ErrorDisplay:
                     },
                 )
             )
-            # add closest physical match
-            # parsed_closest_physical_match = utils.ImageNameHelper.parse_shapey_idx(
-            #     closest_physical_match_shapey_idxs[r]
-            # )
-            # shortened_objname = utils.ImageNameHelper.shorten_objname(
-            #     parsed_closest_physical_match["objname"]
-            # )
-            # graph_data_row.append(
-            #     dc.GraphData(
-            #         x="img_x",
-            #         y="img_y",
-            #         x_label="closest physical match",
-            #         y_label="{}{:02d}".format(
-            #             parsed_closest_physical_match["ax"],
-            #             int(parsed_closest_physical_match["series_idx"]),
-            #         ),
-            #         data=parsed_closest_physical_match["imgname"],
-            #         label=shortened_objname,
-            #         supplementary_data={"distance": closest_physical_match_dists[r]},
-            #     )
-            # )
             graph_data_row_list.append(graph_data_row)
         return graph_data_row_list
+
+    @staticmethod
+    def add_closest_physical_match_to_graph_data_row(
+        graph_data_row: List[dc.GraphData],
+        tuning_curve: dc.GraphDataGroup,
+        exc_dist: int,
+    ):  # exclusion distance, not radius
+        reference_img = graph_data_row[0].data
+        assert isinstance(reference_img, str)
+        ref_shapey_idx = utils.ImageNameHelper.imgname_to_shapey_idx(reference_img)
+        closest_physical_match_shapey_idx = (
+            utils.ImageNameHelper.get_closest_physical_image(ref_shapey_idx, exc_dist)
+        )
+        if closest_physical_match_shapey_idx == -1:
+            graph_data_row.append(
+                dc.GraphData(
+                    x="img_x",
+                    y="img_y",
+                    x_label="closest physical match",
+                    y_label="",
+                    data=vis.BLANK_IMG,
+                    label="",
+                    supplementary_data={"distance": 0.0},
+                )
+            )
+        else:
+            parsed_closest_physical_match = utils.ImageNameHelper.parse_shapey_idx(
+                closest_physical_match_shapey_idx
+            )
+            shortened_objname = utils.ImageNameHelper.shorten_objname(
+                parsed_closest_physical_match["objname"]
+            )
+            closest_physical_match_series_idx = int(
+                parsed_closest_physical_match["series_idx"]
+            )
+            graph_data_row.append(
+                dc.GraphData(
+                    x="img_x",
+                    y="img_y",
+                    x_label="closest physical match",
+                    y_label="{}{:02d}".format(
+                        parsed_closest_physical_match["ax"],
+                        closest_physical_match_series_idx,
+                    ),
+                    data=parsed_closest_physical_match["imgname"],
+                    label=shortened_objname,
+                    supplementary_data={
+                        "distance": tuning_curve[
+                            closest_physical_match_shapey_idx - 1
+                        ].data
+                    },
+                )
+            )
+        return graph_data_row
 
 
 class TuningCurve:
@@ -1032,3 +1066,46 @@ class FeatureActivationLevel:
             feature_activation_level = np.sum(feature > th) / feature.size
             feature_activation_level_list.append(feature_activation_level)
         return feature_activation_level_list
+
+    @staticmethod
+    def augment_graph_data_with_feature_activation_level(
+        graph_data: dc.GraphData,
+        data_loader: dl.FeatureDirMatProcessor,
+        feature_dir: str,
+        threshold: List[np.ndarray],
+    ) -> dc.GraphData:
+        assert isinstance(graph_data.data, str)
+        if graph_data.data == vis.BLANK_IMG:
+            return graph_data
+        assert graph_data.data in utils.SHAPEY200_IMGNAMES
+        assert os.path.exists(feature_dir)
+
+        feature_file_name = graph_data.data.split(".")[0] + ".mat"
+        features = data_loader.load(feature_dir, feature_file_name, filter_key="l2pool")
+        features = list(*features)
+        feature_activation_level = FeatureActivationLevel.get_feature_activation_level(
+            threshold, features
+        )
+
+        typing.cast(Dict, graph_data.supplementary_data)[
+            "feature_activation_level"
+        ] = feature_activation_level
+        return graph_data
+
+    @staticmethod
+    def add_feature_activation_level_imgpanel_data(
+        graph_data_row_list: List[List[dc.GraphData]],
+        data_loader: dl.FeatureDirMatProcessor,
+        feature_dir: str,
+        threshold: List[np.ndarray],
+    ):
+        graph_data_row_list_augmented = []
+        for graph_data_row in graph_data_row_list:
+            graph_data_row_augmented = []
+            for graph_data in graph_data_row:
+                graph_data = FeatureActivationLevel.augment_graph_data_with_feature_activation_level(
+                    graph_data, data_loader, feature_dir, threshold
+                )
+                graph_data_row_augmented.append(graph_data)
+            graph_data_row_list_augmented.append(graph_data_row_augmented)
+        return graph_data_row_list_augmented

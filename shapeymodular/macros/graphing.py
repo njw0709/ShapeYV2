@@ -215,6 +215,7 @@ def plot_histogram_with_error_graph(feature_directory: str) -> None:
 
 def plot_error_panels(feature_directory: str) -> None:
     data_loader = dl.HDFProcessor()
+    feature_data_loader = dl.FeatureDirMatProcessor()
     # create figure directory
     FIG_SAVE_DIR = os.path.join(feature_directory, "figures")
     if not os.path.exists(FIG_SAVE_DIR):
@@ -231,107 +232,155 @@ def plot_error_panels(feature_directory: str) -> None:
     config = dc.load_config(
         os.path.join(feature_directory, "analysis_config_pw_no_cr.json")
     )
-
     analysis_hdf_path = os.path.join(feature_directory, "analysis_results.h5")
-    analysis_hdf = h5py.File(analysis_hdf_path, "r")
     axes = typing.cast(List, config.axes)
-
-    for ax in axes:
-        # sampled one object per category
-        for obj in tqdm(utils.SHAPEY200_SAMPLED_OBJS):
-            # Load necessary data
-            (
-                incorrect_example_ref_img_shapey_idxs,
-                (
-                    incorrect_example_best_positive_match_shapey_idxs,
-                    incorrect_example_best_positive_match_dists,
-                ),
-                _,
-                (all_candidates_sorted_idxs, all_candidates_sorted_dists),
-            ) = an.ErrorDisplay.get_list_of_errors_single_obj(
+    distance_mat_file = os.path.join(feature_directory, "distances-Jaccard.mat")
+    input_data_descriptions = (
+        os.path.join(feature_directory, "imgnames_pw_series.txt"),
+        os.path.join(feature_directory, "imgnames_all.txt"),
+    )
+    # load threshold
+    if os.path.exists(os.path.join(feature_directory, "old_thresholds.mat")):
+        threshold = feature_data_loader.load(feature_directory, "old_thresholds.mat")
+    else:
+        threshold = feature_data_loader.load(feature_directory, "thresholds.mat")
+    if len(threshold) > 3:
+        threshold = threshold[:3]
+    threshold = [*threshold]
+    with h5py.File(analysis_hdf_path, "r") as analysis_hdf:
+        with h5py.File(distance_mat_file, "r") as distances:
+            # load distance matrix
+            corrmats = an.PrepData.load_corrmat_input(
+                [distances],
+                input_data_descriptions,
                 data_loader,
-                analysis_hdf,
-                obj,
-                ax,
-                utils.XRADIUS_TO_PLOT_ERR_PANEL + 1,
                 config,
-                within_category_error=False,
             )
-
-            graph_data_row_list_obj = an.ErrorDisplay.error_examples_to_graph_data_list(
-                incorrect_example_ref_img_shapey_idxs,
-                incorrect_example_best_positive_match_shapey_idxs,
-                incorrect_example_best_positive_match_dists,
-                all_candidates_sorted_idxs,
-                all_candidates_sorted_dists,
-                within_category_error=False,
-            )
-
-            (
-                incorrect_example_ref_img_shapey_idxs,
-                (
-                    incorrect_example_best_positive_match_shapey_idxs,
-                    incorrect_example_best_positive_match_dists,
-                ),
-                _,
-                (all_candidates_sorted_idxs, all_candidates_sorted_dists),
-            ) = an.ErrorDisplay.get_list_of_errors_single_obj(
-                data_loader,
-                analysis_hdf,
-                obj,
-                ax,
-                utils.XRADIUS_TO_PLOT_ERR_PANEL + 1,
-                config,
-                within_category_error=True,
-            )
-
-            graph_data_row_list_cat = an.ErrorDisplay.error_examples_to_graph_data_list(
-                incorrect_example_ref_img_shapey_idxs,
-                incorrect_example_best_positive_match_shapey_idxs,
-                incorrect_example_best_positive_match_dists,
-                all_candidates_sorted_idxs,
-                all_candidates_sorted_dists,
-                within_category_error=True,
-            )
-
-            # plot error panel
-            num_rows = len(graph_data_row_list_obj)
-            if num_rows != 0:
-                num_cols = len(graph_data_row_list_obj[0])
-                image_panel_display = vis.ErrorPanel(num_rows, num_cols)
-                fig = image_panel_display.fill_grid(graph_data_row_list_obj)
-                fig = image_panel_display.format_panel(graph_data_row_list_obj)
-                fig = image_panel_display.set_title(
-                    "Error Panel, obj: {}, series: {} - Object error".format(
-                        utils.ImageNameHelper.shorten_objname(obj), ax
+            for ax in axes:
+                # sampled one object per category
+                for obj in tqdm(utils.SHAPEY200_SAMPLED_OBJS):
+                    # load tuning curve
+                    tuning_curve = an.TuningCurve.get_tuning_curve(
+                        obj, ax, corrmats[0], config
                     )
-                )
-                fig.savefig(
-                    os.path.join(
-                        FIG_SAVE_DIR, "error_display_obj_{}_{}.png".format(obj, ax)
-                    ),
-                    bbox_inches="tight",
-                )
-                plt.close(fig)
-
-            num_rows = len(graph_data_row_list_cat)
-            if num_rows != 0:
-                num_cols = len(graph_data_row_list_cat[0])
-                image_panel_display = vis.ErrorPanel(num_rows, num_cols)
-                fig = image_panel_display.fill_grid(graph_data_row_list_cat)
-                fig = image_panel_display.format_panel(graph_data_row_list_cat)
-                fig = image_panel_display.set_title(
-                    "Error Panel, obj: {}, series: {} - Category error".format(
-                        utils.ImageNameHelper.shorten_objname(obj), ax
+                    # Load necessary data
+                    (
+                        incorrect_example_ref_img_shapey_idxs,
+                        (
+                            incorrect_example_best_positive_match_shapey_idxs,
+                            incorrect_example_best_positive_match_dists,
+                        ),
+                        _,
+                        (all_candidates_sorted_idxs, all_candidates_sorted_dists),
+                    ) = an.ErrorDisplay.get_list_of_errors_single_obj(
+                        data_loader,
+                        analysis_hdf,
+                        obj,
+                        ax,
+                        utils.XRADIUS_TO_PLOT_ERR_PANEL + 1,
+                        config,
+                        within_category_error=False,
+                        incorrect_only=False,
                     )
-                )
-                fig.savefig(
-                    os.path.join(
-                        FIG_SAVE_DIR, "error_display_cat_{}_{}.png".format(obj, ax)
-                    ),
-                    bbox_inches="tight",
-                )
-                plt.close(fig)
+
+                    graph_data_row_list_obj = (
+                        an.ErrorDisplay.error_examples_to_graph_data_list(
+                            incorrect_example_ref_img_shapey_idxs,
+                            incorrect_example_best_positive_match_shapey_idxs,
+                            incorrect_example_best_positive_match_dists,
+                            all_candidates_sorted_idxs,
+                            all_candidates_sorted_dists,
+                            within_category_error=False,
+                        )
+                    )
+                    # get closeset physical match
+                    graph_data_row_list_obj = [
+                        an.ErrorDisplay.add_closest_physical_match_to_graph_data_row(
+                            row, tuning_curve, utils.XRADIUS_TO_PLOT_ERR_PANEL + 1
+                        )
+                        for row in graph_data_row_list_obj
+                    ]
+                    # add activation level information
+                    graph_data_row_list_obj = an.FeatureActivationLevel.add_feature_activation_level_imgpanel_data(
+                        graph_data_row_list_obj,
+                        feature_data_loader,
+                        feature_directory,
+                        threshold,
+                    )
+
+                    (
+                        incorrect_example_ref_img_shapey_idxs,
+                        (
+                            incorrect_example_best_positive_match_shapey_idxs,
+                            incorrect_example_best_positive_match_dists,
+                        ),
+                        _,
+                        (all_candidates_sorted_idxs, all_candidates_sorted_dists),
+                    ) = an.ErrorDisplay.get_list_of_errors_single_obj(
+                        data_loader,
+                        analysis_hdf,
+                        obj,
+                        ax,
+                        utils.XRADIUS_TO_PLOT_ERR_PANEL + 1,
+                        config,
+                        within_category_error=True,
+                    )
+
+                    graph_data_row_list_cat = (
+                        an.ErrorDisplay.error_examples_to_graph_data_list(
+                            incorrect_example_ref_img_shapey_idxs,
+                            incorrect_example_best_positive_match_shapey_idxs,
+                            incorrect_example_best_positive_match_dists,
+                            all_candidates_sorted_idxs,
+                            all_candidates_sorted_dists,
+                            within_category_error=True,
+                        )
+                    )
+
+                    # plot error panel
+                    num_rows = len(graph_data_row_list_obj)
+                    if num_rows != 0:
+                        num_cols = len(graph_data_row_list_obj[0])
+                        image_panel_display = vis.ErrorPanel(num_rows, num_cols)
+                        fig = image_panel_display.fill_grid(graph_data_row_list_obj)
+                        fig = image_panel_display.format_panel(graph_data_row_list_obj)
+                        fig = image_panel_display.set_title(
+                            "Error Panel, obj: {}, series: {}, exclusion radius: {} - Object error".format(
+                                utils.ImageNameHelper.shorten_objname(obj),
+                                ax,
+                                utils.XRADIUS_TO_PLOT_ERR_PANEL,
+                            )
+                        )
+                        fig.savefig(
+                            os.path.join(
+                                FIG_SAVE_DIR,
+                                "error_display_obj_{}_{}.png".format(obj, ax),
+                            ),
+                            bbox_inches="tight",
+                        )
+                        plt.close(fig)
+
+                    num_rows = len(graph_data_row_list_cat)
+                    if num_rows != 0:
+                        num_cols = len(graph_data_row_list_cat[0])
+                        image_panel_display = vis.ErrorPanel(num_rows, num_cols)
+                        fig = image_panel_display.fill_grid(graph_data_row_list_cat)
+                        fig = image_panel_display.format_panel(graph_data_row_list_cat)
+                        fig = image_panel_display.set_title(
+                            "Error Panel, obj: {}, series: {}, exclusion radius: {} - Category error".format(
+                                utils.ImageNameHelper.shorten_objname(obj),
+                                ax,
+                                utils.XRADIUS_TO_PLOT_ERR_PANEL,
+                            )
+                        )
+                        fig.savefig(
+                            os.path.join(
+                                FIG_SAVE_DIR,
+                                "error_display_cat_{}_{}.png".format(obj, ax),
+                            ),
+                            bbox_inches="tight",
+                        )
+                        plt.close(fig)
 
 
 def plot_tuning_curves(feature_directory: str) -> None:

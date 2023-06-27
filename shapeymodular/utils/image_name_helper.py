@@ -113,6 +113,6 @@ class ImageNameHelper:
         if len(choices) == 0:
             return -1
         elif len(choices) == 1:
-            return ref_shapey_idx + choices[0]
+            return choices[0] + ref_shapey_idx
         else:
             return ref_shapey_idx + random.choice(choices)
