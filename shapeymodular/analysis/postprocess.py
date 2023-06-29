@@ -201,25 +201,20 @@ class NNClassificationError:
 class DistanceHistogram:
     @staticmethod
     def gather_histogram_data(
-        data_loader: dl.DataLoader,
-        save_dir: Union[h5py.File, str],
+        sampler: dl.Sampler,
         obj: str,
         ax: str,
-        nn_analysis_config: cd.NNAnalysisConfig,
         within_category_error=False,
         img_idx: Union[int, None] = None,
     ) -> Tuple[dc.GraphDataGroup, dc.GraphData]:
         if not within_category_error:
-            key_top1_hists = data_loader.get_data_pathway(
-                "top1_hists", nn_analysis_config, obj=obj, ax=ax
+            top1_hists = sampler.load(
+                {"data_type": "top1_hists", "obj": obj, "ax": ax}, lazy=False
             )
-            key_cval_hist_otherobj = data_loader.get_data_pathway(
-                "cval_hist_otherobj", nn_analysis_config, obj=obj, ax=ax
+            cval_hist_otherobj = sampler.load(
+                {"data_type": "cval_hist_otherobj", "obj": obj, "ax": ax}, lazy=False
             )
-            top1_hists = data_loader.load(save_dir, key_top1_hists, lazy=False)
-            cval_hist_otherobj = data_loader.load(
-                save_dir, key_cval_hist_otherobj, lazy=False
-            )
+
             if img_idx is None:
                 same_obj_hists = typing.cast(np.ndarray, top1_hists).sum(axis=0)
                 other_obj_hist = typing.cast(np.ndarray, cval_hist_otherobj).sum(axis=0)
@@ -230,11 +225,9 @@ class DistanceHistogram:
                     img_idx, :, :
                 ]
         else:
-            key_hist_cat_other_category = data_loader.get_data_pathway(
-                "hist_category_other_cat_objs", nn_analysis_config, obj=obj, ax=ax
-            )
-            hist_cat_other_category = data_loader.load(
-                save_dir, key_hist_cat_other_category, lazy=False
+            hist_cat_other_category = sampler.load(
+                {"data_type": "hist_category_other_cat_objs", "obj": obj, "ax": ax},
+                lazy=False,
             )
             obj_cat = utils.ImageNameHelper.get_obj_category_from_objname(obj)
             hist_cat_same_category = []
@@ -243,15 +236,14 @@ class DistanceHistogram:
                     other_obj
                 )
                 if other_obj_cat == obj_cat and other_obj != obj:
-                    key_hist_with_exc_dist_same_category = data_loader.get_data_pathway(
-                        "hist_with_exc_dist_same_category",
-                        nn_analysis_config,
-                        obj=obj,
-                        ax=ax,
-                        other_obj_in_same_cat=other_obj,
-                    )
-                    hist_with_exc_dist_same_category = data_loader.load(
-                        save_dir, key_hist_with_exc_dist_same_category, lazy=False
+                    hist_with_exc_dist_same_category = sampler.load(
+                        {
+                            "data_type": "hist_with_exc_dist_same_category",
+                            "obj": obj,
+                            "ax": ax,
+                            "other_obj_in_same_cat": other_obj,
+                        },
+                        lazy=False,
                     )
                     hist_cat_same_category.append(hist_with_exc_dist_same_category)
             # sum over all other objs
@@ -274,14 +266,14 @@ class DistanceHistogram:
             same_obj_hists = hist_cat_same_category
             other_obj_hist = hist_cat_other_category
 
-        bins = nn_analysis_config.bins
+        bins = sampler.nn_analysis_config.bins
         same_obj_hist_graph_data_list: Sequence[dc.GraphData] = []
         for xdist in range(utils.NUMBER_OF_VIEWS_PER_AXIS):
             same_obj_hist_graph_data_list.append(
                 dc.GraphData(
                     x=np.array(bins),
                     y="counts",
-                    x_label=nn_analysis_config.distance_measure,
+                    x_label=sampler.nn_analysis_config.distance_measure,
                     y_label="counts",
                     data=same_obj_hists[xdist, :],
                     label="positive match candidates counts with exclusion",
@@ -296,7 +288,7 @@ class DistanceHistogram:
         hist_data_otherobj = dc.GraphData(
             x=np.array(bins),
             y="counts",
-            x_label=nn_analysis_config.distance_measure,
+            x_label=sampler.nn_analysis_config.distance_measure,
             y_label="counts",
             data=other_obj_hist,
             label="negative match candidates counts",
