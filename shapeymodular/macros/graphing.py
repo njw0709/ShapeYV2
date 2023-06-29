@@ -247,6 +247,7 @@ def plot_error_panels(feature_directory: str) -> None:
     if len(threshold) > 3:
         threshold = threshold[:3]
     threshold = [*threshold]
+
     with h5py.File(analysis_hdf_path, "r") as analysis_hdf:
         with h5py.File(distance_mat_file, "r") as distances:
             # load distance matrix
@@ -339,48 +340,46 @@ def plot_error_panels(feature_directory: str) -> None:
 
                     # plot error panel
                     num_rows = len(graph_data_row_list_obj)
-                    if num_rows != 0:
-                        num_cols = len(graph_data_row_list_obj[0])
-                        image_panel_display = vis.ErrorPanel(num_rows, num_cols)
-                        fig = image_panel_display.fill_grid(graph_data_row_list_obj)
-                        fig = image_panel_display.format_panel(graph_data_row_list_obj)
-                        fig = image_panel_display.set_title(
-                            "Error Panel, obj: {}, series: {}, exclusion radius: {} - Object error".format(
-                                utils.ImageNameHelper.shorten_objname(obj),
-                                ax,
-                                utils.XRADIUS_TO_PLOT_ERR_PANEL,
-                            )
+                    num_cols = len(graph_data_row_list_obj[0])
+                    image_panel_display = vis.ErrorPanel(num_rows, num_cols)
+                    fig = image_panel_display.fill_grid(graph_data_row_list_obj)
+                    fig = image_panel_display.format_panel(graph_data_row_list_obj)
+                    fig = image_panel_display.set_title(
+                        "Error Panel, obj: {}, series: {}, exclusion radius: {} - Object error".format(
+                            utils.ImageNameHelper.shorten_objname(obj),
+                            ax,
+                            utils.XRADIUS_TO_PLOT_ERR_PANEL,
                         )
-                        fig.savefig(
-                            os.path.join(
-                                FIG_SAVE_DIR,
-                                "error_display_obj_{}_{}.png".format(obj, ax),
-                            ),
-                            bbox_inches="tight",
-                        )
-                        plt.close(fig)
+                    )
+                    fig.savefig(
+                        os.path.join(
+                            FIG_SAVE_DIR,
+                            "error_display_obj_{}_{}.png".format(obj, ax),
+                        ),
+                        bbox_inches="tight",
+                    )
+                    plt.close(fig)
 
                     num_rows = len(graph_data_row_list_cat)
-                    if num_rows != 0:
-                        num_cols = len(graph_data_row_list_cat[0])
-                        image_panel_display = vis.ErrorPanel(num_rows, num_cols)
-                        fig = image_panel_display.fill_grid(graph_data_row_list_cat)
-                        fig = image_panel_display.format_panel(graph_data_row_list_cat)
-                        fig = image_panel_display.set_title(
-                            "Error Panel, obj: {}, series: {}, exclusion radius: {} - Category error".format(
-                                utils.ImageNameHelper.shorten_objname(obj),
-                                ax,
-                                utils.XRADIUS_TO_PLOT_ERR_PANEL,
-                            )
+                    num_cols = len(graph_data_row_list_cat[0])
+                    image_panel_display = vis.ErrorPanel(num_rows, num_cols)
+                    fig = image_panel_display.fill_grid(graph_data_row_list_cat)
+                    fig = image_panel_display.format_panel(graph_data_row_list_cat)
+                    fig = image_panel_display.set_title(
+                        "Error Panel, obj: {}, series: {}, exclusion radius: {} - Category error".format(
+                            utils.ImageNameHelper.shorten_objname(obj),
+                            ax,
+                            utils.XRADIUS_TO_PLOT_ERR_PANEL,
                         )
-                        fig.savefig(
-                            os.path.join(
-                                FIG_SAVE_DIR,
-                                "error_display_cat_{}_{}.png".format(obj, ax),
-                            ),
-                            bbox_inches="tight",
-                        )
-                        plt.close(fig)
+                    )
+                    fig.savefig(
+                        os.path.join(
+                            FIG_SAVE_DIR,
+                            "error_display_cat_{}_{}.png".format(obj, ax),
+                        ),
+                        bbox_inches="tight",
+                    )
+                    plt.close(fig)
 
 
 def plot_tuning_curves(feature_directory: str) -> None:

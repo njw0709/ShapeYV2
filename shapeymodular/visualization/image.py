@@ -108,7 +108,7 @@ class ErrorPanel(ImageGrid):
                 ax = ErrorPanel.annotate_corrval(ax, data[r][c])
 
             if r == 0:
-                if c in [0, 1, 2]:
+                if c in [0, 1, self.shape[1] - 2, self.shape[1] - 1]:
                     ax.set_title(
                         data[r][c].x_label,
                         fontweight="bold",
