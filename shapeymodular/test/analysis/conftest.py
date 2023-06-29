@@ -103,3 +103,9 @@ def crossver_corrmat(
         nn_analysis_config,
     )
     yield corrmats
+
+
+@pytest.fixture
+def analysis_results_sampler(data_loader, analysis_hdf, nn_analysis_config):
+    sampler = dl.Sampler(data_loader, analysis_hdf, nn_analysis_config)
+    return sampler

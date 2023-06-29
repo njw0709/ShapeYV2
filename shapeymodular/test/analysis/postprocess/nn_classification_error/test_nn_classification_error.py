@@ -1,6 +1,4 @@
 import random
-import typing
-import h5py
 import numpy as np
 import shapeymodular.analysis.postprocess as pp
 import shapeymodular.data_classes as dc
@@ -8,17 +6,13 @@ import shapeymodular.utils as utils
 
 
 class TestNNClassificationError:
-    def test_gather_info_same_obj_cat(
-        self, data_loader, analysis_hdf, nn_analysis_config
-    ):
+    def test_gather_info_same_obj_cat(self, analysis_results_sampler):
         obj = random.choice(utils.SHAPEY200_OBJS)
         ax = "pw"
         same_objcat_cvals, _ = pp.NNClassificationError.gather_info_same_obj_cat(
-            data_loader,
-            typing.cast(h5py.File, analysis_hdf),
+            analysis_results_sampler,
             obj,
             ax,
-            nn_analysis_config,
         )
         assert same_objcat_cvals.shape == (10, 11, 11)
         obj_cat = utils.ImageNameHelper.get_obj_category_from_objname(obj)
@@ -27,20 +21,21 @@ class TestNNClassificationError:
         ]
         for i, other_obj in enumerate(objs_same_cat):
             if other_obj == obj:
-                key = data_loader.get_data_pathway(
-                    "top1_cvals", nn_analysis_config, obj=obj, ax=ax
+                top1_sameobj_cvals = analysis_results_sampler.load(
+                    {"data_type": "top1_cvals", "obj": obj, "ax": ax}, lazy=False
                 )
-                top1_sameobj_cvals = data_loader.load(analysis_hdf, key, lazy=False)
                 assert np.allclose(
                     top1_sameobj_cvals, same_objcat_cvals[i], equal_nan=True
                 )
 
     def test_compare_same_obj_with_top1_other_obj(
-        self, top1_excdist, top1_other, nn_analysis_config
+        self, top1_excdist, top1_other, analysis_results_sampler
     ):
         top1_error_sameobj = (
             pp.NNClassificationError.compare_same_obj_with_top1_other_obj(
-                top1_excdist, top1_other, nn_analysis_config.distance_measure
+                top1_excdist,
+                top1_other,
+                analysis_results_sampler.nn_analysis_config.distance_measure,
             )
         )
         assert top1_error_sameobj.shape == (11, 11)
@@ -87,37 +82,33 @@ class TestNNClassificationError:
             assert (correct == correct_counts[:, i]).all()
 
     def test_generate_top1_error_data_obj(
-        self, data_loader, random_obj_ax, analysis_hdf, nn_analysis_config
+        self, random_obj_ax, analysis_results_sampler
     ):
         obj, ax = random_obj_ax
         graph_data = pp.NNClassificationError.generate_top1_error_data(
-            data_loader, analysis_hdf, obj, ax, nn_analysis_config
+            analysis_results_sampler, obj, ax
         )
         assert isinstance(graph_data, dc.GraphData)
         graph_data_category = pp.NNClassificationError.generate_top1_error_data(
-            data_loader,
-            analysis_hdf,
+            analysis_results_sampler,
             obj,
             ax,
-            nn_analysis_config,
             within_category_error=False,
         )
         assert isinstance(graph_data_category, dc.GraphData)
 
     def test_generate_top1_error_data_category(
-        self, data_loader, random_obj_ax, analysis_hdf, nn_analysis_config
+        self, random_obj_ax, analysis_results_sampler
     ):
         obj, ax = random_obj_ax
         graph_data = pp.NNClassificationError.generate_top1_error_data(
-            data_loader, analysis_hdf, obj, ax, nn_analysis_config
+            analysis_results_sampler, obj, ax
         )
         assert isinstance(graph_data, dc.GraphData)
         graph_data_category = pp.NNClassificationError.generate_top1_error_data(
-            data_loader,
-            analysis_hdf,
+            analysis_results_sampler,
             obj,
             ax,
-            nn_analysis_config,
             within_category_error=True,
         )
         assert isinstance(graph_data_category, dc.GraphData)

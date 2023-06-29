@@ -11,34 +11,12 @@ from . import nn_analysis as nn
 import os
 
 
-class Sampler:
-    def __init__(
-        self,
-        data_loader: dl.DataLoader,
-        data: Union[h5py.File, str],
-        nn_analysis_config: cd.NNAnalysisConfig,
-    ):
-        self.data_loader = data_loader
-        self.data = data
-        self.nn_analysis_config = nn_analysis_config
-
-    def load(self, query: Dict, lazy=False) -> Union[np.ndarray, h5py.Dataset]:
-        data_type = query.pop("data_type")
-        key = self.data_loader.get_data_pathway(
-            data_type, self.nn_analysis_config, **query
-        )
-        data = self.data_loader.load(self.data, key, lazy=lazy)
-        return data
-
-
 class NNClassificationError:
     @staticmethod
     def gather_info_same_obj_cat(
-        data_loader: dl.DataLoader,
-        save_dir: Union[h5py.File, str],
+        sampler: dl.Sampler,
         obj: str,
         ax: str,
-        nn_analysis_config: cd.NNAnalysisConfig,
     ) -> Tuple[np.ndarray, np.ndarray]:
         same_objcat_cvals = []
         same_objcat_idxs = []
@@ -48,33 +26,33 @@ class NNClassificationError:
         ]
         for other_obj in objs_same_cat:
             if obj != other_obj:
-                key = data_loader.get_data_pathway(
-                    "top1_cvals_same_category",
-                    nn_analysis_config,
-                    obj=obj,
-                    ax=ax,
-                    other_obj_in_same_cat=other_obj,
+                other_obj_cval = sampler.load(
+                    {
+                        "data_type": "top1_cvals_same_category",
+                        "obj": obj,
+                        "ax": ax,
+                        "other_obj_in_same_cat": other_obj,
+                    },
+                    lazy=False,
                 )
-                key_idx = data_loader.get_data_pathway(
-                    "top1_idx_same_category",
-                    nn_analysis_config,
-                    obj=obj,
-                    ax=ax,
-                    other_obj_in_same_cat=other_obj,
+                other_obj_idx = sampler.load(
+                    {
+                        "data_type": "top1_idx_same_category",
+                        "obj": obj,
+                        "ax": ax,
+                        "other_obj_in_same_cat": other_obj,
+                    },
+                    lazy=False,
                 )
-                other_obj_cval = data_loader.load(save_dir, key, lazy=False)
-                other_obj_idx = data_loader.load(save_dir, key_idx, lazy=False)
                 same_objcat_cvals.append(other_obj_cval)
                 same_objcat_idxs.append(other_obj_idx)
             else:
-                key = data_loader.get_data_pathway(
-                    "top1_cvals", nn_analysis_config, obj=obj, ax=ax
+                top1_sameobj_cvals = sampler.load(
+                    {"data_type": "top1_cvals", "obj": obj, "ax": ax}, lazy=False
                 )
-                key_idx = data_loader.get_data_pathway(
-                    "top1_idx", nn_analysis_config, obj=obj, ax=ax
+                top1_sameobj_idx = sampler.load(
+                    {"data_type": "top1_idx", "obj": obj, "ax": ax}, lazy=False
                 )
-                top1_sameobj_cvals = data_loader.load(save_dir, key, lazy=False)
-                top1_sameobj_idx = data_loader.load(save_dir, key_idx, lazy=False)
                 same_objcat_cvals.append(top1_sameobj_cvals)
                 same_objcat_idxs.append(top1_sameobj_idx)
         return np.array(same_objcat_cvals), np.array(same_objcat_idxs)
@@ -156,26 +134,17 @@ class NNClassificationError:
 
     @staticmethod
     def generate_top1_error_data(
-        data_loader: dl.DataLoader,
-        save_dir: Union[h5py.File, str],
+        sampler: dl.Sampler,
         obj: str,
         ax: str,
-        nn_analysis_config: cd.NNAnalysisConfig,
         within_category_error=False,
         distance: str = "correlation",
     ) -> dc.GraphData:
-        key_top1_obj = data_loader.get_data_pathway(
-            "top1_cvals", nn_analysis_config, obj=obj, ax=ax
-        )
-        key_top1_other = data_loader.get_data_pathway(
-            "top1_cvals_otherobj", nn_analysis_config, obj=obj, ax=ax
-        )
-
-        top1_excdist = data_loader.load(
-            save_dir, key_top1_obj, lazy=False
+        top1_excdist = sampler.load(
+            {"data_type": "top1_cvals", "obj": obj, "ax": ax}, lazy=False
         )  # 1st dim = list of imgs in series, 2nd dim = exclusion dists, vals = top1 cvals with exc dist
-        top1_other = data_loader.load(
-            save_dir, key_top1_other, lazy=False
+        top1_other = sampler.load(
+            {"data_type": "top1_cvals_otherobj", "obj": obj, "ax": ax}, lazy=False
         )  # 1st dim = list of imgs in series, vals = top1 cvals excluding the same obj
         top1_excdist = typing.cast(np.ndarray, top1_excdist)
         top1_other = typing.cast(np.ndarray, top1_other)
@@ -183,14 +152,10 @@ class NNClassificationError:
         # if within_category_error = True, you consider a match to another obj in the same obj category a correct answer
         if within_category_error:
             same_objcat_cvals, _ = NNClassificationError.gather_info_same_obj_cat(
-                data_loader, save_dir, obj, ax, nn_analysis_config
+                sampler, obj, ax
             )  # 1st dim = different objs in same obj cat, 2nd dim = imgs, 3rd dim = exclusion dist in ax
-
-            key_top_per_obj_cvals = data_loader.get_data_pathway(
-                "top1_per_obj_cvals", nn_analysis_config, obj=obj, ax=ax
-            )
-            top_per_obj_cvals = data_loader.load(
-                save_dir, key_top_per_obj_cvals, lazy=False
+            top_per_obj_cvals = sampler.load(
+                {"data_type": "top1_per_obj_cvals", "obj": obj, "ax": ax}, lazy=False
             )  # 1st dim = refimgs, 2nd dim = objs (199)
             top_per_obj_cvals = typing.cast(np.ndarray, top_per_obj_cvals)
             correct_counts = (
