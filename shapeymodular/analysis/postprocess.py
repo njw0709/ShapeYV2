@@ -299,6 +299,209 @@ class DistanceHistogram:
 
 class ErrorDisplay:
     @staticmethod
+    def add_reference_images(obj: str, ax: str) -> List[List[dc.GraphData]]:
+        graph_data_row_list: List[List[dc.GraphData]] = []
+        ref_img_shapey_idxs = np.array(
+            utils.IndexingHelper.objname_ax_to_shapey_index(obj, ax)
+        )
+        for ref_shapey_idx in ref_img_shapey_idxs:
+            graph_data_row: List[dc.GraphData] = []
+            parsed_ref_img = utils.ImageNameHelper.parse_shapey_idx(ref_shapey_idx)
+            ref_label = utils.ImageNameHelper.shorten_objname(parsed_ref_img["objname"])
+            ref_graph_data = dc.GraphData(
+                x="img_x",
+                y="img_y",
+                x_label="reference",
+                y_label="{}{:02d}".format(
+                    parsed_ref_img["ax"], int(parsed_ref_img["series_idx"])
+                ),
+                data=parsed_ref_img["imgname"],
+                label=ref_label,
+            )
+            graph_data_row.append(ref_graph_data)
+            graph_data_row_list.append(graph_data_row)
+        return graph_data_row_list
+
+    @staticmethod
+    def add_all_candidates_top_per_obj(
+        graph_data_row_list: List[List[dc.GraphData]],
+        sampler: dl.Sampler,
+        obj: str,
+        ax: str,
+        exc_dist: int,
+        within_category_error: bool = False,
+        truncate_to: int = 10,
+    ) -> List[List[dc.GraphData]]:
+        base_query = {"obj": obj, "ax": ax}
+
+        # Load necessary data
+        top1_dists_sameobj = typing.cast(
+            np.ndarray,
+            sampler.load({"data_type": "top1_cvals", **base_query}, lazy=False),
+        )
+        top1_idxs_sameobj = typing.cast(
+            np.ndarray,
+            sampler.load({"data_type": "top1_idx", **base_query}, lazy=False),
+        )
+        top_per_obj_cvals = typing.cast(
+            np.ndarray,
+            sampler.load({"data_type": "top1_per_obj_cvals", **base_query}, lazy=False),
+        )  # 1st dim = refimgs, 2nd dim = objs (199)
+        top_per_obj_idxs = typing.cast(
+            np.ndarray,
+            sampler.load({"data_type": "top1_per_obj_idxs", **base_query}, lazy=False),
+        )
+
+        if not within_category_error:
+            (
+                all_candidates_sorted_dists,
+                all_candidates_sorted_idxs,
+            ) = ErrorDisplay.get_all_candidates_sorted_top_per_obj(
+                top1_dists_sameobj,
+                top1_idxs_sameobj,
+                top_per_obj_cvals,
+                top_per_obj_idxs,
+                exc_dist,
+            )
+        else:
+            (
+                same_objcat_dists,
+                same_objcat_idxs,
+            ) = NNClassificationError.gather_info_same_obj_cat(
+                sampler, obj, ax
+            )  # 1st dim = different objs in same obj cat, 2nd dim = imgs, 3rd dim = exclusion dist in axis
+
+            # Get top candidates per object sorted
+            (
+                all_candidates_sorted_dists,
+                all_candidates_sorted_idxs,
+            ) = ErrorDisplay.get_all_candidates_sorted_category_top_per_obj(
+                same_objcat_dists,
+                same_objcat_idxs,
+                top_per_obj_cvals,
+                top_per_obj_idxs,
+                obj,
+                exc_dist,
+            )
+
+        # add top 10 candidates to graph data row
+        for i, graph_data_row in enumerate(graph_data_row_list):
+            row_all_candidate_sorted_dists = all_candidates_sorted_dists[i, :]
+            row_all_candidate_sorted_idxs = all_candidates_sorted_idxs[i, :]
+            ref_imgname = typing.cast(str, graph_data_row[0].data)
+            ref_shapey_idx = utils.ImageNameHelper.imgname_to_shapey_idx(ref_imgname)
+            parsed_ref_img = utils.ImageNameHelper.parse_shapey_idx(ref_shapey_idx)
+            for candidate_shapey_idx in row_all_candidate_sorted_idxs[:truncate_to]:
+                parsed_candidate_name = utils.ImageNameHelper.parse_shapey_idx(
+                    candidate_shapey_idx
+                )
+                shortened_objname = utils.ImageNameHelper.shorten_objname(
+                    parsed_candidate_name["objname"]
+                )
+
+                if within_category_error:
+                    correct_match = (
+                        parsed_ref_img["obj_cat"] == parsed_candidate_name["obj_cat"]
+                    )
+                else:
+                    correct_match = (
+                        parsed_ref_img["objname"] == parsed_candidate_name["objname"]
+                    )
+
+                graph_data_row.append(
+                    dc.GraphData(
+                        x="img_x",
+                        y="img_y",
+                        x_label="candidates top per obj",
+                        y_label="{}{:02d}".format(
+                            parsed_candidate_name["ax"],
+                            int(parsed_candidate_name["series_idx"]),
+                        ),
+                        data=parsed_candidate_name["imgname"],
+                        label=shortened_objname,
+                        supplementary_data={
+                            "distance": row_all_candidate_sorted_dists[i],
+                            "correct_match": correct_match,
+                        },
+                    )
+                )
+        return graph_data_row_list
+
+    @staticmethod
+    def add_top_positive_match_candidate(
+        graph_data_row_list: List[List[dc.GraphData]],
+        sampler: dl.Sampler,
+        obj: str,
+        ax: str,
+        exc_dist: int,
+        within_category_error: bool = False,
+    ) -> List[List[dc.GraphData]]:
+        base_query = {"obj": obj, "ax": ax}
+        if not within_category_error:
+            top1_dists_sameobj = typing.cast(
+                np.ndarray,
+                sampler.load({"data_type": "top1_cvals", **base_query}, lazy=False),
+            )
+            top1_idxs_sameobj = typing.cast(
+                np.ndarray,
+                sampler.load({"data_type": "top1_idx", **base_query}, lazy=False),
+            )
+        else:
+            (
+                same_objcat_dists,
+                same_objcat_idxs,
+            ) = NNClassificationError.gather_info_same_obj_cat(
+                sampler, obj, ax
+            )  # 1st dim = different objs in same obj cat, 2nd dim = imgs, 3rd dim = exclusion dist in axis
+
+            # get top1 dists and idxs for same obj category
+            (
+                top1_dists_sameobj,
+                top1_idxs_sameobj,
+            ) = ErrorDisplay.consolidate_same_obj_cat_candidates(
+                same_objcat_dists,
+                same_objcat_idxs,
+                distance=sampler.nn_analysis_config.distance_measure,
+            )
+        top1_dists_exc_dist = top1_dists_sameobj[:, exc_dist]
+        top1_idxs_exc_dist = top1_idxs_sameobj[:, exc_dist]
+
+        for i, graph_data_row in enumerate(graph_data_row_list):
+            # add best matching positive match candidate
+            parsed_best_positive_match = utils.ImageNameHelper.parse_shapey_idx(
+                top1_idxs_exc_dist[i]
+            )
+            shortened_objname = utils.ImageNameHelper.shorten_objname(
+                parsed_best_positive_match["objname"]
+            )
+            graph_data_row.append(
+                dc.GraphData(
+                    x="img_x",
+                    y="img_y",
+                    x_label="best positive match",
+                    y_label="{}{:02d}".format(
+                        parsed_best_positive_match["ax"],
+                        int(parsed_best_positive_match["series_idx"]),
+                    ),
+                    data=parsed_best_positive_match["imgname"],
+                    label=shortened_objname,
+                    supplementary_data={"distance": top1_dists_exc_dist[i]},
+                )
+            )
+        return graph_data_row_list
+
+    @staticmethod
+    def add_closest_physical_image(
+        graph_data_row_list: List[List[dc.GraphData]],
+        sampler: dl.Sampler,
+        obj: str,
+        ax: str,
+        exc_dist: int,
+        within_category_error: bool = False,
+    ) -> List[List[dc.GraphData]]:
+        return graph_data_row_list
+
+    @staticmethod
     def get_list_of_errors_single_obj(
         data_loader: dl.DataLoader,
         save_dir: Union[h5py.File, str],
