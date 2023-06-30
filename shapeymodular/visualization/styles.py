@@ -12,10 +12,15 @@ LINE_STYLES = ["-", "--", "-.", ":"]
 LABEL_FONT_SIZE = 15
 TITLE_FONT_SIZE = 17
 TICK_FONT_SIZE = 15
-SHAPEY_IMG_DIR = os.environ.get("SHAPEY_IMG_DIR", "../data/ShapeY200/dataset/")
+SHAPEY_IMG_DIR = os.environ.get(
+    "SHAPEY_IMG_DIR", "/home/namj/projects/ShapeYAnalysis/data/ShapeY200/dataset"
+)
 ANNOTATION_FONT_SIZE = 7
+TEXT_FONT_SIZE = 6
 CORRECT_MATCH_COLOR = "blue"
-CORRECT_MATCH_BORDER_WIDTH = 4
+ERROR_DISPLAY_HIGHLIGHT_BORDER_WIDTH = 4
+INCORRECT_MATCH_COLOR = "red"
+CORRECT_CATEGORY_MATCH_COLOR = "green"
 
 
 def format_xdist_graph(

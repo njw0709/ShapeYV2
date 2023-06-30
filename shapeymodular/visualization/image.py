@@ -7,9 +7,9 @@ from PIL import Image
 from .styles import (
     SHAPEY_IMG_DIR,
     ANNOTATION_FONT_SIZE,
-    CORRECT_MATCH_COLOR,
-    CORRECT_MATCH_BORDER_WIDTH,
+    ERROR_DISPLAY_HIGHLIGHT_BORDER_WIDTH,
     TITLE_FONT_SIZE,
+    TEXT_FONT_SIZE,
 )
 from mpl_toolkits.axes_grid1 import ImageGrid as MplImageGrid
 
@@ -63,15 +63,35 @@ class ImageGrid(ImageDisplay):
     @staticmethod
     def annotate_corrval(ax: mplax.Axes, data: dc.GraphData) -> mplax.Axes:
         assert data.supplementary_data is not None
-        corrval = "{:.4f}".format(data.supplementary_data["distance"])
+        corrval = "distance:\n{:.4f}".format(data.supplementary_data["distance"])
         ax.text(
-            128,
+            5,
             250,
             corrval,
             color="yellow",
-            fontsize=10,
-            horizontalalignment="center",
+            fontsize=TEXT_FONT_SIZE,
+            horizontalalignment="left",
+            fontweight="bold",
         )
+        return ax
+
+    @staticmethod
+    def annotate_feature_activation_levels(
+        ax: mplax.Axes, data: dc.GraphData
+    ) -> mplax.Axes:
+        assert data.supplementary_data is not None
+        feature_activation_levels = data.supplementary_data["feature_activation_level"]
+        base_y = 210
+        for i, level in enumerate(feature_activation_levels):
+            ax.text(
+                251,
+                base_y + 20 * i,
+                "{:.4f}".format(level),
+                color="magenta",
+                fontsize=TEXT_FONT_SIZE,
+                horizontalalignment="right",
+                fontweight="bold",
+            )
         return ax
 
     @staticmethod
@@ -97,6 +117,17 @@ class ErrorPanel(ImageGrid):
         for i, ax in enumerate(self.grid):  # type: ignore
             r = i // self.shape[1]
             c = i % self.shape[1]
+            curr_data = data[r][c]
+            if isinstance(curr_data.supplementary_data, dict):
+                if "highlight" in curr_data.supplementary_data.keys():
+                    self.highlight_border(
+                        ax,
+                        curr_data.supplementary_data["highlight"],
+                        ERROR_DISPLAY_HIGHLIGHT_BORDER_WIDTH,
+                    )
+                if "feature_activation_level" in curr_data.supplementary_data.keys():
+                    self.annotate_feature_activation_levels(ax, curr_data)
+
             if c == 0:
                 ax.set_ylabel(
                     "{}\n{}".format(data[r][c].label, data[r][c].y_label),

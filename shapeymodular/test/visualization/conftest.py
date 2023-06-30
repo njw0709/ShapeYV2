@@ -120,3 +120,39 @@ def random_obj_ax(nn_analysis_config):
     obj = random.choice(utils.SHAPEY200_OBJS)
     ax = random.choice(nn_analysis_config.axes)
     yield obj, ax
+
+
+## Test Data directory with features saved in the directory
+@pytest.fixture
+def features_directory():
+    yield "/home/francis/nineCasesToRun/kernels12_poolingMap0Left1Right/features-results-l2p0,1"
+
+
+@pytest.fixture
+def thresholds(features_directory, feature_dir_loader):
+    threshold = feature_dir_loader.load(features_directory, "thresholds.mat")
+    yield threshold
+
+
+@pytest.fixture
+def analysis_sampler(analysis_hdf, nn_analysis_config, data_loader):
+    sampler = dl.Sampler(data_loader, analysis_hdf, nn_analysis_config)  # type: ignore
+    yield sampler
+
+
+@pytest.fixture
+def feature_dir_loader():
+    yield dl.FeatureDirMatProcessor()
+
+
+@pytest.fixture
+def corrmat_sampler(
+    data_loader, distance_hdf, input_data_description_path, nn_analysis_config
+):
+    same_obj_corrmat_sampler = dl.CorrMatSampler(
+        data_loader,
+        distance_hdf[0],
+        input_data_description_path,
+        nn_analysis_config,
+    )
+    yield same_obj_corrmat_sampler

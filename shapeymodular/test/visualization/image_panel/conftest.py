@@ -11,73 +11,85 @@ def random_xdist():
 
 @pytest.fixture
 def list_of_errors_obj(
-    random_obj_ax, data_loader, analysis_hdf, random_xdist, nn_analysis_config
+    random_obj_ax,
+    analysis_sampler,
+    corrmat_sampler,
+    feature_dir_loader,
+    features_directory,
+    thresholds,
 ):
     obj, ax = random_obj_ax
-    (
-        incorrect_example_ref_img_shapey_idxs,
-        (
-            incorrect_example_best_positive_match_shapey_idxs,
-            incorrect_example_best_positive_match_dists,
-        ),
-        (
-            incorrect_example_best_other_obj_shapey_idxs,
-            incorrect_example_best_other_obj_dists,
-        ),
-        (all_candidates_sorted_idxs, all_candidates_sorted_dists),
-    ) = an.ErrorDisplay.get_list_of_errors_single_obj(
-        data_loader,
-        analysis_hdf,
+    graph_data_row_list_obj = an.ErrorDisplay.add_reference_images(obj, ax)
+    graph_data_row_list_obj = an.ErrorDisplay.add_all_candidates_top_per_obj(
+        graph_data_row_list_obj,
+        analysis_sampler,
         obj,
         ax,
-        random_xdist,
-        nn_analysis_config,
+        utils.XRADIUS_TO_PLOT_ERR_PANEL + 1,
         within_category_error=False,
     )
-
-    graph_data_row_list = an.ErrorDisplay.error_examples_to_graph_data_list(
-        incorrect_example_ref_img_shapey_idxs,
-        incorrect_example_best_positive_match_shapey_idxs,
-        incorrect_example_best_positive_match_dists,
-        all_candidates_sorted_idxs,
-        all_candidates_sorted_dists,
+    graph_data_row_list_obj = an.ErrorDisplay.add_top_positive_match_candidate(
+        graph_data_row_list_obj,
+        analysis_sampler,
+        obj,
+        ax,
+        utils.XRADIUS_TO_PLOT_ERR_PANEL + 1,
         within_category_error=False,
     )
-    yield graph_data_row_list
+    graph_data_row_list_obj = an.ErrorDisplay.add_closest_physical_image(
+        graph_data_row_list_obj,
+        corrmat_sampler,
+        obj,
+        ax,
+        utils.XRADIUS_TO_PLOT_ERR_PANEL + 1,
+    )
+    graph_data_row_list_obj = an.ErrorDisplay.add_feature_activation_level_annotation(
+        graph_data_row_list_obj,
+        feature_dir_loader,
+        features_directory,
+        thresholds,
+    )
+    yield graph_data_row_list_obj
 
 
 @pytest.fixture
 def list_of_errors_cat(
-    random_obj_ax, data_loader, analysis_hdf, random_xdist, nn_analysis_config
+    random_obj_ax,
+    analysis_sampler,
+    corrmat_sampler,
+    feature_dir_loader,
+    features_directory,
+    thresholds,
 ):
     obj, ax = random_obj_ax
-    (
-        incorrect_example_ref_img_shapey_idxs,
-        (
-            incorrect_example_best_positive_match_shapey_idxs,
-            incorrect_example_best_positive_match_dists,
-        ),
-        (
-            incorrect_example_best_other_obj_shapey_idxs,
-            incorrect_example_best_other_obj_dists,
-        ),
-        (all_candidates_sorted_idxs, all_candidates_sorted_dists),
-    ) = an.ErrorDisplay.get_list_of_errors_single_obj(
-        data_loader,
-        analysis_hdf,
+    graph_data_row_list_obj = an.ErrorDisplay.add_reference_images(obj, ax)
+    graph_data_row_list_obj = an.ErrorDisplay.add_all_candidates_top_per_obj(
+        graph_data_row_list_obj,
+        analysis_sampler,
         obj,
         ax,
-        random_xdist,
-        nn_analysis_config,
+        utils.XRADIUS_TO_PLOT_ERR_PANEL + 1,
         within_category_error=True,
     )
-
-    graph_data_row_list = an.ErrorDisplay.error_examples_to_graph_data_list(
-        incorrect_example_ref_img_shapey_idxs,
-        incorrect_example_best_positive_match_shapey_idxs,
-        incorrect_example_best_positive_match_dists,
-        all_candidates_sorted_idxs,
-        all_candidates_sorted_dists,
+    graph_data_row_list_obj = an.ErrorDisplay.add_top_positive_match_candidate(
+        graph_data_row_list_obj,
+        analysis_sampler,
+        obj,
+        ax,
+        utils.XRADIUS_TO_PLOT_ERR_PANEL + 1,
         within_category_error=True,
     )
-    yield graph_data_row_list
+    graph_data_row_list_obj = an.ErrorDisplay.add_closest_physical_image(
+        graph_data_row_list_obj,
+        corrmat_sampler,
+        obj,
+        ax,
+        utils.XRADIUS_TO_PLOT_ERR_PANEL + 1,
+    )
+    graph_data_row_list_obj = an.ErrorDisplay.add_feature_activation_level_annotation(
+        graph_data_row_list_obj,
+        feature_dir_loader,
+        features_directory,
+        thresholds,
+    )
+    yield graph_data_row_list_obj
