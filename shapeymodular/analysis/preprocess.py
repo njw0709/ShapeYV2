@@ -20,7 +20,3 @@ def compute_activation_threshold(
     threshold_idx = np.argmax(norm_cdf > activation_level, axis=1)
     threshold = bins_array[np.arange(bins_array.shape[0]), threshold_idx]
     return threshold
-
-
-def convert_nan_dist_to_zero() -> None:
-    pass

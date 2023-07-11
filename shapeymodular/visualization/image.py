@@ -63,7 +63,7 @@ class ImageGrid(ImageDisplay):
     @staticmethod
     def annotate_corrval(ax: mplax.Axes, data: dc.GraphData) -> mplax.Axes:
         assert data.supplementary_data is not None
-        corrval = "distance:\n{:.4f}".format(data.supplementary_data["distance"])
+        corrval = "{:.3f}".format(data.supplementary_data["distance"])
         ax.text(
             5,
             250,
@@ -86,7 +86,7 @@ class ImageGrid(ImageDisplay):
             ax.text(
                 251,
                 base_y + 20 * i,
-                "{:.4f}".format(level),
+                "{:.3f}".format(level),
                 color="magenta",
                 fontsize=TEXT_FONT_SIZE,
                 horizontalalignment="right",
@@ -129,11 +129,12 @@ class ErrorPanel(ImageGrid):
                     self.annotate_feature_activation_levels(ax, curr_data)
 
             if c == 0:
-                ax.set_ylabel(
-                    "{}\n{}".format(data[r][c].label, data[r][c].y_label),
-                    fontweight="bold",
-                    fontsize=ANNOTATION_FONT_SIZE,
-                )
+                # ax.set_ylabel(
+                #     "{}\n{}".format(data[r][c].label, data[r][c].y_label),
+                #     fontweight="bold",
+                #     fontsize=ANNOTATION_FONT_SIZE,
+                # )
+                ax = ErrorPanel.annotate_imgname(ax, data[r][c])
             else:
                 ax = ErrorPanel.annotate_imgname(ax, data[r][c])
                 ax = ErrorPanel.annotate_corrval(ax, data[r][c])

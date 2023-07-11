@@ -1,9 +1,7 @@
 import numpy as np
 import shapeymodular.data_loader as dl
 import shapeymodular.utils as utils
-import shapeymodular.data_classes as cd
 import shapeymodular.visualization as vis
-import h5py
 from typing import Union, Sequence, Tuple, List, Dict
 import typing
 import shapeymodular.data_classes as dc
@@ -392,7 +390,9 @@ class ErrorDisplay:
             ref_imgname = typing.cast(str, graph_data_row[0].data)
             ref_shapey_idx = utils.ImageNameHelper.imgname_to_shapey_idx(ref_imgname)
             parsed_ref_img = utils.ImageNameHelper.parse_shapey_idx(ref_shapey_idx)
-            for candidate_shapey_idx in row_all_candidate_sorted_idxs[:truncate_to]:
+            for j, candidate_shapey_idx in enumerate(
+                row_all_candidate_sorted_idxs[:truncate_to]
+            ):
                 parsed_candidate_name = utils.ImageNameHelper.parse_shapey_idx(
                     candidate_shapey_idx
                 )
@@ -425,7 +425,7 @@ class ErrorDisplay:
                         data=parsed_candidate_name["imgname"],
                         label=shortened_objname,
                         supplementary_data={
-                            "distance": row_all_candidate_sorted_dists[i],
+                            "distance": row_all_candidate_sorted_dists[j],
                             "correct_match": correct_match,
                             "highlight": highlight,
                         },
