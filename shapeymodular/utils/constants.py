@@ -76,6 +76,9 @@ PATH_CONFIG_PW_NO_CR = os.path.join(CURR_FILE_DIR, "analysis_config_pw_no_cr.jso
 PATH_CONFIG_PW_CR = os.path.join(CURR_FILE_DIR, "analysis_config_pw_cr.json")
 PATH_IMGLIST_ALL = os.path.join(CURR_FILE_DIR, "imgnames_all.txt")
 PATH_IMGLIST_PW = os.path.join(CURR_FILE_DIR, "imgnames_pw_series.txt")
+PATH_FEATURELIST_ALL = os.path.join(CURR_FILE_DIR, "features_imgnames_all.txt")
+PATH_FEATURELIST_PW = os.path.join(CURR_FILE_DIR, "features_imgnames_pw_series.txt")
+
 
 XRADIUS_TO_PLOT_ERR_PANEL = (
     2  # exclusion radius, add 1 to get the actual index (exclusion distance)

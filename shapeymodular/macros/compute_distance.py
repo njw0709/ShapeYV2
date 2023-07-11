@@ -21,9 +21,10 @@ def check_and_prep_for_distance_computation(dirname: str) -> None:
         raise FileNotFoundError("thresholds.mat not found")
 
     # copy imgname files
-    cmd = ["cp", utils.PATH_IMGLIST_ALL, "."]
+    print("copying features list")
+    cmd = ["cp", utils.PATH_FEATURELIST_ALL, "./imgnames_all.txt"]
     utils.execute_and_print(cmd)
-    cmd = ["cp", utils.PATH_IMGLIST_PW, "."]
+    cmd = ["cp", utils.PATH_FEATURELIST_PW, "./imgnames_pw_series.txt"]
     utils.execute_and_print(cmd)
     print("Done preparing for distance computation")
 
