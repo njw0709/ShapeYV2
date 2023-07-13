@@ -12,7 +12,7 @@ def check_and_prep_for_distance_computation(dirname: str) -> None:
     print("Current working directory: {0}".format(cwd))
 
     if os.path.exists(os.path.join(dirname, "thresholds.mat")):
-        with open("config.json") as f:
+        with open("config.json", "r") as f:
             config = json.load(f)
         assert config["featuresThresholdsFileName"] == os.path.join(
             dirname, "thresholds.mat"
@@ -29,7 +29,7 @@ def check_and_prep_for_distance_computation(dirname: str) -> None:
     print("Done preparing for distance computation")
 
 
-def compute_distance(dirname: str) -> None:
+def compute_distance(dirname: str, gpunum: int = 0) -> None:
     # change working directory
     os.chdir(dirname)
     cwd = os.getcwd()
@@ -45,7 +45,7 @@ def compute_distance(dirname: str) -> None:
         "-f",
         "imgnames_all.txt",
         "-g",
-        "0",
+        "{}".format(gpunum),
         "--distance-name",
         "Jaccard",
         "--pairwise-dist-in",

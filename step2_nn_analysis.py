@@ -31,4 +31,5 @@ all_features_directories = [
 ]
 
 for feature_directory in all_features_directories:
+    os.remove(os.path.join(feature_directory, "distances-Jaccard.mat"))
     nn_batch.run_exclusion_analysis(feature_directory)
