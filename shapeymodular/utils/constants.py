@@ -64,6 +64,8 @@ SHAPEY200_SAMPLED_OBJS = sampled_one_obj_per_cat(sample_idx=ONE_PER_OBJ_SAMPLE_I
 SHAPEY200_IMGNAMES = generate_all_imgnames(SHAPEY200_OBJS)
 SHAPEY200_IMGNAMES_DICT = bidict(enumerate(SHAPEY200_IMGNAMES))
 SHAPEY200_NUM_IMGS = len(SHAPEY200_IMGNAMES)
+SHAPEY_IMG_DIMS = (3, 256, 256)
+
 KNOWN_DTYPES = {
     "int": int,
     "int32": np.int32,
