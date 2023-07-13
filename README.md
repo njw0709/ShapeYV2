@@ -7,7 +7,7 @@ Requirements: Python 3.9, Cuda version 10.2 (prerequisite for cupy)
 
 To install ShapeY, run the following command:
 ```
-pip install ShapeYModular==2.0.1
+pip install ShapeYModular==2.0.2
 ```
 
 ## Step0: Download ShapeY200 dataset
