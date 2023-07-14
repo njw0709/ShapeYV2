@@ -1,7 +1,7 @@
 import os
 from PIL import Image
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 import torchvision.transforms as transforms
 from typing import Callable
 
@@ -13,7 +13,9 @@ class ImageDataset(Dataset):
         self,
         root_dir: str,
         file_extension: str = ".png",
-        transform: Callable = transforms.Compose([transforms.ToTensor(), normalize]),
+        transform: Callable = transforms.Compose(
+            [transforms.Resize(224), transforms.ToTensor(), normalize]
+        ),
     ):
         self.root_dir = root_dir
         self.image_files = [

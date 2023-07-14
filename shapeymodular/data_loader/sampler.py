@@ -24,6 +24,13 @@ class Sampler:
         data = self.data_loader.load(self.data, key, lazy=lazy)
         return data
 
+    def save(self, query: Dict, data: np.ndarray, overwrite: bool = False) -> None:
+        data_type = query.pop("data_type")
+        key = self.data_loader.get_data_pathway(
+            data_type, self.nn_analysis_config, **query
+        )
+        self.data_loader.save(self.data, key, data, data.dtype, overwrite)
+
 
 class CorrMatSampler(Sampler):
     def __init__(

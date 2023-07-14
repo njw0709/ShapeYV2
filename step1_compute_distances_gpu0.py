@@ -26,6 +26,8 @@ all_features_directories = [
 
 # compute distances
 for i, dir in enumerate(all_features_directories):
-    os.remove(os.path.join(dir, "distances-Jaccard.mat"))
+    if os.path.exists(os.path.join(dir, "distances-Jaccard.mat")):
+        print("distances file already exists in {}. Removing...".format(dir))
+        os.remove(os.path.join(dir, "distances-Jaccard.mat"))
     compute_distance.check_and_prep_for_distance_computation(dir)
     compute_distance.compute_distance(dir)
