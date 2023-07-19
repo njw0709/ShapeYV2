@@ -17,7 +17,7 @@ REQUIREMENTS = [
     "pytest",
     "pytest-profiling",
     "mypy",
-    "numpy==1.21",
+    "numpy>=1.21",
     "bidict",
     "dacite",
     "Pillow>=9.5.0",
@@ -35,7 +35,7 @@ CLASSIFIERS = [
 # TODO: separate dev / test / deploy setup with options
 setuptools.setup(
     name="ShapeYModular",
-    version="2.0.2",
+    version="2.0.3",
     description="Benchmark that tests shape recognition",
     long_description=long_description,
     url="https://github.com/njw0709/ShapeYV2",
@@ -46,4 +46,5 @@ setuptools.setup(
     classifiers=CLASSIFIERS,
     install_requires=REQUIREMENTS,
     keywords="tests shape recognition capacity",
+    package_data={"shapeymodular": ["utils/*.json", "utils/*.txt"]},
 )

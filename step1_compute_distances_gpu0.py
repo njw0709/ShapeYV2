@@ -4,9 +4,7 @@ import shapeymodular.macros.compute_distance as compute_distance
 
 # get all directories to run
 all_features_directories = [
-    "/home/francis/nineCasesToRun/kernels12_poolingMap0Left1Right/features-results-l2p0,1",
     "/home/francis/nineCasesToRun/kernels12_poolingMap1Left1Right/features-results-l2p0,1",
-    "/home/francis/nineCasesToRun/kernels12_poolingMap1Left2Right/features-results-l2p0,1",
     "/home/francis/nineCasesToRun/kernels16_poolingMap0Left1Right/features-results-l2p0,1",
     "/home/francis/nineCasesToRun/kernels16_poolingMap1Left1Right/features-results-l2p0,1",
 ]

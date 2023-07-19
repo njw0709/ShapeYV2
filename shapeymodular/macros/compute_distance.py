@@ -19,7 +19,11 @@ def check_and_prep_for_distance_computation(dirname: str) -> None:
         )
     else:
         raise FileNotFoundError("thresholds.mat not found")
-
+    # append to json file
+    config["lshHashName"] = ""
+    config["lshGpuCacheMaxMB"] = 3000
+    with open("config.json", "w") as f:
+        json.dump(config, f, indent=4)
     # copy imgname files
     print("copying features list")
     cmd = ["cp", utils.PATH_FEATURELIST_ALL, "./imgnames_all.txt"]
