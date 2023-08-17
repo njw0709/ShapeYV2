@@ -7,6 +7,7 @@ from typing import Tuple
 
 BLANK_IMG = os.path.join(os.path.dirname(__file__), "blank.png")
 MARKER_STYLES = [m for m in markers.MarkerStyle.markers if m not in ["None", "none"]]
+del MARKER_STYLES[1]  # remove invisible marker
 COLORS = cm.get_cmap("tab20", 20)
 LINE_STYLES = ["-", "--", "-.", ":"]
 LABEL_FONT_SIZE = 15

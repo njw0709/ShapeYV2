@@ -24,6 +24,18 @@ class GraphData:
             else:
                 assert len(self.data) == len(self.x)
 
+    def copy(self):
+        return GraphData(
+            x=self.x,
+            y=self.y,
+            x_label=self.x_label,
+            y_label=self.y_label,
+            data=self.data,
+            label=self.label,
+            supplementary_data=self.supplementary_data,
+            hist=self.hist,
+        )
+
 
 @dataclass
 class GraphDataGroup:

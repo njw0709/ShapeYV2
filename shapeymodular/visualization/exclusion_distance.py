@@ -19,10 +19,13 @@ class NNClassificationError(LineGraph):
         labels = [gd.label for gd in graph_data_group.data]
         assert "mean" in labels
         graph_data = graph_data_group.get_data_from_label("mean")
-        graph_data.x = (
-            typing.cast(np.ndarray, graph_data.x) - 1
+        graph_data_corrected = graph_data.copy()
+        graph_data_corrected.x = (
+            typing.cast(np.ndarray, graph_data_corrected.x) - 1
         )  # calibrate to exclusion radius
-        fig, ax = NNClassificationError.draw(fig, ax, graph_data, order=order)
+        fig, ax = NNClassificationError.draw(
+            fig, ax, graph_data_corrected, order=order, alpha=0.7
+        )
         fig, ax = format_xdist_graph(fig, ax)
         return fig, ax
 
@@ -33,9 +36,10 @@ class NNClassificationError(LineGraph):
         graph_data: dc.GraphData,
         order: int = 0,
     ) -> Tuple[mplfig.Figure, mplax.Axes]:
-        graph_data.x = (
-            typing.cast(np.ndarray, graph_data.x) - 1
+        graph_data_corrected = graph_data.copy()
+        graph_data_corrected.x = (
+            typing.cast(np.ndarray, graph_data_corrected.x) - 1
         )  # calibrate to exclusion radius
-        fig, ax = NNClassificationError.draw(fig, ax, graph_data, order=order)
+        fig, ax = NNClassificationError.draw(fig, ax, graph_data_corrected, order=order)
         fig, ax = format_xdist_graph(fig, ax)
         return fig, ax
