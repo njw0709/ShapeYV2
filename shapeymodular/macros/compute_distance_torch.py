@@ -2,7 +2,6 @@ import os
 import shapeymodular.torchutils.distances as distances
 import shapeymodular.data_loader as dl
 import shapeymodular.analysis as an
-import shapeymodular.utils.constants as constants
 import numpy as np
 import h5py
 import torch
@@ -43,9 +42,11 @@ def get_thresholded_features(
     if os.path.exists(os.path.join(datadir, save_name)):
         print("Loading from saved features file...")
         with h5py.File(os.path.join(datadir, save_name), "r") as hf:
-            feature_name_np = hf["imgnames"][()]  # type: ignore
-            decoded_array = np.char.decode(feature_name_np, "utf-8")  # type: ignore
-            feature_name_list = decoded_array.tolist()
+            feature_name_np = typing.cast(np.ndarray, hf["imgnames"][()])  # type: ignore
+            feature_name_list = [
+                x.decode("utf-8") if isinstance(x, bytes) else x
+                for x in feature_name_np
+            ]
             features = typing.cast(np.ndarray, hf["thresholded_features"][()])  # type: ignore
         return feature_name_list, features
 
