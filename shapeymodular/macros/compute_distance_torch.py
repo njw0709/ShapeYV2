@@ -39,6 +39,16 @@ def get_thresholded_features(
     save_dir: str = "",
     save_name: str = "thresholded_features.h5",
 ) -> Tuple[List[str], np.ndarray]:
+    # check for saved thresholded features
+    if os.path.exists(os.path.join(datadir, save_name)):
+        print("Loading from saved features file...")
+        with h5py.File(os.path.join(datadir, save_name), "r") as hf:
+            feature_name_np = hf["imgnames"][()]  # type: ignore
+            decoded_array = np.char.decode(feature_name_np, "utf-8")  # type: ignore
+            feature_name_list = decoded_array.tolist()
+            features = typing.cast(np.ndarray, hf["thresholded_features"][()])  # type: ignore
+        return feature_name_list, features
+
     data_loader = dl.FeatureDirMatProcessor()
     thresholds_list = data_loader.load(datadir, threshold_file, filter_key="thresholds")
     feature_name_list = [

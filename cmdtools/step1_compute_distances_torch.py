@@ -66,8 +66,9 @@ if __name__ == "__main__":
         print("distances file already exists in {}. Skipping...".format(dir))
         exit()
     else:
-        print("Computing distances...")
+        pass
 
+    print("computing thresholded features...")
     # check if necessary files exist
     compute_distance.check_and_prep_for_distance_computation(
         args.dir,
@@ -82,7 +83,7 @@ if __name__ == "__main__":
         save_thresholded_features=args.save_thresholded_features,
         save_name=args.thresholded_features_save_name,
     )
-
+    print("computing distances...")
     # compute jaccard distance
     compute_distance.compute_jaccard_distance(
         args.dir,
