@@ -37,7 +37,7 @@ CLASSIFIERS = [
 # TODO: separate dev / test / deploy setup with options
 setuptools.setup(
     name="ShapeYModular",
-    version="2.0.5",
+    version="2.0.6",
     description="Benchmark that tests shape recognition",
     long_description=long_description,
     url="https://github.com/njw0709/ShapeYV2",
