@@ -10,6 +10,9 @@ __pycache__/
 *.hdf5
 *.png
 
+# project specific
+notebooks/
+
 # C extensions
 *.so
 
