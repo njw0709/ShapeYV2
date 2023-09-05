@@ -61,7 +61,7 @@ if __name__ == "__main__":
     # compute distances
     if os.path.exists(os.path.join(args.dir, args.output_name)) and args.replace:
         print("distances file already exists in {}. Removing...".format(dir))
-        os.remove(os.path.join(args.dir, "distances-Jaccard.mat"))
+        os.remove(os.path.join(args.dir, args.output_name))
     elif os.path.exists(os.path.join(args.dir, args.output_name)) and not args.replace:
         print("distances file already exists in {}. Skipping...".format(dir))
         exit()
