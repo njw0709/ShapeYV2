@@ -22,6 +22,8 @@ REQUIREMENTS = [
     "dacite",
     "Pillow>=9.5.0",
     "gdown",
+    "torch",
+    "torchvision",
 ]
 
 # some more details
@@ -35,7 +37,7 @@ CLASSIFIERS = [
 # TODO: separate dev / test / deploy setup with options
 setuptools.setup(
     name="ShapeYModular",
-    version="2.0.3",
+    version="2.0.5",
     description="Benchmark that tests shape recognition",
     long_description=long_description,
     url="https://github.com/njw0709/ShapeYV2",
