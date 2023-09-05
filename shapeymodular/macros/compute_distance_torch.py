@@ -7,7 +7,7 @@ import numpy as np
 import h5py
 import torch
 import time
-from typing import Union
+from typing import Union, Tuple, List
 import typing
 from tqdm import tqdm
 
@@ -38,7 +38,7 @@ def get_thresholded_features(
     save_thresholded_features: bool = False,
     save_dir: str = "",
     save_name: str = "thresholded_features.h5",
-):
+) -> Tuple[List[str], np.ndarray]:
     data_loader = dl.FeatureDirMatProcessor()
     thresholds_list = data_loader.load(datadir, threshold_file, filter_key="thresholds")
     feature_name_list = [

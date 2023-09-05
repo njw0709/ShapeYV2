@@ -2,6 +2,7 @@ import pytest
 import os
 from shapeymodular.test.conftest import test_data_dir
 import shapeymodular.data_loader as dl
+import shapeymodular.macros.compute_distance_torch as distances
 
 
 @pytest.fixture
@@ -36,4 +37,13 @@ def feature_file_list(test_feature_dir):
         if f.endswith(".mat") and f.startswith("features_")
     ]
     feature_name_list = [os.path.join(test_feature_dir, f) for f in feature_name_list]
-    return feature_name_list
+    yield feature_name_list
+
+
+@pytest.fixture
+def thresholded_feature_and_imgname(test_feature_dir, threshold_file_name):
+    imgnames, features = distances.get_thresholded_features(
+        test_feature_dir,
+        threshold_file=threshold_file_name,
+    )
+    yield imgnames, features
