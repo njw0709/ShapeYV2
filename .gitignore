@@ -12,6 +12,7 @@ __pycache__/
 
 # project specific
 notebooks/
+run_analysis/
 
 # C extensions
 *.so

@@ -90,4 +90,5 @@ if __name__ == "__main__":
         args.output_name,
         args.row_segment_size,
         args.col_segment_size,
+        gpu_index=args.gpu,
     )
