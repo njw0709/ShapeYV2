@@ -1,5 +1,5 @@
 import numpy as np
-from typing import List
+from typing import List, Tuple
 import tables
 from tqdm import tqdm
 from multiprocessing import Pool
@@ -39,15 +39,21 @@ def read_file(fname_key):
 def read_and_threshold_features(
     data_names: List[str],
     thresholds_list,
-    out_feature_list: List[np.ndarray],
+    out_feature_np: np.ndarray,
     feature_key: str = "l2pool",
+    pool_size: int = 4,
+    feature_shape: Tuple = (4000, 24),
+    subframe_len: int = 3,
 ):
     data_names_and_key = [(fname, feature_key) for fname in data_names]
-    with Pool(4) as pool:
+    flat_len = out_feature_np.shape[1]
+    assert flat_len == np.array(feature_shape).prod() * subframe_len
+    with Pool(pool_size) as pool:
         for i, features in tqdm(
             enumerate(pool.imap(read_file, data_names_and_key)), total=len(data_names)
         ):
-            out_feature_list[0][:, :, i] = features[0] > thresholds_list[0]
-            out_feature_list[1][:, :, i] = features[1] > thresholds_list[1]
-            out_feature_list[2][:, :, i] = features[2] > thresholds_list[2]
-    return out_feature_list
+            out_feature_single = np.zeros((*feature_shape, subframe_len), dtype=bool)
+            for s_i in range(subframe_len):
+                out_feature_single[:, :, s_i] = features[s_i] > thresholds_list[s_i]
+            out_feature_np[i, :] = out_feature_single.reshape((flat_len,))
+    return out_feature_np

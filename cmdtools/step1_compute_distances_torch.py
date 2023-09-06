@@ -60,10 +60,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
     # compute distances
     if os.path.exists(os.path.join(args.dir, args.output_name)) and args.replace:
-        print("distances file already exists in {}. Removing...".format(dir))
+        print("distances file already exists in {}. Removing...".format(args.dir))
         os.remove(os.path.join(args.dir, args.output_name))
     elif os.path.exists(os.path.join(args.dir, args.output_name)) and not args.replace:
-        print("distances file already exists in {}. Skipping...".format(dir))
+        print("distances file already exists in {}. Skipping...".format(args.dir))
         exit()
     else:
         pass
@@ -85,6 +85,9 @@ if __name__ == "__main__":
     )
     print("computing distances...")
     # compute jaccard distance
+    # thresholded_feature_file = os.path.join(
+    #     args.dir, args.thresholded_features_save_name
+    # )
     compute_distance.compute_jaccard_distance(
         args.dir,
         features,

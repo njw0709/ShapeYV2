@@ -9,6 +9,7 @@ import time
 from typing import Union, Tuple, List
 import typing
 from tqdm import tqdm
+import time
 
 
 def check_and_prep_for_distance_computation(
@@ -64,50 +65,50 @@ def get_thresholded_features(
     )
     number_of_subframes = len(sample_feature)
     feature_dims = sample_feature[0].shape
+    flatten_dims = np.array(feature_dims).prod()
     number_of_features = len(feature_name_list)
 
     feature_name_list = [os.path.join(datadir, f) for f in feature_name_list]
 
-    thresholded_feature_list_placeholder = [
-        np.zeros((*feature_dims, number_of_features), dtype=bool)
-        for _ in range(number_of_subframes)
-    ]
+    thresholded_feature_list_placeholder = np.zeros(
+        (number_of_features, flatten_dims * number_of_subframes), dtype=bool
+    )
     # threshold features
-    thresholded_feature_list = an.read_and_threshold_features(
+    thresholded_feature_list_placeholder = an.read_and_threshold_features(
         feature_name_list,
         thresholds_list,
         thresholded_feature_list_placeholder,
         feature_key=varname_filter,
+        feature_shape=feature_dims,
+        subframe_len=number_of_subframes,
+        pool_size=4,
     )
-    features = np.stack(thresholded_feature_list, axis=2)
-    features = features.reshape(
-        (np.array(feature_dims).prod() * 3, number_of_features)
-    ).T
+
     if save_thresholded_features:
         print("Saving thresholded features...")
+        t = time.time()
         feature_name_np = np.array(feature_name_list, dtype=object)
         dt = h5py.string_dtype(encoding="utf-8")
         if save_dir == "":
             save_dir = datadir
-        if 1000 > features.shape[0]:
-            chunk_size = features.shape[0] // 10
+        if 1000 > thresholded_feature_list_placeholder.shape[0]:
+            chunk_size = thresholded_feature_list_placeholder.shape[0] // 10
         else:
             chunk_size = 1000
         with h5py.File(os.path.join(save_dir, save_name), "w") as f:
             f.create_dataset(
                 "thresholded_features",
-                data=features,
-                chunks=(chunk_size, features.shape[1]),
+                data=thresholded_feature_list_placeholder,
+                chunks=(chunk_size, thresholded_feature_list_placeholder.shape[1]),
                 compression="gzip",
                 dtype="bool",
             )
             f.create_dataset(
                 "imgnames", (len(feature_name_np),), dtype=dt, data=feature_name_np
             )
+        print("Done saving thresholded features! Time: {}".format(time.time() - t))
 
-        print("Done saving thresholded features!")
-
-    return feature_name_list, features
+    return feature_name_list, thresholded_feature_list_placeholder
 
 
 def compute_jaccard_distance(
