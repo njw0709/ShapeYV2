@@ -17,7 +17,7 @@ class PrepData:
         input_data_description_path: Union[Tuple[str, str], None],
         data_loader: dl.DataLoader,
         nn_analysis_config: dc.NNAnalysisConfig,
-        nan_to_zero: bool = True,
+        nan_to_zero: bool = False,
     ) -> Sequence[dc.CorrMat]:
         corrmats: Sequence[dc.CorrMat] = []
         # list of corrmats (for contrast exclusion, two corrmats)

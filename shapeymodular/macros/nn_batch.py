@@ -258,7 +258,7 @@ def exclusion_distance_analysis_batch(
         input_data_description_path,
         data_loader,
         nn_analysis_config,
-        nan_to_zero=True,
+        nan_to_zero=False,
     )
 
     # check if all necessary data is present for requested analysis
