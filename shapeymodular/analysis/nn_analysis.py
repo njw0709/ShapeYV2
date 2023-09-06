@@ -103,6 +103,24 @@ class PrepData:
         return corrmat.get_subset(row_corrmat_idx, col_corrmat_idx)
 
     @staticmethod
+    def cut_single_ax_to_all_corrmat(corrmat: dc.CorrMat, ax: str) -> dc.CorrMat:
+        row_shapey_idx: Sequence[int] = []
+        for obj in utils.SHAPEY200_OBJS:
+            row_shapey_idx.extend(
+                utils.IndexingHelper.objname_ax_to_shapey_index(obj, ax)
+            )
+        col_shapey_idx = corrmat.description[1].shapey_idxs
+        row_corrmat_idx, available_row_shapey_idx = corrmat.description[
+            0
+        ].shapey_idx_to_corrmat_idx(row_shapey_idx)
+        col_corrmat_idx, available_col_shapey_idx = corrmat.description[
+            1
+        ].shapey_idx_to_corrmat_idx(col_shapey_idx)
+        row_corrmat_idx = typing.cast(List[int], row_corrmat_idx)
+        col_corrmat_idx = typing.cast(List[int], col_corrmat_idx)
+        return corrmat.get_subset(row_corrmat_idx, col_corrmat_idx)
+
+    @staticmethod
     def cut_single_obj_ax_sameobj_corrmat(
         obj_ax_cutout_corrmats: Sequence[dc.CorrMat],
         obj: str,

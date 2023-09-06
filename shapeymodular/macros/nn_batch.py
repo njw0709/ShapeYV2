@@ -276,10 +276,15 @@ def exclusion_distance_analysis_batch(
         axes = utils.ALL_AXES
 
     # run analysis and save results
-    for obj in tqdm(objnames):
-        for ax in axes:
+    for ax in axes:
+        print("Running analysis for axis {}".format(ax))
+        corrmats_ax = [
+            an.PrepData.cut_single_ax_to_all_corrmat(corrmat, ax)
+            for corrmat in corrmats
+        ]
+        for obj in tqdm(objnames):
             analysis_results = exclusion_distance_analysis_single_obj_ax(
-                obj, ax, corrmats, nn_analysis_config
+                obj, ax, corrmats_ax, nn_analysis_config
             )
             save_exclusion_distance_analysis_results(
                 obj,
