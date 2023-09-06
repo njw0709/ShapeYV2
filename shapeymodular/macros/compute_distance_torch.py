@@ -129,18 +129,17 @@ def compute_jaccard_distance(
         thresholded_features = typing.cast(str, thresholded_features)
         with h5py.File(os.path.join(datadir, thresholded_features), "r") as hf:
             data = typing.cast(np.ndarray, hf["thresholded_features"][()])  # type: ignore
+        print("Done loading features. Time: {}".format(time.time() - t))
     else:
         data = typing.cast(np.ndarray, thresholded_features)
 
     print("data shape: {}".format(data.shape))
 
-    print("Done loading features. Time: {}".format(time.time() - t))
-
     print("Computing jaccard distance...")
 
     data = torch.tensor(data, dtype=torch.bool)
 
-    with h5py.File(output_file, "w") as hf:
+    with h5py.File(os.path.join(datadir, output_file), "w") as hf:
         distance_matrix_dset = hf.create_dataset(
             "Jaccard_dists",
             (data.shape[0], data.shape[0]),

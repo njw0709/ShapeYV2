@@ -8,7 +8,15 @@ from tqdm import tqdm
 import os
 
 
-def run_exclusion_analysis(dirname: str) -> None:
+def run_exclusion_analysis(
+    dirname: str,
+    distance_file: str = "distances-Jaccard.mat",
+    row_imgnames: str = "imgnames_pw_series.txt",
+    col_imgnames: str = "imgnames_all.txt",
+    save_name: str = "analysis_results.h5",
+    axes: str = "pw",
+    config_filename: Union[str, None] = None,
+) -> None:
     # Prep required files
     os.chdir(dirname)
     cwd = os.getcwd()
@@ -16,18 +24,25 @@ def run_exclusion_analysis(dirname: str) -> None:
     print("Current working directory: {0}".format(cwd))
 
     # copy config file to feature directory
-    cmd = ["cp", utils.PATH_CONFIG_PW_NO_CR, "."]
-    utils.execute_and_print(cmd)
+    if axes == "pw":
+        cmd = ["cp", utils.PATH_CONFIG_PW_NO_CR, "."]
+        utils.execute_and_print(cmd)
+        config_filename = os.path.basename(utils.PATH_CONFIG_PW_NO_CR)
+    elif axes == "all":
+        cmd = ["cp", utils.PATH_CONFIG_ALL_NO_CR, "."]
+        utils.execute_and_print(cmd)
+        config_filename = os.path.basename(utils.PATH_CONFIG_ALL_NO_CR)
+    else:
+        assert config_filename is not None
 
-    config_filename = os.path.basename(utils.PATH_CONFIG_PW_NO_CR)
     data_loader = de.HDFProcessor()
-    distance_mat_file = os.path.join(dirname, "distances-Jaccard.mat")
+    distance_mat_file = os.path.join(dirname, distance_file)
     input_data_descriptions = (
-        os.path.join(dirname, "imgnames_pw_series.txt"),
-        os.path.join(dirname, "imgnames_all.txt"),
+        os.path.join(dirname, row_imgnames),
+        os.path.join(dirname, col_imgnames),
     )
     config = cd.load_config(os.path.join(dirname, config_filename))
-    save_name = os.path.join(dirname, "analysis_results.h5")
+    save_name = os.path.join(dirname, save_name)
 
     with h5py.File(distance_mat_file, "r") as f:
         with h5py.File(save_name, "w") as save_file:
