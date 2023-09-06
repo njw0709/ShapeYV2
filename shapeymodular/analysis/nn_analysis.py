@@ -24,7 +24,7 @@ class PrepData:
         # get path for corrmat
         corrmat_path = data_loader.get_data_pathway("corrmat", nn_analysis_config)
         # load and append
-        data = data_loader.load(data_root_path[0], corrmat_path, lazy=True)
+        data = data_loader.load(data_root_path[0], corrmat_path, lazy=False)
         if nan_to_zero:
             data = data[:]
             data[np.isnan(data)] = 0.0
