@@ -27,7 +27,7 @@ def compute_threshold_subsample(
     save_file_name = os.path.join(save_dir, file_name)
     # check if save file exists
     if os.path.isfile(save_file_name):
-        os.rename(save_file_name, os.path.join(save_dir, "old_" + file_name))
+        os.remove(save_file_name)
     all_exists, feature_files = data_loader.check_all_feature_file_exists(
         features_directory
     )
@@ -41,7 +41,7 @@ def compute_threshold_subsample(
     shape = data[0].shape
 
     # accumulate the subsampled features
-    accumulators = [[]] * len(data)
+    accumulators = [[] for _ in range(len(data))]
     for feature_file in tqdm(subsampled_feature_files):
         data = data_loader.load(
             features_directory, feature_file, filter_key=variable_name
@@ -49,6 +49,13 @@ def compute_threshold_subsample(
         for i in range(len(data)):
             assert data[i].shape == shape
             accumulators[i].append(data[i])
+
+    for acc in accumulators:
+        assert len(acc) == sample_size
+
+    assert accumulators[0] != accumulators[1]
+    assert accumulators[0] != accumulators[2]
+    assert accumulators[1] != accumulators[2]
 
     # concatenate per subframe, and compute threshold
     for i in range(len(accumulators)):
