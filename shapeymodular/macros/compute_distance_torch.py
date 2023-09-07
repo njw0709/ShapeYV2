@@ -144,7 +144,8 @@ def compute_jaccard_distance(
             "Jaccard_dists",
             (data.shape[0], data.shape[0]),
             dtype=float,
-            chunks=(row_segment_size, col_segment_size),
+            chunks=(row_segment_size, data.shape[0]),
+            compression="gzip",
         )
 
         # compute jaccard distance in segments

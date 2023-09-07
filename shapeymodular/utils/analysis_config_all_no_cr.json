@@ -4,7 +4,7 @@
     "distance_measure": "correlation",
     "distance_dtype": "float32",
     "num_objs": 0,
-    "axes": null,
+    "axes": ["p", "pr", "pw", "r", "rw", "w", "x", "xp", "xr", "xw", "xy", "y", "yp", "yr", "yw"],
     "objnames": null,
     "imgnames": null,
     "batch_analysis": true,

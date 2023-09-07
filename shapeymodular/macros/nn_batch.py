@@ -6,6 +6,7 @@ import shapeymodular.analysis as an
 import shapeymodular.utils as utils
 from tqdm import tqdm
 import os
+import time
 
 
 def run_exclusion_analysis(
@@ -278,10 +279,13 @@ def exclusion_distance_analysis_batch(
     # run analysis and save results
     for ax in axes:
         print("Running analysis for axis {}".format(ax))
+        print("Loading data...")
+        t = time.time()
         corrmats_ax = [
             an.PrepData.cut_single_ax_to_all_corrmat(corrmat, ax)
             for corrmat in corrmats
         ]
+        print("Loading data took {} seconds".format(time.time() - t))
         for obj in tqdm(objnames):
             analysis_results = exclusion_distance_analysis_single_obj_ax(
                 obj, ax, corrmats_ax, nn_analysis_config
