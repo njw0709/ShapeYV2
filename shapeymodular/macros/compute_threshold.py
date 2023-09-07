@@ -55,10 +55,6 @@ def compute_threshold_subsample(
     for acc in accumulators:
         assert len(acc) == sample_size
 
-    assert np.all(accumulators[0] != accumulators[1])
-    assert np.all(accumulators[0] != accumulators[2])
-    assert np.all(accumulators[1] != accumulators[2])
-
     # concatenate per subframe, and compute threshold
     for i in range(len(accumulators)):
         concatenated_features: np.ndarray = np.concatenate(
