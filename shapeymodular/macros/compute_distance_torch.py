@@ -118,6 +118,7 @@ def compute_jaccard_distance(
     row_segment_size: int,
     col_segment_size: int,
     gpu_index: int = 0,
+    dtype: type = np.float32,
 ):
     # Define the device using the specified GPU index
     device = torch.device(f"cuda:{gpu_index}" if torch.cuda.is_available() else "cpu")
@@ -143,7 +144,7 @@ def compute_jaccard_distance(
         distance_matrix_dset = hf.create_dataset(
             "Jaccard_dists",
             (data.shape[0], data.shape[0]),
-            dtype=np.float32,
+            dtype=dtype,
             chunks=(row_segment_size // 2, data.shape[0]),
         )
 
