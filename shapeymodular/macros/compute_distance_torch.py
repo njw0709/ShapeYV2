@@ -143,9 +143,8 @@ def compute_jaccard_distance(
         distance_matrix_dset = hf.create_dataset(
             "Jaccard_dists",
             (data.shape[0], data.shape[0]),
-            dtype=float,
-            chunks=(row_segment_size, data.shape[0]),
-            compression="gzip",
+            dtype=np.float32,
+            chunks=(row_segment_size // 2, data.shape[0]),
         )
 
         # compute jaccard distance in segments
