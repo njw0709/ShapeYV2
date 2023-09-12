@@ -1,28 +1,12 @@
-import os
-import shapeymodular.data_loader as dl
-import shapeymodular.visualization as vis
-import matplotlib.pyplot as plt
-import shapeymodular.macros.graphing as graphing
 import argparse
+import shapeymodular.macros.graphing as graphing
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Combine error graphs from different cases"
-    )
+    parser = argparse.ArgumentParser(description="Graph results per case")
     parser.add_argument(
-        "-d",
-        "--dirs",
-        nargs="+",
-        help="<Required> Directories to combine the error graphs",
-        required=True,
-    )
-    parser.add_argument(
-        "-o",
-        "--output",
+        "--dir",
         type=str,
-        help="<Required> Output directory to save the combined error graphs",
-        required=True,
     )
     parser.add_argument(
         "--analysis_file",
@@ -44,11 +28,10 @@ if __name__ == "__main__":
         type=str,
         default=None,
     )
-
     args = parser.parse_args()
-    graphing.combine_nn_classification_error_graphs(
-        args.dirs,
-        args.output,
+
+    graphing.plot_nn_classification_error_graph(
+        args.dir,
         analysis_file=args.analysis_file,
         axes_choice=args.axes_choice,
         fig_save_dir=args.fig_save_dir,

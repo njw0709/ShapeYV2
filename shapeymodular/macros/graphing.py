@@ -6,15 +6,22 @@ import h5py
 import shapeymodular.utils as utils
 import shapeymodular.visualization as vis
 import typing
-from typing import List
+from typing import List, Tuple, Dict, Union
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 
-def plot_nn_classification_error_graph(feature_directory: str):
+def plot_nn_classification_error_graph(
+    feature_directory: str,
+    analysis_file: str = "analysis_results.h5",
+    axes_choice: str = "pw",
+    fig_save_dir: str = "figures",
+    config_filename: Union[None, str] = None,
+    no_save: bool = False,
+) -> Tuple[Dict, Dict]:
     data_loader = dl.HDFProcessor()
     # create figure directory
-    FIG_SAVE_DIR = os.path.join(feature_directory, "figures")
+    FIG_SAVE_DIR = os.path.join(feature_directory, fig_save_dir)
     if not os.path.exists(FIG_SAVE_DIR):
         os.makedirs(FIG_SAVE_DIR)
 
@@ -24,18 +31,30 @@ def plot_nn_classification_error_graph(feature_directory: str):
     print("Current working directory: {0}".format(cwd))
 
     # copy config file to feature directory
-    cmd = ["cp", utils.PATH_CONFIG_PW_NO_CR, "."]
-    utils.execute_and_print(cmd)
-    config = dc.load_config(
-        os.path.join(feature_directory, "analysis_config_pw_no_cr.json")
-    )
+    if axes_choice == "pw":
+        cmd = ["cp", utils.PATH_CONFIG_PW_NO_CR, "."]
+        utils.execute_and_print(cmd)
+        config = dc.load_config(
+            os.path.join(feature_directory, utils.PATH_CONFIG_PW_NO_CR)
+        )
+    elif axes_choice == "all":
+        cmd = ["cp", utils.PATH_CONFIG_ALL_NO_CR, "."]
+        utils.execute_and_print(cmd)
+        config = dc.load_config(
+            os.path.join(feature_directory, utils.PATH_CONFIG_ALL_NO_CR)
+        )
+    else:
+        assert config_filename is not None
+        config = dc.load_config(os.path.join(feature_directory, config_filename))
 
-    analysis_hdf_path = os.path.join(feature_directory, "analysis_results.h5")
+    analysis_hdf_path = os.path.join(feature_directory, analysis_file)
     analysis_hdf = h5py.File(analysis_hdf_path, "r")
     analysis_sampler = dl.Sampler(data_loader, analysis_hdf, config)
     axes = typing.cast(List, config.axes)
     dict_ax_to_graph_data_group_obj = {}
     dict_ax_to_graph_data_group_cat = {}
+    fig_obj, ax_obj = plt.subplots(1, 1)
+    fig_cat, ax_cat = plt.subplots(1, 1)
     for ax in axes:
         # post process data for graphing
         graph_data_list_obj_error = []
@@ -58,8 +77,7 @@ def plot_nn_classification_error_graph(feature_directory: str):
         dict_ax_to_graph_data_group_cat[ax] = graph_data_group_cat_error
 
         print("Plotting...")
-        fig_obj, ax_obj = plt.subplots(1, 1)
-        fig_cat, ax_cat = plt.subplots(1, 1)
+
         fig_obj, ax_obj = vis.NNClassificationError.plot_top1_avg_err_per_axis(
             fig_obj, ax_obj, graph_data_group_obj_error
         )
@@ -75,22 +93,86 @@ def plot_nn_classification_error_graph(feature_directory: str):
             bbox_to_anchor=(-1.5, 1),
         )
         analysis_hdf.close()
-
+    if not no_save:
         fig_obj.savefig(
             os.path.join(FIG_SAVE_DIR, "nn_error_obj.png"), bbox_inches="tight"
         )
         fig_cat.savefig(
             os.path.join(FIG_SAVE_DIR, "nn_error_cat.png"), bbox_inches="tight"
         )
-        plt.close(fig_obj)
-        plt.close(fig_cat)
+    plt.close(fig_obj)
+    plt.close(fig_cat)
     return dict_ax_to_graph_data_group_obj, dict_ax_to_graph_data_group_cat
 
 
-def plot_histogram_with_error_graph(feature_directory: str) -> None:
+def combine_nn_classification_error_graphs(
+    feature_directories: List[str],
+    output_dir: str,
+    analysis_file: str = "analysis_results.h5",
+    axes_choice: str = "pw",
+    fig_save_dir: str = "figures",
+    config_filename: Union[None, str] = None,
+) -> None:
+    FIG_SAVE_DIR = os.path.join(output_dir, fig_save_dir)
+    combined_obj = []
+    combined_cat = []
+    legends = []
+
+    for feature_directory in feature_directories:
+        (
+            dict_graph_data_group_obj,
+            dict_graph_data_group_cat,
+        ) = plot_nn_classification_error_graph(
+            feature_directory,
+            analysis_file=analysis_file,
+            axes_choice=axes_choice,
+            fig_save_dir=fig_save_dir,
+            config_filename=config_filename,
+            no_save=True,
+        )
+        combined_obj.append(dict_graph_data_group_obj)
+        combined_cat.append(dict_graph_data_group_cat)
+        optimization_params = feature_directory.split("/")
+        legends.append("{}-{}".format(optimization_params[-2], optimization_params[-1]))
+
+    # plot combined graphs
+    print("Plotting...")
+    for ax in dict_graph_data_group_obj.keys():  # type: ignore
+        fig_obj, ax_obj = plt.subplots(1, 1)
+        fig_cat, ax_cat = plt.subplots(1, 1)
+        for i in range(len(combined_obj)):
+            fig_obj, ax_obj = vis.NNClassificationError.plot_top1_avg_err_per_axis(
+                fig_obj, ax_obj, combined_obj[i][ax], order=i
+            )
+            fig_cat, ax_cat = vis.NNClassificationError.plot_top1_avg_err_per_axis(
+                fig_cat, ax_cat, combined_cat[i][ax], order=i
+            )
+
+        ax_obj.legend(legends, loc="upper left", bbox_to_anchor=(-1.5, 1))
+        ax_cat.legend(legends, loc="upper left", bbox_to_anchor=(-1.5, 1))
+
+        fig_obj.savefig(
+            os.path.join(FIG_SAVE_DIR, "nn_error_obj_{}.png".format(ax)),
+            bbox_inches="tight",
+        )
+        fig_cat.savefig(
+            os.path.join(FIG_SAVE_DIR, "nn_error_cat_{}.png".format(ax)),
+            bbox_inches="tight",
+        )
+        plt.close(fig_obj)
+        plt.close(fig_cat)
+
+
+def plot_histogram_with_error_graph(
+    feature_directory: str,
+    analysis_file: str = "analysis_results.h5",
+    axes_choice: str = "pw",
+    fig_save_dir: str = "figures",
+    config_filename: Union[None, str] = None,
+) -> None:
     data_loader = dl.HDFProcessor()
     # create figure directory
-    FIG_SAVE_DIR = os.path.join(feature_directory, "figures")
+    FIG_SAVE_DIR = os.path.join(feature_directory, fig_save_dir)
     if not os.path.exists(FIG_SAVE_DIR):
         os.makedirs(FIG_SAVE_DIR)
 
@@ -100,13 +182,23 @@ def plot_histogram_with_error_graph(feature_directory: str) -> None:
     print("Current working directory: {0}".format(cwd))
 
     # copy config file to feature directory
-    cmd = ["cp", utils.PATH_CONFIG_PW_NO_CR, "."]
-    utils.execute_and_print(cmd)
-    config = dc.load_config(
-        os.path.join(feature_directory, "analysis_config_pw_no_cr.json")
-    )
+    if axes_choice == "pw":
+        cmd = ["cp", utils.PATH_CONFIG_PW_NO_CR, "."]
+        utils.execute_and_print(cmd)
+        config = dc.load_config(
+            os.path.join(feature_directory, utils.PATH_CONFIG_PW_NO_CR)
+        )
+    elif axes_choice == "all":
+        cmd = ["cp", utils.PATH_CONFIG_ALL_NO_CR, "."]
+        utils.execute_and_print(cmd)
+        config = dc.load_config(
+            os.path.join(feature_directory, utils.PATH_CONFIG_ALL_NO_CR)
+        )
+    else:
+        assert config_filename is not None
+        config = dc.load_config(os.path.join(feature_directory, config_filename))
 
-    analysis_hdf_path = os.path.join(feature_directory, "analysis_results.h5")
+    analysis_hdf_path = os.path.join(feature_directory, analysis_file)
     analysis_hdf = h5py.File(analysis_hdf_path, "r")
     analysis_sampler = dl.Sampler(data_loader, analysis_hdf, config)
     axes = typing.cast(List, config.axes)
@@ -209,9 +301,19 @@ def plot_histogram_with_error_graph(feature_directory: str) -> None:
             plt.close(fig_cat)
 
 
-def plot_error_panels(feature_directory: str) -> None:
+def plot_error_panels(
+    feature_directory: str,
+    analysis_file: str = "analysis_results.h5",
+    distances_file: str = "distances-Jaccard.mat",
+    thresholds_file: str = "thresholds.mat",
+    axes_choice: str = "pw",
+    fig_save_dir: str = "figures",
+    config_filename: Union[None, str] = None,
+    row_descriptions: Union[None, str] = None,
+    col_descriptions: Union[None, str] = None,
+) -> None:
     # create figure directory
-    FIG_SAVE_DIR = os.path.join(feature_directory, "figures")
+    FIG_SAVE_DIR = os.path.join(feature_directory, fig_save_dir)
     if not os.path.exists(FIG_SAVE_DIR):
         os.makedirs(FIG_SAVE_DIR)
 
@@ -221,26 +323,46 @@ def plot_error_panels(feature_directory: str) -> None:
     print("Current working directory: {0}".format(cwd))
 
     # copy config file to feature directory
-    cmd = ["cp", utils.PATH_CONFIG_PW_NO_CR, "."]
-    utils.execute_and_print(cmd)
-    config = dc.load_config(
-        os.path.join(feature_directory, "analysis_config_pw_no_cr.json")
-    )
-    analysis_hdf_path = os.path.join(feature_directory, "analysis_results.h5")
+    if axes_choice == "pw":
+        cmd = ["cp", utils.PATH_CONFIG_PW_NO_CR, "."]
+        utils.execute_and_print(cmd)
+        config = dc.load_config(
+            os.path.join(feature_directory, utils.PATH_CONFIG_PW_NO_CR)
+        )
+        input_data_descriptions = (
+            os.path.join(feature_directory, "imgnames_pw_series.txt"),
+            os.path.join(feature_directory, "imgnames_all.txt"),
+        )
+    elif axes_choice == "all":
+        cmd = ["cp", utils.PATH_CONFIG_ALL_NO_CR, "."]
+        utils.execute_and_print(cmd)
+        config = dc.load_config(
+            os.path.join(feature_directory, utils.PATH_CONFIG_ALL_NO_CR)
+        )
+        input_data_descriptions = (
+            os.path.join(feature_directory, "imgnames_all.txt"),
+            os.path.join(feature_directory, "imgnames_all.txt"),
+        )
+    else:
+        assert config_filename is not None
+        assert row_descriptions is not None
+        assert col_descriptions is not None
+        config = dc.load_config(os.path.join(feature_directory, config_filename))
+        input_data_descriptions = (
+            os.path.join(feature_directory, row_descriptions),
+            os.path.join(feature_directory, col_descriptions),
+        )
+
+    analysis_hdf_path = os.path.join(feature_directory, analysis_file)
     axes = typing.cast(List, config.axes)
-    distance_mat_file = os.path.join(feature_directory, "distances-Jaccard.mat")
-    input_data_descriptions = (
-        os.path.join(feature_directory, "imgnames_pw_series.txt"),
-        os.path.join(feature_directory, "imgnames_all.txt"),
-    )
+    distance_mat_file = os.path.join(feature_directory, distances_file)
+
     data_loader = dl.HDFProcessor()
     feature_data_loader = dl.FeatureDirMatProcessor()
 
     # load threshold
-    if os.path.exists(os.path.join(feature_directory, "old_thresholds.mat")):
-        threshold = feature_data_loader.load(feature_directory, "old_thresholds.mat")
-    else:
-        threshold = feature_data_loader.load(feature_directory, "thresholds.mat")
+    threshold = feature_data_loader.load(feature_directory, thresholds_file)
+
     if len(threshold) > 3:
         threshold = threshold[:3]
     threshold = [*threshold]
@@ -376,10 +498,18 @@ def plot_error_panels(feature_directory: str) -> None:
             plt.close(fig)
 
 
-def plot_tuning_curves(feature_directory: str) -> None:
+def plot_tuning_curves(
+    feature_directory: str,
+    distances_file: str = "distances-Jaccard.mat",
+    axes_choice: str = "pw",
+    fig_save_dir: str = "figures",
+    config_filename: Union[None, str] = None,
+    row_descriptions: Union[None, str] = None,
+    col_descriptions: Union[None, str] = None,
+) -> None:
     data_loader = dl.HDFProcessor()
     # create figure directory
-    FIG_SAVE_DIR = os.path.join(feature_directory, "figures")
+    FIG_SAVE_DIR = os.path.join(feature_directory, fig_save_dir)
     if not os.path.exists(FIG_SAVE_DIR):
         os.makedirs(FIG_SAVE_DIR)
 
@@ -389,19 +519,39 @@ def plot_tuning_curves(feature_directory: str) -> None:
     print("Current working directory: {0}".format(cwd))
 
     # copy config file to feature directory
-    cmd = ["cp", utils.PATH_CONFIG_PW_NO_CR, "."]
-    utils.execute_and_print(cmd)
-    config = dc.load_config(
-        os.path.join(feature_directory, "analysis_config_pw_no_cr.json")
-    )
+    if axes_choice == "pw":
+        cmd = ["cp", utils.PATH_CONFIG_PW_NO_CR, "."]
+        utils.execute_and_print(cmd)
+        config = dc.load_config(
+            os.path.join(feature_directory, utils.PATH_CONFIG_PW_NO_CR)
+        )
+        input_data_descriptions = (
+            os.path.join(feature_directory, "imgnames_pw_series.txt"),
+            os.path.join(feature_directory, "imgnames_all.txt"),
+        )
+    elif axes_choice == "all":
+        cmd = ["cp", utils.PATH_CONFIG_ALL_NO_CR, "."]
+        utils.execute_and_print(cmd)
+        config = dc.load_config(
+            os.path.join(feature_directory, utils.PATH_CONFIG_ALL_NO_CR)
+        )
+        input_data_descriptions = (
+            os.path.join(feature_directory, "imgnames_all.txt"),
+            os.path.join(feature_directory, "imgnames_all.txt"),
+        )
+    else:
+        assert config_filename is not None
+        assert row_descriptions is not None
+        assert col_descriptions is not None
+        config = dc.load_config(os.path.join(feature_directory, config_filename))
+        input_data_descriptions = (
+            os.path.join(feature_directory, row_descriptions),
+            os.path.join(feature_directory, col_descriptions),
+        )
 
     axes = typing.cast(List, config.axes)
 
-    distance_mat_file = os.path.join(feature_directory, "distances-Jaccard.mat")
-    input_data_descriptions = (
-        os.path.join(feature_directory, "imgnames_pw_series.txt"),
-        os.path.join(feature_directory, "imgnames_all.txt"),
-    )
+    distance_mat_file = os.path.join(feature_directory, distances_file)
 
     # load distance matrix
     with h5py.File(distance_mat_file, "r") as f:
@@ -426,7 +576,9 @@ def plot_tuning_curves(feature_directory: str) -> None:
                     "{}".format(utils.ImageNameHelper.shorten_objname(obj))
                 )
                 fig.savefig(
-                    os.path.join(FIG_SAVE_DIR, "tuning_curve_{}.png".format(obj)),
+                    os.path.join(
+                        FIG_SAVE_DIR, "tuning_curve_{}_{}.png".format(ax, obj)
+                    ),
                     bbox_inches="tight",
                 )
                 plt.close(fig)
