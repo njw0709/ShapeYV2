@@ -55,7 +55,9 @@ def plot_nn_classification_error_graph(
     dict_ax_to_graph_data_group_cat = {}
     fig_obj, ax_obj = plt.subplots(1, 1)
     fig_cat, ax_cat = plt.subplots(1, 1)
-    for ax in axes:
+    legend_obj = []
+    legend_cat = []
+    for ax_index, ax in enumerate(axes):
         # post process data for graphing
         graph_data_list_obj_error = []
         graph_data_list_cat_error = []
@@ -79,19 +81,19 @@ def plot_nn_classification_error_graph(
         print("Plotting...")
 
         fig_obj, ax_obj = vis.NNClassificationError.plot_top1_avg_err_per_axis(
-            fig_obj, ax_obj, graph_data_group_obj_error
+            fig_obj, ax_obj, graph_data_group_obj_error, order=ax_index
         )
         fig_cat, ax_cat = vis.NNClassificationError.plot_top1_avg_err_per_axis(
-            fig_cat, ax_cat, graph_data_group_cat_error
+            fig_cat, ax_cat, graph_data_group_cat_error, order=ax_index
         )
-        ax_obj.legend(
-            ["object error - {}".format(ax)], loc="upper left", bbox_to_anchor=(-1.5, 1)
-        )
-        ax_cat.legend(
-            ["category error - {}".format(ax)],
-            loc="upper left",
-            bbox_to_anchor=(-1.5, 1),
-        )
+        legend_obj.append("object error - {}".format(ax))
+        legend_cat.append("category error - {}".format(ax))
+    ax_obj.legend(legend_obj, loc="upper left", bbox_to_anchor=(-1.5, 1))
+    ax_cat.legend(
+        legend_cat,
+        loc="upper left",
+        bbox_to_anchor=(-1.5, 1),
+    )
     analysis_hdf.close()
     if not no_save:
         fig_obj.savefig(
