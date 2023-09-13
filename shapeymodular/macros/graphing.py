@@ -92,7 +92,7 @@ def plot_nn_classification_error_graph(
             loc="upper left",
             bbox_to_anchor=(-1.5, 1),
         )
-        analysis_hdf.close()
+    analysis_hdf.close()
     if not no_save:
         fig_obj.savefig(
             os.path.join(FIG_SAVE_DIR, "nn_error_obj.png"), bbox_inches="tight"
