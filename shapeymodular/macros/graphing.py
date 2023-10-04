@@ -123,6 +123,8 @@ def combine_nn_classification_error_graphs(
     axes_choice: str = "pw",
     fig_save_dir: str = "figures",
     config_filename: Union[None, str] = None,
+    log_scale: bool = False,
+    fig_format: str = "png",
 ) -> None:
     FIG_SAVE_DIR = os.path.join(output_dir, fig_save_dir)
     combined_obj = []
@@ -151,6 +153,9 @@ def combine_nn_classification_error_graphs(
     for ax in dict_graph_data_group_obj.keys():  # type: ignore
         fig_obj, ax_obj = plt.subplots(1, 1)
         fig_cat, ax_cat = plt.subplots(1, 1)
+        if log_scale:
+            ax_obj.set_yscale("log")
+            ax_cat.set_yscale("log")
         for i in range(len(combined_obj)):
             fig_obj, ax_obj = vis.NNClassificationError.plot_top1_avg_err_per_axis(
                 fig_obj, ax_obj, combined_obj[i][ax], order=i
@@ -163,11 +168,13 @@ def combine_nn_classification_error_graphs(
         ax_cat.legend(legends, loc="upper left", bbox_to_anchor=(-1.5, 1))
 
         fig_obj.savefig(
-            os.path.join(FIG_SAVE_DIR, "nn_error_obj_{}.png".format(ax)),
+            os.path.join(FIG_SAVE_DIR, "nn_error_obj_{}.{}".format(ax, fig_format)),
+            fig_format=fig_format,
             bbox_inches="tight",
         )
         fig_cat.savefig(
-            os.path.join(FIG_SAVE_DIR, "nn_error_cat_{}.png".format(ax)),
+            os.path.join(FIG_SAVE_DIR, "nn_error_cat_{}.{}".format(ax, fig_format)),
+            fig_format=fig_format,
             bbox_inches="tight",
         )
         plt.close(fig_obj)
