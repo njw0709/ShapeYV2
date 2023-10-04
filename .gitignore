@@ -9,7 +9,8 @@ __pycache__/
 *.h5
 *.hdf5
 *.png
-
+*.svg
+*.pdf
 # project specific
 notebooks/
 run_analysis/
