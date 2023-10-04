@@ -125,6 +125,7 @@ def combine_nn_classification_error_graphs(
     config_filename: Union[None, str] = None,
     log_scale: bool = False,
     fig_format: str = "png",
+    marker_size: str = "normal",
 ) -> None:
     FIG_SAVE_DIR = os.path.join(output_dir, fig_save_dir)
     combined_obj = []
@@ -166,6 +167,15 @@ def combine_nn_classification_error_graphs(
 
         ax_obj.legend(legends, loc="upper left", bbox_to_anchor=(-1.5, 1))
         ax_cat.legend(legends, loc="upper left", bbox_to_anchor=(-1.5, 1))
+        if marker_size == "small":
+            lines = ax_obj.lines
+            for line in lines:
+                line.set_linewidth(0.5)
+                line.set_markersize(2)
+            lines = ax_cat.lines
+            for line in lines:
+                line.set_linewidth(0.5)
+                line.set_markersize(2)
 
         fig_obj.savefig(
             os.path.join(FIG_SAVE_DIR, "nn_error_obj_{}.{}".format(ax, fig_format)),

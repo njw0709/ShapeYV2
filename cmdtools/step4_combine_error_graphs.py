@@ -54,7 +54,11 @@ if __name__ == "__main__":
         type=str,
         default="png",
     )
-
+    parser.add_argument(
+        "--marker_size",
+        type=str,
+        default="normal",
+    )
     args = parser.parse_args()
     graphing.combine_nn_classification_error_graphs(
         args.dirs,
@@ -65,4 +69,5 @@ if __name__ == "__main__":
         config_filename=args.config_filename,
         log_scale=args.ylog,
         fig_format=args.fig_format,
+        marker_size=args.marker_size,
     )
