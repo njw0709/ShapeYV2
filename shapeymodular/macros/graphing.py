@@ -169,12 +169,12 @@ def combine_nn_classification_error_graphs(
 
         fig_obj.savefig(
             os.path.join(FIG_SAVE_DIR, "nn_error_obj_{}.{}".format(ax, fig_format)),
-            fig_format=fig_format,
+            format=fig_format,
             bbox_inches="tight",
         )
         fig_cat.savefig(
             os.path.join(FIG_SAVE_DIR, "nn_error_cat_{}.{}".format(ax, fig_format)),
-            fig_format=fig_format,
+            format=fig_format,
             bbox_inches="tight",
         )
         plt.close(fig_obj)
