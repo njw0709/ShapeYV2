@@ -28,6 +28,16 @@ if __name__ == "__main__":
         type=str,
         default=None,
     )
+    parser.add_argument(
+        "--ylog",
+        type=bool,
+        default=False,
+    )
+    parser.add_argument(
+        "--fig_format",
+        type=str,
+        default="png",
+    )
     args = parser.parse_args()
 
     graphing.plot_nn_classification_error_graph(
@@ -36,4 +46,6 @@ if __name__ == "__main__":
         axes_choice=args.axes_choice,
         fig_save_dir=args.fig_save_dir,
         config_filename=args.config_filename,
+        log_scale=args.ylog,
+        fig_format=args.fig_format,
     )

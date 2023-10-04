@@ -18,6 +18,8 @@ def plot_nn_classification_error_graph(
     fig_save_dir: str = "figures",
     config_filename: Union[None, str] = None,
     no_save: bool = False,
+    log_scale: bool = False,
+    fig_format: str = "png",
 ) -> Tuple[Dict, Dict]:
     data_loader = dl.HDFProcessor()
     # create figure directory
@@ -55,6 +57,9 @@ def plot_nn_classification_error_graph(
     dict_ax_to_graph_data_group_cat = {}
     fig_obj, ax_obj = plt.subplots(1, 1)
     fig_cat, ax_cat = plt.subplots(1, 1)
+    if log_scale:
+        ax_obj.set_yscale("log")
+        ax_cat.set_yscale("log")
     legend_obj = []
     legend_cat = []
     for ax_index, ax in enumerate(axes):
@@ -97,10 +102,14 @@ def plot_nn_classification_error_graph(
     analysis_hdf.close()
     if not no_save:
         fig_obj.savefig(
-            os.path.join(FIG_SAVE_DIR, "nn_error_obj.png"), bbox_inches="tight"
+            os.path.join(FIG_SAVE_DIR, "nn_error_obj." + fig_format),
+            format=fig_format,
+            bbox_inches="tight",
         )
         fig_cat.savefig(
-            os.path.join(FIG_SAVE_DIR, "nn_error_cat.png"), bbox_inches="tight"
+            os.path.join(FIG_SAVE_DIR, "nn_error_cat." + fig_format),
+            format=fig_format,
+            bbox_inches="tight",
         )
     plt.close(fig_obj)
     plt.close(fig_cat)
@@ -331,10 +340,19 @@ def plot_error_panels(
         config = dc.load_config(
             os.path.join(feature_directory, utils.PATH_CONFIG_PW_NO_CR)
         )
-        input_data_descriptions = (
-            os.path.join(feature_directory, "imgnames_pw_series.txt"),
-            os.path.join(feature_directory, "imgnames_all.txt"),
-        )
+        if row_descriptions == None and col_descriptions == None:
+            input_data_descriptions = (
+                os.path.join(feature_directory, "imgnames_pw_series.txt"),
+                os.path.join(feature_directory, "imgnames_all.txt"),
+            )
+        else:
+            assert row_descriptions is not None
+            assert col_descriptions is not None
+            input_data_descriptions = (
+                os.path.join(feature_directory, row_descriptions),
+                os.path.join(feature_directory, col_descriptions),
+            )
+
     elif axes_choice == "all":
         cmd = ["cp", utils.PATH_CONFIG_ALL_NO_CR, "."]
         utils.execute_and_print(cmd)
