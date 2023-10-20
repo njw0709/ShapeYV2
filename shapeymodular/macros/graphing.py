@@ -10,6 +10,8 @@ from typing import List, Tuple, Dict, Union
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
+LEGEND_LOCATION = (0, 1)
+
 
 def plot_nn_classification_error_graph(
     feature_directory: str,
@@ -96,11 +98,11 @@ def plot_nn_classification_error_graph(
         )
         legend_obj.append("object error - {}".format(ax))
         legend_cat.append("category error - {}".format(ax))
-    ax_obj.legend(legend_obj, loc="upper left", bbox_to_anchor=(-1.5, 1))
+    ax_obj.legend(legend_obj, loc="upper left", bbox_to_anchor=LEGEND_LOCATION)
     ax_cat.legend(
         legend_cat,
         loc="upper left",
-        bbox_to_anchor=(-1.5, 1),
+        bbox_to_anchor=LEGEND_LOCATION,
     )
     analysis_hdf.close()
     if not no_save:
@@ -174,8 +176,8 @@ def combine_nn_classification_error_graphs(
                 fig_cat, ax_cat, combined_cat[i][ax], order=i
             )
 
-        ax_obj.legend(legends, loc="upper left", bbox_to_anchor=(-1.5, 1))
-        ax_cat.legend(legends, loc="upper left", bbox_to_anchor=(-1.5, 1))
+        ax_obj.legend(legends, loc="upper left", bbox_to_anchor=LEGEND_LOCATION)
+        ax_cat.legend(legends, loc="upper left", bbox_to_anchor=LEGEND_LOCATION)
         if marker_size == "small":
             lines = ax_obj.lines
             for line in lines:

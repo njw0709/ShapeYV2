@@ -75,5 +75,5 @@ if __name__ == "__main__":
         log_scale=args.ylog,
         fig_format=args.fig_format,
         marker_size=args.marker_size,
-        legends=args.legend,
+        legends=args.legends,
     )
