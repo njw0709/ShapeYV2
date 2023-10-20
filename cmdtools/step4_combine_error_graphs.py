@@ -59,6 +59,11 @@ if __name__ == "__main__":
         type=str,
         default="normal",
     )
+    parser.add_argument(
+        "--legends",
+        nargs="+",
+        default=[],
+    )
     args = parser.parse_args()
     graphing.combine_nn_classification_error_graphs(
         args.dirs,
@@ -70,4 +75,5 @@ if __name__ == "__main__":
         log_scale=args.ylog,
         fig_format=args.fig_format,
         marker_size=args.marker_size,
+        legends=args.legend,
     )

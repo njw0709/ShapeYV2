@@ -22,7 +22,7 @@ if __name__ == "__main__":
         default="pw",
     )
     parser.add_argument(
-        "--distances_file",
+        "--distance_file",
         type=str,
         default="distances-Jaccard.mat",
     )
@@ -50,7 +50,7 @@ if __name__ == "__main__":
 
     graphing.plot_tuning_curves(
         args.dir,
-        distances_file=args.distances_file,
+        distances_file=args.distance_file,
         axes_choice=args.axes_choice,
         fig_save_dir=args.fig_save_dir,
         config_filename=args.config_filename,

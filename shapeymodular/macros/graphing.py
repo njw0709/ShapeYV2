@@ -129,11 +129,14 @@ def combine_nn_classification_error_graphs(
     log_scale: bool = False,
     fig_format: str = "png",
     marker_size: str = "normal",
+    legends: list = [],
 ) -> None:
     FIG_SAVE_DIR = os.path.join(output_dir, fig_save_dir)
     combined_obj = []
     combined_cat = []
-    legends = []
+    legend_predefined = False
+    if len(legends) > 0:
+        legend_predefined = True
 
     for feature_directory in feature_directories:
         (
@@ -150,7 +153,10 @@ def combine_nn_classification_error_graphs(
         combined_obj.append(dict_graph_data_group_obj)
         combined_cat.append(dict_graph_data_group_cat)
         optimization_params = feature_directory.split("/")
-        legends.append("{}-{}".format(optimization_params[-2], optimization_params[-1]))
+        if not legend_predefined:
+            legends.append(
+                "{}-{}".format(optimization_params[-2], optimization_params[-1])
+            )
 
     # plot combined graphs
     print("Plotting...")
