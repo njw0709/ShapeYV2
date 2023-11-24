@@ -213,6 +213,7 @@ def compute_distance(
 
     data = torch.tensor(data)
     if metric == "correlation":
+        print("normalizing features...")
         data = torchutilfeat.standardize_features(data)
 
     with h5py.File(os.path.join(datadir, output_file), "w") as hf:
