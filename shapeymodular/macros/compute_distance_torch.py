@@ -1,5 +1,6 @@
 import os
 import shapeymodular.torchutils.distances as distances
+import shapeymodular.torchutils.features as torchutilfeat
 import shapeymodular.data_loader as dl
 import shapeymodular.analysis as an
 import numpy as np
@@ -168,6 +169,79 @@ def compute_jaccard_distance(
 
                 # compute the jaccard distance
                 distance_segment = distances.jaccard_distance_mm(
+                    row_segment_gpu, col_segment_gpu
+                )  # (segment_size_r, segment_size_c)
+
+                # save to distance matrix
+                distance_matrix_dset[
+                    row_seg_idx:end_idx_row, col_seg_idx:end_idx_col
+                ] = distance_segment.cpu().numpy()
+    print("Done")
+
+
+def compute_distance(
+    datadir: str,
+    features: Union[np.ndarray, str],
+    output_file: str,
+    row_segment_size: int,
+    col_segment_size: int,
+    gpu_index: int = 0,
+    dtype: type = np.float32,
+    metric: str = "correlation",
+) -> None:
+    # Define the device using the specified GPU index
+    device = torch.device(f"cuda:{gpu_index}" if torch.cuda.is_available() else "cpu")
+    t = time.time()
+    if isinstance(features, str):
+        assert os.path.exists(features)
+        print("Loading features...")
+        # Convert the numpy array to a PyTorch tensor and send it to the specified device
+        features = typing.cast(str, features)
+        with h5py.File(os.path.join(datadir, features), "r") as hf:
+            data = typing.cast(np.ndarray, hf["features"][()])  # type: ignore
+        print("Done loading features. Time: {}".format(time.time() - t))
+    else:
+        data = typing.cast(np.ndarray, features)
+
+    print("data shape: {}".format(data.shape))
+
+    print("Computing {} ...".format(metric))
+    if metric == "correlation":
+        metric_func = distances.correlation_prenormalized
+    else:
+        raise NotImplementedError("metric {} not implemented".format(metric))
+
+    data = torch.tensor(data)
+    if metric == "correlation":
+        data = torchutilfeat.standardize_features(data)
+
+    with h5py.File(os.path.join(datadir, output_file), "w") as hf:
+        distance_matrix_dset = hf.create_dataset(
+            "{}".format(metric),
+            (data.shape[0], data.shape[0]),
+            dtype=dtype,
+            chunks=(row_segment_size // 2, data.shape[0]),
+        )
+        # compute distance in segments
+        for row_seg_idx in tqdm(range(0, data.shape[0], row_segment_size)):
+            if row_seg_idx + row_segment_size >= data.shape[0]:
+                end_idx_row = data.shape[0]
+            else:
+                end_idx_row = row_seg_idx + row_segment_size
+            row_segment_gpu = data[row_seg_idx:end_idx_row].to(
+                device
+            )  # (segment_size_r, d)
+            for col_seg_idx in range(0, data.shape[0], col_segment_size):
+                if col_seg_idx + col_segment_size >= data.shape[0]:
+                    end_idx_col = data.shape[0]
+                else:
+                    end_idx_col = col_seg_idx + col_segment_size
+                col_segment_gpu = data[col_seg_idx:end_idx_col].to(
+                    device
+                )  # (segment_size_c, d)
+
+                # compute distance
+                distance_segment = metric_func(
                     row_segment_gpu, col_segment_gpu
                 )  # (segment_size_r, segment_size_c)
 

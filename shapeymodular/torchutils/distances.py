@@ -24,7 +24,7 @@ def jaccard_distance_mm(mat1, mat2):
     return jaccard_similarity  # (n, m)
 
 
-def correlation_rowwise(
+def correlation_prenormalized(
     mat1_normalized: torch.Tensor, mat2_normalized: torch.Tensor
 ) -> torch.Tensor:
     # assume mat1_normalized and mat2_normalized are standardized
