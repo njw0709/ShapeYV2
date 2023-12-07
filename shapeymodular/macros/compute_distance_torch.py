@@ -180,7 +180,7 @@ def compute_jaccard_distance(
 
 
 def compute_distance(
-    datadir: str,
+    output_dir: str,
     features: Union[np.ndarray, str],
     output_file: str,
     row_segment_size: int,
@@ -197,7 +197,7 @@ def compute_distance(
         print("Loading features...")
         # Convert the numpy array to a PyTorch tensor and send it to the specified device
         features = typing.cast(str, features)
-        with h5py.File(os.path.join(datadir, features), "r") as hf:
+        with h5py.File(features, "r") as hf:
             data = typing.cast(np.ndarray, hf["features"][()])  # type: ignore
         print("Done loading features. Time: {}".format(time.time() - t))
     else:
@@ -216,7 +216,7 @@ def compute_distance(
         print("normalizing features...")
         data = torchutilfeat.standardize_features(data)
 
-    with h5py.File(os.path.join(datadir, output_file), "w") as hf:
+    with h5py.File(os.path.join(output_dir, output_file), "w") as hf:
         distance_matrix_dset = hf.create_dataset(
             "{}".format(metric),
             (data.shape[0], data.shape[0]),

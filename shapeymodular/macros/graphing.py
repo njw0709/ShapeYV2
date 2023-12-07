@@ -344,7 +344,7 @@ def plot_error_panels(
     feature_directory: str,
     analysis_file: str = "analysis_results.h5",
     distances_file: str = "distances-Jaccard.mat",
-    thresholds_file: str = "thresholds.mat",
+    thresholds_file: Union[None, str] = "thresholds.mat",
     axes_choice: str = "pw",
     fig_save_dir: str = "figures",
     config_filename: Union[None, str] = None,
@@ -409,11 +409,14 @@ def plot_error_panels(
     feature_data_loader = dl.FeatureDirMatProcessor()
 
     # load threshold
-    threshold = feature_data_loader.load(feature_directory, thresholds_file)
+    if thresholds_file is not None:
+        threshold = feature_data_loader.load(feature_directory, thresholds_file)
+        if len(threshold) > 3:
+            threshold = threshold[:3]
+        threshold = [*threshold]
+    else:
+        threshold = None
 
-    if len(threshold) > 3:
-        threshold = threshold[:3]
-    threshold = [*threshold]
     for ax in axes:
         # sampled one object per category
         for obj in tqdm(utils.SHAPEY200_SAMPLED_OBJS):
@@ -485,22 +488,23 @@ def plot_error_panels(
                     utils.XRADIUS_TO_PLOT_ERR_PANEL + 1,
                 )
             # add feature activation levels
-            graph_data_row_list_cat = (
-                an.ErrorDisplay.add_feature_activation_level_annotation(
-                    graph_data_row_list_cat,
-                    feature_data_loader,
-                    feature_directory,
-                    threshold,
+            if threshold is not None:
+                graph_data_row_list_cat = (
+                    an.ErrorDisplay.add_feature_activation_level_annotation(
+                        graph_data_row_list_cat,
+                        feature_data_loader,
+                        feature_directory,
+                        threshold,
+                    )
                 )
-            )
-            graph_data_row_list_obj = (
-                an.ErrorDisplay.add_feature_activation_level_annotation(
-                    graph_data_row_list_obj,
-                    feature_data_loader,
-                    feature_directory,
-                    threshold,
+                graph_data_row_list_obj = (
+                    an.ErrorDisplay.add_feature_activation_level_annotation(
+                        graph_data_row_list_obj,
+                        feature_data_loader,
+                        feature_directory,
+                        threshold,
+                    )
                 )
-            )
 
             # plot error panel
             num_rows = len(graph_data_row_list_obj)
