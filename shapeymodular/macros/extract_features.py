@@ -13,7 +13,11 @@ def extract_shapey200_features(
     savedir: str,
     model: nn.Module = models.resnet50(pretrained=True),
     overwrite: bool = False,
+    dataset_version: str = "original",
 ) -> None:
+    dataset_path = utils.SHAPEY200_DATASET_PATH_DICT[dataset_version]
+    feature_file_name = "features_{}.h5".format(dataset_version)
+
     # check if savedir exists
     if os.path.isdir(savedir):
         pass
@@ -36,22 +40,22 @@ def extract_shapey200_features(
     config = dc.load_config(os.path.join(savedir, config_filename))
 
     # get image dataset
-    shapey200_dataset = tu.ImageDataset(
-        "/home/namj/projects/datasets/ShapeY200/dataset"
-    )
+    shapey200_dataset = tu.ImageDataset(dataset_path)
     shapey200_imgnames = np.array(shapey200_dataset.image_files).astype("S")
 
     # sampler
     data_loader = dl.HDFProcessor()
 
     # open hdf5 file to save features
-    if os.path.exists(os.path.join(savedir, "features.h5")):
+    if os.path.exists(os.path.join(savedir, feature_file_name)):
         if overwrite:
-            os.remove(os.path.join(savedir, "features.h5"))
+            os.remove(os.path.join(savedir, feature_file_name))
         else:
-            raise FileExistsError("features.h5 already exists in savedir.")
+            raise FileExistsError(
+                "{} already exists in savedir.".format(feature_file_name)
+            )
 
-    with h5py.File(os.path.join(savedir, "features.h5"), "w") as hf:
+    with h5py.File(os.path.join(savedir, feature_file_name), "w") as hf:
         sampler = dl.Sampler(data_loader, hf, config)
         sampler.save({"data_type": "imgnames"}, shapey200_imgnames)
 

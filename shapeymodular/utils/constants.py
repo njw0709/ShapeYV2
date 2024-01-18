@@ -44,6 +44,11 @@ def sampled_one_obj_per_cat(sample_idx: int = 3) -> List[str]:
     return sampled_objs
 
 
+SHAPEY200_DATASET_PATH_DICT = {
+    "original": "/home/namj/projects/datasets/ShapeY200/dataset",
+    "contrast reversed": "/home/namj/projects/datasets/ShapeY200CR/dataset",
+}
+
 DEGREES_OF_FREEDOM: int = 5
 ALL_AXES = generate_axes_of_interest()
 NUMBER_OF_OBJECTS: int = 200
@@ -65,6 +70,7 @@ SHAPEY200_IMGNAMES = generate_all_imgnames(SHAPEY200_OBJS)
 SHAPEY200_IMGNAMES_DICT = bidict(enumerate(SHAPEY200_IMGNAMES))
 SHAPEY200_NUM_IMGS = len(SHAPEY200_IMGNAMES)
 SHAPEY_IMG_DIMS = (3, 256, 256)
+
 
 KNOWN_DTYPES = {
     "int": int,
