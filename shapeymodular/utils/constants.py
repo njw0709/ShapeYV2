@@ -46,7 +46,7 @@ def sampled_one_obj_per_cat(sample_idx: int = 3) -> List[str]:
 
 SHAPEY200_DATASET_PATH_DICT = {
     "original": "/home/namj/projects/datasets/ShapeY200/dataset",
-    "contrast reversed": "/home/namj/projects/datasets/ShapeY200CR/dataset",
+    "contrast_reversed": "/home/namj/projects/datasets/ShapeY200CR/dataset",
 }
 
 DEGREES_OF_FREEDOM: int = 5

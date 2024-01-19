@@ -14,9 +14,10 @@ def extract_shapey200_features(
     model: nn.Module = models.resnet50(pretrained=True),
     overwrite: bool = False,
     dataset_version: str = "original",
+    model_name: str = "resnet50",
 ) -> None:
     dataset_path = utils.SHAPEY200_DATASET_PATH_DICT[dataset_version]
-    feature_file_name = "features_{}.h5".format(dataset_version)
+    feature_file_name = "features_{}_{}.h5".format(model_name, dataset_version)
 
     # check if savedir exists
     if os.path.isdir(savedir):
