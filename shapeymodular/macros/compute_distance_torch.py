@@ -130,6 +130,7 @@ def compute_jaccard_distance(
         metric,
         dataset_exclusion=dataset_exclusion,
         dtype=torch.bool,
+        feature_key="thresholded_features",
     )
     print("Computing jaccard distance...")
     with h5py.File(os.path.join(datadir, output_file), "w") as hf:
@@ -199,6 +200,7 @@ def load_features(
     metric: str,
     dataset_exclusion: bool = False,
     dtype: torch.dtype = torch.float32,
+    feature_key: str = "feature_output/output",
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     # load data
     t = time.time()
@@ -211,9 +213,9 @@ def load_features(
             print("Loading features...")
             # Convert the numpy array to a PyTorch tensor and send it to the specified device
             with h5py.File(features[0], "r") as hf:
-                data_row = typing.cast(np.ndarray, hf["features"][()])  # type: ignore
+                data_row = typing.cast(np.ndarray, hf[feature_key][()])  # type: ignore
             with h5py.File(features[1], "r") as hf:
-                data_col = typing.cast(np.ndarray, hf["features"][()])  # type: ignore
+                data_col = typing.cast(np.ndarray, hf[feature_key][()])  # type: ignore
             print("Done loading features. Time: {}".format(time.time() - t))
         else:
             data_row = typing.cast(np.ndarray, features[0])
@@ -234,7 +236,7 @@ def load_features(
             # Convert the numpy array to a PyTorch tensor and send it to the specified device
             features = typing.cast(str, features)
             with h5py.File(features, "r") as hf:
-                data = typing.cast(np.ndarray, hf["features"][()])  # type: ignore
+                data = typing.cast(np.ndarray, hf[feature_key][()])  # type: ignore
             print("Done loading features. Time: {}".format(time.time() - t))
         else:
             data = typing.cast(np.ndarray, features)
