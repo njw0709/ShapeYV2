@@ -17,6 +17,7 @@ def run_exclusion_analysis(
     save_name: str = "analysis_results.h5",
     axes: str = "pw",
     config_filename: Union[str, None] = None,
+    dataset_exclusion: bool = False,
 ) -> None:
     # Prep required files
     os.chdir(dirname)
@@ -26,11 +27,22 @@ def run_exclusion_analysis(
 
     # copy config file to feature directory
     if axes == "pw":
-        cmd = ["cp", utils.PATH_CONFIG_PW_NO_CR, "."]
+        if dataset_exclusion:
+            assert isinstance(distance_file, tuple)
+            cmd = ["cp", utils.PATH_CONFIG_PW_CR, "."]
+            config_filename = os.path.basename(utils.PATH_CONFIG_PW_CR)
+        else:
+            cmd = ["cp", utils.PATH_CONFIG_PW_NO_CR, "."]
+            config_filename = os.path.basename(utils.PATH_CONFIG_PW_NO_CR)
         utils.execute_and_print(cmd)
-        config_filename = os.path.basename(utils.PATH_CONFIG_PW_NO_CR)
     elif axes == "all":
-        cmd = ["cp", utils.PATH_CONFIG_ALL_NO_CR, "."]
+        if dataset_exclusion:
+            assert isinstance(distance_file, tuple)
+            cmd = ["cp", utils.PATH_CONFIG_ALL_CR, "."]
+            config_filename = os.path.basename(utils.PATH_CONFIG_ALL_CR)
+        else:
+            cmd = ["cp", utils.PATH_CONFIG_ALL_NO_CR, "."]
+            config_filename = os.path.basename(utils.PATH_CONFIG_ALL_NO_CR)
         utils.execute_and_print(cmd)
         config_filename = os.path.basename(utils.PATH_CONFIG_ALL_NO_CR)
     else:
@@ -53,13 +65,23 @@ def run_exclusion_analysis(
 
     try:
         if isinstance(distance_file, str):
-            distance_mat_file = os.path.join(dirname, distance_file)
+            if os.path.exists(distance_file):
+                distance_mat_file = distance_file
+            else:
+                distance_mat_file = os.path.join(dirname, distance_file)
             f = h5py.File(distance_mat_file, "r")
             input_data = [f]
         elif isinstance(distance_file, tuple):
-            input_data = [
-                h5py.File(os.path.join(dirname, fname), "r") for fname in distance_file
-            ]
+            if os.path.exists(distance_file[0]):
+                input_data = [
+                    h5py.File(distance_file[0], "r"),
+                    h5py.File(distance_file[1], "r"),
+                ]
+            else:
+                input_data = [
+                    h5py.File(os.path.join(dirname, fname), "r")
+                    for fname in distance_file
+                ]
         else:
             raise ValueError("distance_file must be a string or a tuple of strings")
         with h5py.File(save_name, "w") as save_file:
