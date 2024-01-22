@@ -11,7 +11,7 @@ import time
 
 def run_exclusion_analysis(
     dirname: str,
-    distance_file: str = "distances-Jaccard.mat",
+    distance_file: Union[str, Tuple[str, str]] = "distances-Jaccard.mat",
     row_imgnames: str = "imgnames_pw_series.txt",
     col_imgnames: str = "imgnames_all.txt",
     save_name: str = "analysis_results.h5",
@@ -36,18 +36,40 @@ def run_exclusion_analysis(
     else:
         assert config_filename is not None
 
-    data_loader = de.HDFProcessor()
-    distance_mat_file = os.path.join(dirname, distance_file)
     input_data_descriptions = (
         os.path.join(dirname, row_imgnames),
         os.path.join(dirname, col_imgnames),
     )
     config = cd.load_config(os.path.join(dirname, config_filename))
-    save_name = os.path.join(dirname, save_name)
 
-    with h5py.File(distance_mat_file, "r") as f:
-        with h5py.File(save_name, "w") as save_file:
+    if config.contrast_exclusion:
+        print("Running contrast exclusion analysis")
+        save_name = save_name.replace(
+            ".h5", "_cr_{}.h5".format(config.constrast_exclusion_mode)
+        )
+
+    save_name = os.path.join(dirname, save_name)
+    data_loader = de.HDFProcessor()
+
+    try:
+        if isinstance(distance_file, str):
+            distance_mat_file = os.path.join(dirname, distance_file)
+            f = h5py.File(distance_mat_file, "r")
             input_data = [f]
+        elif isinstance(distance_file, tuple):
+            input_data = [
+                h5py.File(os.path.join(dirname, fname), "r") for fname in distance_file
+            ]
+        else:
+            raise ValueError("distance_file must be a string or a tuple of strings")
+        with h5py.File(save_name, "w") as save_file:
+            # save config as h5 meta data
+            config_dict = config.as_dict()
+            for k, v in config_dict.items():
+                if v is None:
+                    config_dict[k] = "None"
+            save_file.attrs.update(config_dict)
+
             exclusion_distance_analysis_batch(
                 input_data,
                 input_data_descriptions,
@@ -57,6 +79,14 @@ def run_exclusion_analysis(
                 config,
                 overwrite=True,
             )
+    except Exception as e:
+        print(e)
+        print("Error in running exclusion analysis")
+        input_data = None
+    finally:
+        if input_data is not None:  # type: ignore
+            for f in input_data:  # type: ignore
+                f.close()
 
 
 def exclusion_distance_analysis_single_obj_ax(

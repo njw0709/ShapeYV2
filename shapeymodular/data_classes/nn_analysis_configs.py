@@ -30,6 +30,13 @@ class NNAnalysisConfig(DataClassJsonMixin):
     histogram: bool
     bins: Union[None, Sequence[float]]
 
+    def __iter__(self):
+        for field in self.__dataclass_fields__:
+            yield field, getattr(self, field)
+
+    def as_dict(self):
+        return {k: v for k, v in self}
+
 
 def load_config(json_path: str) -> NNAnalysisConfig:
     with open(json_path, "r") as f:
