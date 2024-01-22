@@ -35,25 +35,29 @@ def plot_nn_classification_error_graph(
     print("Current working directory: {0}".format(cwd))
 
     # copy config file to feature directory
-    if axes_choice == "pw":
-        cmd = ["cp", utils.PATH_CONFIG_PW_NO_CR, "."]
-        utils.execute_and_print(cmd)
-        config = dc.load_config(
-            os.path.join(feature_directory, utils.PATH_CONFIG_PW_NO_CR)
-        )
-        axes = [axes_choice]
-    elif axes_choice == "all":
-        cmd = ["cp", utils.PATH_CONFIG_ALL_NO_CR, "."]
-        utils.execute_and_print(cmd)
-        config = dc.load_config(
-            os.path.join(feature_directory, utils.PATH_CONFIG_ALL_NO_CR)
-        )
-        axes = typing.cast(List, config.axes)
-    else:
-        assert config_filename is not None
+    if config_filename is not None:
         config = dc.load_config(os.path.join(feature_directory, config_filename))
-        assert axes_choice in typing.cast(List, config.axes)
-        axes = [axes_choice]
+        if axes_choice != "all":
+            assert axes_choice in typing.cast(List, config.axes)
+            axes = [axes_choice]
+
+    else:
+        if axes_choice == "pw":
+            cmd = ["cp", utils.PATH_CONFIG_PW_NO_CR, "."]
+            utils.execute_and_print(cmd)
+            config = dc.load_config(
+                os.path.join(feature_directory, utils.PATH_CONFIG_PW_NO_CR)
+            )
+            axes = [axes_choice]
+        elif axes_choice == "all":
+            cmd = ["cp", utils.PATH_CONFIG_ALL_NO_CR, "."]
+            utils.execute_and_print(cmd)
+            config = dc.load_config(
+                os.path.join(feature_directory, utils.PATH_CONFIG_ALL_NO_CR)
+            )
+            axes = typing.cast(List, config.axes)
+        else:
+            raise ValueError("axes_choice must be 'pw' or 'all'")
 
     analysis_hdf_path = os.path.join(feature_directory, analysis_file)
     analysis_hdf = h5py.File(analysis_hdf_path, "r")
