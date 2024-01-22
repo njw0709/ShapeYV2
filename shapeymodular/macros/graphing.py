@@ -40,6 +40,8 @@ def plot_nn_classification_error_graph(
         if axes_choice != "all":
             assert axes_choice in typing.cast(List, config.axes)
             axes = [axes_choice]
+        else:
+            axes = typing.cast(List, config.axes)
 
     else:
         if axes_choice == "pw":
