@@ -10,7 +10,7 @@ class NNAnalysisConfig(DataClassJsonMixin):
     """Configuration for NNAnalysis."""
 
     contrast_exclusion: bool  # if True, run contrast exclusion analysis.
-    constrast_exclusion_mode: Union[
+    contrast_exclusion_mode: Union[
         str, None
     ]  # must be specified for contrast exclusion analysis. "soft" or "hard".
     distance_measure: str  # distance measure to use for NN analysis. "correlation" or "euclidean".

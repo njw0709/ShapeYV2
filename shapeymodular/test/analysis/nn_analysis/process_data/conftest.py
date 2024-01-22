@@ -17,7 +17,7 @@ def get_top1_other_obj_setup(obj_ax_selected_corrmat_subset, nn_analysis_config)
     (obj, ax, corrmats_obj_ax_row_subset) = obj_ax_selected_corrmat_subset
     if (
         nn_analysis_config.contrast_exclusion
-        and nn_analysis_config.constrast_exclusion_mode == "soft"
+        and nn_analysis_config.contrast_exclusion_mode == "soft"
     ):
         other_obj_corrmat = corrmats_obj_ax_row_subset[1]
     else:
@@ -31,7 +31,7 @@ def get_top1_other_obj_subset_setup(obj_ax_selected_corrmat_subset, nn_analysis_
     (obj, ax, corrmats_obj_ax_row_subset) = obj_ax_selected_corrmat_subset
     if (
         nn_analysis_config.contrast_exclusion
-        and nn_analysis_config.constrast_exclusion_mode == "soft"
+        and nn_analysis_config.contrast_exclusion_mode == "soft"
     ):
         other_obj_corrmat = corrmats_obj_ax_row_subset[1]
     else:
@@ -69,7 +69,7 @@ def get_positive_match_top1_imgrank_setup(
 
     if (
         nn_analysis_config.contrast_exclusion
-        and nn_analysis_config.constrast_exclusion_mode == "soft"
+        and nn_analysis_config.contrast_exclusion_mode == "soft"
     ):
         other_obj_corrmat = corrmats_obj_ax_row_subset[1]
     else:

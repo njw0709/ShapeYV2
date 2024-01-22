@@ -15,8 +15,7 @@ def run_exclusion_analysis(
     row_imgnames: str = "imgnames_pw_series.txt",
     col_imgnames: str = "imgnames_all.txt",
     save_name: str = "analysis_results.h5",
-    axes: str = "pw",
-    config_filename: Union[str, None] = None,
+    config_filename: str = "analysis_config.json",
     dataset_exclusion: bool = False,
 ) -> None:
     # Prep required files
@@ -26,27 +25,7 @@ def run_exclusion_analysis(
     print("Current working directory: {0}".format(cwd))
 
     # copy config file to feature directory
-    if axes == "pw":
-        if dataset_exclusion:
-            assert isinstance(distance_file, tuple)
-            cmd = ["cp", utils.PATH_CONFIG_PW_CR, "."]
-            config_filename = os.path.basename(utils.PATH_CONFIG_PW_CR)
-        else:
-            cmd = ["cp", utils.PATH_CONFIG_PW_NO_CR, "."]
-            config_filename = os.path.basename(utils.PATH_CONFIG_PW_NO_CR)
-        utils.execute_and_print(cmd)
-    elif axes == "all":
-        if dataset_exclusion:
-            assert isinstance(distance_file, tuple)
-            cmd = ["cp", utils.PATH_CONFIG_ALL_CR, "."]
-            config_filename = os.path.basename(utils.PATH_CONFIG_ALL_CR)
-        else:
-            cmd = ["cp", utils.PATH_CONFIG_ALL_NO_CR, "."]
-            config_filename = os.path.basename(utils.PATH_CONFIG_ALL_NO_CR)
-        utils.execute_and_print(cmd)
-        config_filename = os.path.basename(utils.PATH_CONFIG_ALL_NO_CR)
-    else:
-        assert config_filename is not None
+    assert os.path.exists(config_filename)
 
     input_data_descriptions = (
         os.path.join(dirname, row_imgnames),
@@ -57,7 +36,7 @@ def run_exclusion_analysis(
     if config.contrast_exclusion:
         print("Running contrast exclusion analysis")
         save_name = save_name.replace(
-            ".h5", "_cr_{}.h5".format(config.constrast_exclusion_mode)
+            ".h5", "_cr_{}.h5".format(config.contrast_exclusion_mode)
         )
 
     save_name = os.path.join(dirname, save_name)
@@ -84,6 +63,7 @@ def run_exclusion_analysis(
                 ]
         else:
             raise ValueError("distance_file must be a string or a tuple of strings")
+
         with h5py.File(save_name, "w") as save_file:
             # save config as h5 meta data
             config_dict = config.as_dict()
@@ -91,7 +71,6 @@ def run_exclusion_analysis(
                 if v is None:
                     config_dict[k] = "None"
             save_file.attrs.update(config_dict)
-
             exclusion_distance_analysis_batch(
                 input_data,
                 input_data_descriptions,
@@ -141,7 +120,7 @@ def exclusion_distance_analysis_single_obj_ax(
     # compute the closest other object image to the original image
     if (
         nn_analysis_config.contrast_exclusion
-        and nn_analysis_config.constrast_exclusion_mode == "soft"
+        and nn_analysis_config.contrast_exclusion_mode == "soft"
     ):
         other_obj_corrmat = corrmats_obj_ax_row_subset[1]
     else:

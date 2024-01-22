@@ -34,11 +34,7 @@ if __name__ == "__main__":
         type=str,
         default="analysis_results.h5",
     )
-    parser.add_argument(
-        "--axes",
-        type=str,
-        default="pw",
-    )
+
     parser.add_argument(
         "--cupy_device",
         type=int,
@@ -56,5 +52,4 @@ if __name__ == "__main__":
         row_imgnames=args.row_imgnames,
         col_imgnames=args.col_imgnames,
         save_name=args.save_name,
-        axes=args.axes,
     )
