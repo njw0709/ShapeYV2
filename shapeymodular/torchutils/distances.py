@@ -33,3 +33,14 @@ def correlation_prenormalized(
     # output shape: (n, m)
     output = torch.mm(mat1_normalized, mat2_normalized.T)
     return output
+
+
+def cosine_similarity(mat1: torch.Tensor, mat2: torch.Tensor) -> torch.Tensor:
+    # divide by the norms
+    norm1 = torch.norm(mat1, dim=1, keepdim=True)
+    norm2 = torch.norm(mat2, dim=1, keepdim=True)
+    mat1_normalized = mat1 / norm1
+    mat2_normalized = mat2 / norm2
+    # compute the dot product
+    output = torch.mm(mat1_normalized, mat2_normalized.T)
+    return output

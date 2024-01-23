@@ -220,15 +220,22 @@ def load_features(
         else:
             data_row = typing.cast(np.ndarray, features[0])
             data_col = typing.cast(np.ndarray, features[1])
-        print("row data shape: {}".format(data_row.shape))
-        print("col data shape: {}".format(data_col.shape))
+        assert data_row.shape[1] == data_col.shape[1]
+        print("feature length: {}".format(data_row.shape[1]))
 
         data_row = torch.tensor(data_row, dtype=dtype)
         data_col = torch.tensor(data_col, dtype=dtype)
         if metric == "correlation":
             print("normalizing features...")
-            data_row = torchutilfeat.standardize_features(data_row)
-            data_col = torchutilfeat.standardize_features(data_col)
+            joined_data = torch.cat((data_row, data_col), dim=0)
+            mean_joined = joined_data.mean(dim=0, keepdim=True)
+            std_joined = joined_data.std(dim=0, keepdim=True)
+            data_row = torchutilfeat.standardize_features(
+                data_row, mean=mean_joined, std=std_joined
+            )
+            data_col = torchutilfeat.standardize_features(
+                data_col, mean=mean_joined, std=std_joined
+            )
     else:
         if isinstance(features, str):
             assert os.path.exists(features)
