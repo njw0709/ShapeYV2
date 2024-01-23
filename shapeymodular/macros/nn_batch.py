@@ -16,7 +16,6 @@ def run_exclusion_analysis(
     col_imgnames: str = "imgnames_all.txt",
     save_name: str = "analysis_results.h5",
     config_filename: str = "analysis_config.json",
-    dataset_exclusion: bool = False,
 ) -> None:
     # Prep required files
     os.chdir(dirname)
