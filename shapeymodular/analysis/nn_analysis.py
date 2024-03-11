@@ -573,9 +573,9 @@ class MaskExcluded:
                     dtype=float,
                 )
             )
-            single_axis_excluded_to_nan_mask[
-                single_axis_excluded_to_nan_mask == 0
-            ] = cp.nan
+            single_axis_excluded_to_nan_mask[single_axis_excluded_to_nan_mask == 0] = (
+                cp.nan
+            )
             return single_axis_excluded_to_nan_mask
 
     @staticmethod

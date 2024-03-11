@@ -290,7 +290,7 @@ def compute_distance_in_segments(
             )  # (segment_size_r, segment_size_c)
 
             # save to distance matrix
-            hf_dataset[
-                row_seg_idx:end_idx_row, col_seg_idx:end_idx_col
-            ] = distance_segment.cpu().numpy()
+            hf_dataset[row_seg_idx:end_idx_row, col_seg_idx:end_idx_col] = (
+                distance_segment.cpu().numpy()
+            )
     print("Done")

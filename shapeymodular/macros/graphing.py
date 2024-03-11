@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 LEGEND_LOCATION = (0, 1)
+LEGEND_OUTSIDE_LOCATION = (-0.55, 1)
 
 
 def plot_nn_classification_error_graph(
@@ -22,6 +23,7 @@ def plot_nn_classification_error_graph(
     no_save: bool = False,
     log_scale: bool = False,
     fig_format: str = "png",
+    legend_outside: bool = False,
 ) -> Tuple[Dict, Dict]:
     data_loader = dl.HDFProcessor()
     # create figure directory
@@ -104,12 +106,22 @@ def plot_nn_classification_error_graph(
         )
         legend_obj.append("object error - {}".format(ax))
         legend_cat.append("category error - {}".format(ax))
-    ax_obj.legend(legend_obj, loc="upper left", bbox_to_anchor=LEGEND_LOCATION)
-    ax_cat.legend(
-        legend_cat,
-        loc="upper left",
-        bbox_to_anchor=LEGEND_LOCATION,
-    )
+    if legend_outside:
+        ax_obj.legend(
+            legend_obj, loc="upper left", bbox_to_anchor=LEGEND_OUTSIDE_LOCATION
+        )
+        ax_cat.legend(
+            legend_cat,
+            loc="upper left",
+            bbox_to_anchor=LEGEND_OUTSIDE_LOCATION,
+        )
+    else:
+        ax_obj.legend(legend_obj, loc="upper left", bbox_to_anchor=LEGEND_LOCATION)
+        ax_cat.legend(
+            legend_cat,
+            loc="upper left",
+            bbox_to_anchor=LEGEND_LOCATION,
+        )
     analysis_hdf.close()
     if not no_save:
         fig_obj.savefig(

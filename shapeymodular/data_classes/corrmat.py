@@ -30,6 +30,10 @@ class CorrMat(ABC):
         subset_corrmat = self.corrmat[row_idxs, :][:, col_idxs]
         return CorrMat(subset_description, subset_corrmat)
 
+    def load_to_np(self):
+        if isinstance(self.corrmat, h5py.Dataset):
+            self.corrmat = self.corrmat[()]
+
 
 @dataclass
 class WholeShapeYMat(CorrMat):

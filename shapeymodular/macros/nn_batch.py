@@ -7,6 +7,7 @@ import shapeymodular.utils as utils
 from tqdm import tqdm
 import os
 import time
+import concurrent.futures
 
 
 def run_exclusion_analysis(
@@ -63,6 +64,15 @@ def run_exclusion_analysis(
         else:
             raise ValueError("distance_file must be a string or a tuple of strings")
 
+        # get results
+        print("gathering all results...")
+        results_dict = exclusion_distance_analysis_batch(
+            input_data,
+            input_data_descriptions,
+            data_loader,
+            config,
+        )
+
         with h5py.File(save_name, "w") as save_file:
             # save config as h5 meta data
             config_dict = config.as_dict()
@@ -70,18 +80,13 @@ def run_exclusion_analysis(
                 if v is None:
                     config_dict[k] = "None"
             save_file.attrs.update(config_dict)
-            exclusion_distance_analysis_batch(
-                input_data,
-                input_data_descriptions,
-                data_loader,
-                save_file,
-                data_loader,
-                config,
-                overwrite=True,
+            save_all_analysis_results(
+                results_dict, save_file, data_loader, config, overwrite=True
             )
+
     except Exception as e:
         print(e)
-        print("Error in running exclusion analysis")
+        # print("Error in running exclusion analysis")
         input_data = None
     finally:
         if input_data is not None:  # type: ignore
@@ -278,10 +283,8 @@ def exclusion_distance_analysis_batch(
         Tuple[str, str], None
     ],  # row / column descriptors for (row, col). if None, assumes using all images.
     data_loader: de.DataLoader,
-    save_dir: h5py.File,  # hdf5 file to save the results.
-    data_saver: de.HDFProcessor,
     nn_analysis_config: cd.NNAnalysisConfig,
-    overwrite: bool = False,
+    parallel: bool = True,
 ) -> None:
     # get correlation (or distance) matrix
     corrmats = an.PrepData.load_corrmat_input(
@@ -307,19 +310,85 @@ def exclusion_distance_analysis_batch(
         axes = utils.ALL_AXES
 
     # run analysis and save results
-    for ax in axes:
-        print("Running analysis for axis {}".format(ax))
-        print("Loading data...")
-        t = time.time()
-        corrmats_ax = [
-            an.PrepData.cut_single_ax_to_all_corrmat(corrmat, ax)
-            for corrmat in corrmats
-        ]
-        print("Loading data took {} seconds".format(time.time() - t))
-        for obj in tqdm(objnames):
-            analysis_results = exclusion_distance_analysis_single_obj_ax(
-                obj, ax, corrmats_ax, nn_analysis_config
+
+    # collect all results for ax first:
+    results_dict = {}
+
+    if parallel:
+        # pull all data first
+        corrmats_ax = []
+        print("Loading corrmat data...")
+        for ax in tqdm(axes):
+            corrmats_ax.append(
+                [
+                    an.PrepData.cut_single_ax_to_all_corrmat(corrmat, ax)
+                    for corrmat in corrmats
+                ]
             )
+        # Use ProcessPoolExecutor to parallelize the processing.
+        with concurrent.futures.ProcessPoolExecutor(max_workers=6) as executor:
+            # Submit all tasks to the executor.
+            future_to_ax_pair = {
+                executor.submit(
+                    process_ax_obj_pair,
+                    ax,
+                    objnames,
+                    corrmats_ax[i],
+                    nn_analysis_config,
+                ): ax
+                for i, ax in enumerate(axes)
+            }
+
+            for future in concurrent.futures.as_completed(future_to_ax_pair):
+                ax = future_to_ax_pair[future]
+                try:
+                    result_key, results_dict_obj = future.result()
+                    results_dict[result_key] = results_dict_obj
+                except Exception as exc:
+                    print(f"Generated an exception for {ax}: {exc}")
+    else:
+        for ax in axes:
+            print("Running analysis for axis {}".format(ax))
+            print("Loading data...")
+            t = time.time()
+            corrmats_ax = [
+                an.PrepData.cut_single_ax_to_all_corrmat(corrmat, ax)
+                for corrmat in corrmats
+            ]
+            print("Loading data took {} seconds".format(time.time() - t))
+            results_obj_dict = {}
+            for obj in tqdm(objnames):
+                analysis_results = exclusion_distance_analysis_single_obj_ax(
+                    obj, ax, corrmats_ax, nn_analysis_config
+                )
+                results_obj_dict[obj] = analysis_results
+            results_dict[ax] = results_obj_dict
+    return results_dict
+
+
+def process_ax_obj_pair(ax, objnames, corrmats_ax, nn_analysis_config):
+    results_dict = {}
+    print(f"Running analysis for axis {ax}")
+    for obj in tqdm(objnames):
+        start_time = time.time()
+        analysis_results = exclusion_distance_analysis_single_obj_ax(
+            obj, ax, corrmats_ax, nn_analysis_config
+        )
+        results_dict[obj] = analysis_results
+    print(f"Processing for axis {ax} took {time.time() - start_time} seconds")
+    return ax, results_dict
+
+
+def save_all_analysis_results(
+    results_dict: dict,
+    save_dir: h5py.File,  # hdf5 file to save the results.
+    data_saver: de.HDFProcessor,
+    nn_analysis_config: cd.NNAnalysisConfig,
+    overwrite: bool = False,
+):
+    print("saving all results...")
+    for ax, results_obj_dict in results_dict.items():
+        for obj, analysis_results in results_obj_dict.items():
             save_exclusion_distance_analysis_results(
                 obj,
                 ax,
@@ -329,3 +398,23 @@ def exclusion_distance_analysis_batch(
                 nn_analysis_config,
                 overwrite=overwrite,
             )
+
+
+def exclusion_analysis_process_axis(
+    ax, corrmats_ax, objnames, save_dir, data_saver, nn_analysis_config, overwrite
+):
+    for obj in objnames:
+        analysis_results = exclusion_distance_analysis_single_obj_ax(
+            obj, ax, corrmats_ax, nn_analysis_config
+        )
+        save_exclusion_distance_analysis_results(
+            obj,
+            ax,
+            analysis_results,
+            save_dir,
+            data_saver,
+            nn_analysis_config,
+            overwrite=overwrite,
+        )
+
+    return f"Completed processing for axis {ax}"
