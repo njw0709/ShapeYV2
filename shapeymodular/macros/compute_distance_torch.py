@@ -227,15 +227,28 @@ def load_features(
         data_col = torch.tensor(data_col, dtype=dtype)
         if metric == "correlation":
             print("normalizing features...")
-            joined_data = torch.cat((data_row, data_col), dim=0)
-            mean_joined = joined_data.mean(dim=0, keepdim=True)
-            std_joined = joined_data.std(dim=0, keepdim=True)
-            data_row = torchutilfeat.standardize_features(
-                data_row, mean=mean_joined, std=std_joined
-            )
-            data_col = torchutilfeat.standardize_features(
-                data_col, mean=mean_joined, std=std_joined
-            )
+            data_row_norm = torch.norm(data_row, p=2, dim=1, keepdim=True)
+            data_col_norm = torch.norm(data_col, p=2, dim=1, keepdim=True)
+            # if norm is close to zero, add small value
+            row_close_to_zero = torch.isclose(data_row_norm, torch.tensor([0.0]))
+            col_close_to_zero = torch.isclose(data_col_norm, torch.tensor([0.0]))
+            # if any is close to zero, add small value
+            if row_close_to_zero.any():
+                data_row_norm[row_close_to_zero] = 1e9
+            if col_close_to_zero.any():
+                data_col_norm[col_close_to_zero] = 1e9
+            data_row = data_row / data_row_norm
+            data_col = data_col / data_col_norm
+
+            # joined_data = torch.cat((data_row, data_col), dim=0)
+            # mean_joined = joined_data.mean(dim=0, keepdim=True)
+            # std_joined = joined_data.std(dim=0, keepdim=True)
+            # data_row = torchutilfeat.standardize_features(
+            #     data_row, mean=mean_joined, std=std_joined
+            # )
+            # data_col = torchutilfeat.standardize_features(
+            #     data_col, mean=mean_joined, std=std_joined
+            # )
     else:
         if isinstance(features, str):
             assert os.path.exists(features)
@@ -251,7 +264,13 @@ def load_features(
         data = torch.tensor(data, dtype=dtype)
         if metric == "correlation":
             print("normalizing features...")
-            data = torchutilfeat.standardize_features(data)
+            data_norm = torch.norm(data, p=2, dim=1, keepdim=True)
+            # if norm is close to zero, add small value
+            close_to_zero = torch.isclose(data_norm, torch.tensor([0.0]))
+            if close_to_zero.any():
+                data_norm[close_to_zero] = 1e9
+            data = data / data_norm
+            # data = torchutilfeat.standardize_features(data)
         data_row = data
         data_col = data
     return (data_row, data_col)
