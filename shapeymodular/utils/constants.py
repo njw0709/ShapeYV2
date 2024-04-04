@@ -57,11 +57,18 @@ NUMBER_OF_OBJS_PER_CATEGORY: int = NUMBER_OF_OBJECTS // NUMBER_OF_CATEGORY
 NUMBER_OF_AXES = len(ALL_AXES)
 NUMBER_OF_VIEWS_PER_AXIS = 11
 CURR_FILE_DIR = os.path.dirname(os.path.realpath(__file__))
-with open(
-    os.path.join(CURR_FILE_DIR, "ShapeY200_objs.json"),
-    "r",
-) as f:
+with open(os.path.join(CURR_FILE_DIR, "ShapeY200_objs.json"), "r") as f:
     SHAPEY200_OBJS = json.load(f)
+
+with open(os.path.join(CURR_FILE_DIR, "test_categories.json"), "r") as f:
+    SHAPEY200_TEST_CATEGORIES = json.load(f)
+SHAPEY200_TRAIN_OBJS = [
+    obj for obj in SHAPEY200_OBJS if obj.split("_")[0] not in SHAPEY200_TEST_CATEGORIES
+]
+SHAPEY200_TEST_OBJS = [
+    obj for obj in SHAPEY200_OBJS if obj.split("_")[0] in SHAPEY200_TEST_CATEGORIES
+]
+
 SHAPEY200_OBJCATS = np.unique([obj.split("_")[0] for obj in SHAPEY200_OBJS])
 SHAPEY200_CAT_TO_OBJ_DICT = create_shapey_cat_to_obj_dict()
 ONE_PER_OBJ_SAMPLE_IDX = 3

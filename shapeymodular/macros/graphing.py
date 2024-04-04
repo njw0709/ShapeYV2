@@ -24,6 +24,7 @@ def plot_nn_classification_error_graph(
     log_scale: bool = False,
     fig_format: str = "png",
     legend_outside: bool = False,
+    obj_subset: Union[None, str, List[str]] = None,
 ) -> Tuple[Dict, Dict]:
     data_loader = dl.HDFProcessor()
     # create figure directory
@@ -79,7 +80,16 @@ def plot_nn_classification_error_graph(
         # post process data for graphing
         graph_data_list_obj_error = []
         graph_data_list_cat_error = []
-        for obj in tqdm(utils.SHAPEY200_OBJS):
+        if obj_subset is None:
+            object_list = utils.SHAPEY200_OBJS
+        elif obj_subset == "train":
+            object_list = utils.SHAPEY200_TRAIN_OBJS
+        elif obj_subset == "test":
+            object_list = utils.SHAPEY200_TEST_OBJS
+        else:
+            object_list = obj_subset
+
+        for obj in tqdm(object_list):
             graph_data_obj = an.NNClassificationError.generate_top1_error_data(
                 analysis_sampler, obj, ax
             )

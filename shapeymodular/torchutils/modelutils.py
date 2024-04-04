@@ -16,14 +16,13 @@ class GetModelIntermediateLayer(nn.Module):
         return x
 
 
+@torch.no_grad()
 def extract_feature_vectors(
     model: nn.Module,
     img_dataset: Dataset,
     batch_size: int = 10,
 ) -> np.ndarray:
-    is_gpu_model = all(param.device.type == "cuda" for param in model.parameters())
-    if not is_gpu_model:
-        model.cuda()
+    device = next(model.parameters()).device
     if model.training:
         model.eval()
 
@@ -33,7 +32,7 @@ def extract_feature_vectors(
 
     features = []
     for img in tqdm(img_dataloader):
-        img = img.cuda()
+        img = img.to(device)
         feature_vector = model(img)
         output = feature_vector.view(feature_vector.size(0), -1)
         output_np = output.cpu().data.numpy()

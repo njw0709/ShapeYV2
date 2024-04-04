@@ -61,5 +61,5 @@ def extract_shapey200_features(
         sampler.save({"data_type": "imgnames"}, shapey200_imgnames)
 
         # extract features
-        features = tu.extract_feature_vectors(model, shapey200_dataset, batch_size=30)
+        features = tu.extract_feature_vectors(model, shapey200_dataset, batch_size=200)
         sampler.save({"data_type": "features"}, features)

@@ -285,7 +285,7 @@ def exclusion_distance_analysis_batch(
     data_loader: de.DataLoader,
     nn_analysis_config: cd.NNAnalysisConfig,
     parallel: bool = True,
-) -> None:
+) -> dict:
     # get correlation (or distance) matrix
     corrmats = an.PrepData.load_corrmat_input(
         input_data,
