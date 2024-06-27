@@ -2,8 +2,22 @@ import h5py
 from typing import Sequence, Union, Tuple, List
 import typing
 import numpy as np
-import cupy as cp
-from cupyx.scipy.linalg import tri
+
+# import cupy as cp
+
+# try:
+#     NUM_GPUS = cp.cuda.runtime.getDeviceCount()
+#     from cupyx.scipy.linalg import tri
+
+#     CUPY_ACTIVE = True
+# except Exception as e:
+# print("no GPU found, defaulting to numpy...")
+cp = np
+from scipy.linalg import tri
+
+CUPY_ACTIVE = False
+print("defaulting to numpy...")
+
 import shapeymodular.data_classes as dc
 import shapeymodular.utils as utils
 import shapeymodular.data_loader as dl
@@ -302,15 +316,37 @@ class ProcessData:
                 counts = cp.apply_along_axis(
                     lambda r: cp.histogram(r[~np.isnan(r)], bins=cp_bins)[0], 1, res
                 )
-                hist_array[:, xdist, :] = counts.get()
-            if nn_analysis_config.distance_measure == "correlation":
+                if CUPY_ACTIVE:
+                    hist_array[:, xdist, :] = counts.get()
+                else:
+                    hist_array[:, xdist, :] = counts
+            if (
+                nn_analysis_config.distance_measure == "correlation"
+                or nn_analysis_config.distance_measure == "Jaccard_dist"
+            ):
                 closest_dist_xdist = cp.nanmax(res, axis=1)
+                if not CUPY_ACTIVE:
+                    # get all nan rows
+                    all_nan_rows = np.isnan(res).all(axis=1)
+                    res = np.nan_to_num(res, nan=float("-inf"))
                 closest_idx_xdist = cp.nanargmax(res, axis=1)
+                if not CUPY_ACTIVE:
+                    closest_idx_xdist[all_nan_rows] = -1
             else:
                 closest_dist_xdist = cp.nanmin(res, axis=1)
+                if not CUPY_ACTIVE:
+                    # get all nan rows
+                    all_nan_rows = np.isnan(res).all(axis=1)
+                    res = np.nan_to_num(res, nan=float("inf"))
                 closest_idx_xdist = cp.nanargmin(res, axis=1)
-            closest_dists[:, xdist] = closest_dist_xdist.get()
-            closest_idxs[:, xdist] = closest_idx_xdist.get()
+                if not CUPY_ACTIVE:
+                    closest_idx_xdist[all_nan_rows] = -1
+            if CUPY_ACTIVE:
+                closest_dists[:, xdist] = closest_dist_xdist.get()
+                closest_idxs[:, xdist] = closest_idx_xdist.get()
+            else:
+                closest_dists[:, xdist] = closest_dist_xdist
+                closest_idxs[:, xdist] = closest_idx_xdist
         # convert closest index to shapey index
         obj_idx_start = (
             utils.ImageNameHelper.objname_to_shapey_obj_idx(obj)
@@ -360,7 +396,7 @@ class ProcessData:
             ).T
             sameobj_shapey_idx = utils.IndexingHelper.objname_ax_to_shapey_index(obj)
 
-            if distance_measure == "correlation":
+            if distance_measure == "correlation" or distance_measure == "Jaccard_dist":
                 comparison_result = other_obj_corrmat_cp >= comparison_mask
             else:
                 comparison_result = other_obj_corrmat_cp <= comparison_mask
@@ -368,7 +404,12 @@ class ProcessData:
             comparison_result[:, sameobj_shapey_idx] = False
             # count how many are true
             above_top1_positive_match_count = cp.sum(comparison_result, axis=1)
-            positive_match_imgrank[:, exc_dist] = above_top1_positive_match_count.get()
+            if CUPY_ACTIVE:
+                positive_match_imgrank[:, exc_dist] = (
+                    above_top1_positive_match_count.get()
+                )
+            else:
+                positive_match_imgrank[:, exc_dist] = above_top1_positive_match_count
         return positive_match_imgrank
 
     @staticmethod
@@ -432,7 +473,10 @@ class ProcessData:
                 )
                 cval_mat_obj = other_obj_corrmat_np[:, other_obj_idxs]
                 other_obj_idx_start = min(other_obj_idxs)
-                if nn_analysis_config.distance_measure == "correlation":
+                if (
+                    nn_analysis_config.distance_measure == "correlation"
+                    or nn_analysis_config.distance_measure == "Jaccard_dist"
+                ):
                     top1_cvals.append(np.nanmax(cval_mat_obj, axis=1))
                     top1_idxs.append(
                         np.nanargmax(cval_mat_obj, axis=1) + other_obj_idx_start
@@ -444,7 +488,10 @@ class ProcessData:
                     )
         top1_per_obj_dists = np.array(top1_cvals, dtype=float).T
         top1_per_obj_idxs = np.array(top1_idxs, dtype=np.int64).T
-        if nn_analysis_config.distance_measure == "correlation":
+        if (
+            nn_analysis_config.distance_measure == "correlation"
+            or nn_analysis_config.distance_measure == "Jaccard_dist"
+        ):
             top1_other_obj_dists = np.nanmax(top1_per_obj_dists, axis=1, keepdims=True)
             top1_other_obj_idxs = top1_per_obj_idxs[
                 np.arange(utils.NUMBER_OF_VIEWS_PER_AXIS),
@@ -481,7 +528,8 @@ class ProcessData:
                 count_col = (top1_per_obj_dists > comparison_mask).sum(axis=1)
             else:
                 count_col = (top1_per_obj_dists < comparison_mask).sum(axis=1)
-            count_col = count_col.get()
+            if CUPY_ACTIVE:
+                count_col = count_col.get()
             count_col = count_col.astype(np.float32)
             count_col[np.isnan(col)] = np.nan
             sameobj_objrank.append(count_col)

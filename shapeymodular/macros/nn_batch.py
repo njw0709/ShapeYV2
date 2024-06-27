@@ -8,6 +8,7 @@ from tqdm import tqdm
 import os
 import time
 import concurrent.futures
+import traceback
 
 
 def run_exclusion_analysis(
@@ -17,6 +18,7 @@ def run_exclusion_analysis(
     col_imgnames: str = "imgnames_all.txt",
     save_name: str = "analysis_results.h5",
     config_filename: str = "analysis_config.json",
+    parallel: bool = False,
 ) -> None:
     # Prep required files
     os.chdir(dirname)
@@ -71,6 +73,7 @@ def run_exclusion_analysis(
             input_data_descriptions,
             data_loader,
             config,
+            parallel=parallel,
         )
 
         with h5py.File(save_name, "w") as save_file:
@@ -86,8 +89,9 @@ def run_exclusion_analysis(
 
     except Exception as e:
         print(e)
-        # print("Error in running exclusion analysis")
+        # print("Error innning exclusion analysis")
         input_data = None
+        print(traceback.format_exc())
     finally:
         if input_data is not None:  # type: ignore
             for f in input_data:  # type: ignore

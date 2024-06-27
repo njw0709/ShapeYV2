@@ -133,6 +133,10 @@ def compute_jaccard_distance(
         feature_key="thresholded_features",
     )
     print("Computing jaccard distance...")
+    data_row = data_row.T
+    data_col = data_col.T
+    print("data row shape: {}".format(data_row.shape[0]))
+    print("data col shape: {}".format(data_col.shape[0]))
     with h5py.File(os.path.join(datadir, output_file), "w") as hf:
         distance_matrix_dset = hf.create_dataset(
             "Jaccard_dists",
@@ -149,6 +153,44 @@ def compute_jaccard_distance(
             distances.jaccard_distance_mm,
             distance_matrix_dset,
             device,
+        )
+
+
+def compute_weighted_jaccard(
+    datadir: str,
+    thresholded_features: np.ndarray,
+    weights: np.ndarray,
+    output_file: str,
+    row_segment_size: int,
+    col_segment_size: int,
+    gpu_index: int = 0,
+    dtype: torch.dtype = torch.float32,
+    dataset_exclusion: bool = False,
+):
+    # Define the device using the specified GPU index
+    device = torch.device(f"cuda:{gpu_index}" if torch.cuda.is_available() else "cpu")
+    data_row = torch.tensor(thresholded_features, dtype=dtype).T
+    data_col = torch.tensor(thresholded_features.copy(), dtype=dtype).T
+    weights = torch.tensor(weights, dtype=dtype).T
+
+    print("Computing jaccard distance...")
+    with h5py.File(os.path.join(datadir, output_file), "w") as hf:
+        distance_matrix_dset = hf.create_dataset(
+            "Jaccard_dists",
+            (data_row.shape[0], data_col.shape[0]),
+            dtype=np.float16,
+            chunks=(row_segment_size // 2, data_row.shape[0]),
+        )
+        # compute jaccard distance in segments
+        compute_distance_in_segments(
+            data_row,
+            data_col,
+            row_segment_size,
+            col_segment_size,
+            distances.weighted_jaccard_distance_mm,
+            distance_matrix_dset,
+            device,
+            weights=weights,
         )
 
 
@@ -284,7 +326,12 @@ def compute_distance_in_segments(
     metric_func: typing.Callable,
     hf_dataset: h5py.Dataset,
     device: torch.device,
+    weights: Union[torch.Tensor, None] = None,
 ) -> None:
+    # check if weights is of same dimensions as data_row if provided
+    if weights is not None:
+        assert weights.shape[1] == data_row.shape[1]
+
     # compute distance in segments
     for row_seg_idx in tqdm(range(0, data_row.shape[0], row_segment_size)):
         if row_seg_idx + row_segment_size >= data_row.shape[0]:
@@ -294,6 +341,13 @@ def compute_distance_in_segments(
         row_segment_gpu = data_row[row_seg_idx:end_idx_row].to(
             device
         )  # (segment_size_r, d)
+
+        if weights is not None:
+            if weights.shape[0] == 1:
+                weights_segment_gpu = weights.to(device)
+            else:
+                weights_segment_gpu = weights[row_seg_idx:end_idx_row].to(device)
+
         for col_seg_idx in range(0, data_col.shape[0], col_segment_size):
             if col_seg_idx + col_segment_size >= data_col.shape[0]:
                 end_idx_col = data_col.shape[0]
@@ -304,9 +358,14 @@ def compute_distance_in_segments(
             )  # (segment_size_c, d)
 
             # compute distance
-            distance_segment = metric_func(
-                row_segment_gpu, col_segment_gpu
-            )  # (segment_size_r, segment_size_c)
+            if weights is not None:
+                distance_segment = metric_func(
+                    row_segment_gpu, col_segment_gpu, weights_segment_gpu
+                )
+            else:
+                distance_segment = metric_func(
+                    row_segment_gpu, col_segment_gpu
+                )  # (segment_size_r, segment_size_c)
 
             # save to distance matrix
             hf_dataset[row_seg_idx:end_idx_row, col_seg_idx:end_idx_col] = (

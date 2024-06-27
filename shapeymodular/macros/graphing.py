@@ -25,6 +25,7 @@ def plot_nn_classification_error_graph(
     fig_format: str = "png",
     legend_outside: bool = False,
     obj_subset: Union[None, str, List[str]] = None,
+    name_tail: str = "",
 ) -> Tuple[Dict, Dict]:
     data_loader = dl.HDFProcessor()
     # create figure directory
@@ -86,6 +87,10 @@ def plot_nn_classification_error_graph(
             object_list = utils.SHAPEY200_TRAIN_OBJS
         elif obj_subset == "test":
             object_list = utils.SHAPEY200_TEST_OBJS
+        elif obj_subset == "train_shapex":
+            object_list = utils.SHAPEX200_TRAIN_OBJS
+        elif obj_subset == "test_shapex":
+            object_list = utils.SHAPEX200_TEST_OBJS
         else:
             object_list = obj_subset
 
@@ -100,7 +105,7 @@ def plot_nn_classification_error_graph(
             graph_data_list_cat_error.append(graph_data_cat)
         graph_data_group_obj_error = dc.GraphDataGroup(graph_data_list_obj_error)
         graph_data_group_cat_error = dc.GraphDataGroup(graph_data_list_cat_error)
-        print("computing statistics...")
+        print("computing statistics for {}...".format(ax))
         graph_data_group_obj_error.compute_statistics()
         graph_data_group_cat_error.compute_statistics()
         dict_ax_to_graph_data_group_obj[ax] = graph_data_group_obj_error
@@ -135,12 +140,16 @@ def plot_nn_classification_error_graph(
     analysis_hdf.close()
     if not no_save:
         fig_obj.savefig(
-            os.path.join(FIG_SAVE_DIR, "nn_error_obj." + fig_format),
+            os.path.join(
+                FIG_SAVE_DIR, "nn_error_obj{}.".format(name_tail) + fig_format
+            ),
             format=fig_format,
             bbox_inches="tight",
         )
         fig_cat.savefig(
-            os.path.join(FIG_SAVE_DIR, "nn_error_cat." + fig_format),
+            os.path.join(
+                FIG_SAVE_DIR, "nn_error_cat{}.".format(name_tail) + fig_format
+            ),
             format=fig_format,
             bbox_inches="tight",
         )

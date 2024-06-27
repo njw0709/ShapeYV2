@@ -24,6 +24,33 @@ def jaccard_distance_mm(mat1, mat2):
     return jaccard_similarity  # (n, m)
 
 
+def weighted_jaccard_distance_mm(mat1, mat2, weights):
+    mat1 = mat1.float()
+    mat2 = mat2.float()
+    weights = weights.float()
+    # Weighted Intersection (Sum_i(w_i*e1_i*e2_i))
+    intersection = torch.mm((mat1 * weights), mat2.T)
+
+    # Weighted Sum of rows for mat1 and mat2
+    sum_mat1 = (mat1 * weights).sum(dim=1, keepdim=True)
+    # if applying the same weight across all feats
+    if weights.shape[0] == 1:
+        sum_mat2 = (mat2 * weights).sum(dim=1, keepdim=True)
+        union = (sum_mat1 + sum_mat2.T) - intersection
+    # if applying adaptive weights according to the reference feature vector (row)
+    else:
+        sum_mat2 = torch.mm(weights, mat2.T)
+        union = (sum_mat1 + sum_mat2) - intersection
+
+    # Avoid division by zero
+    union = union + (union == 0).float()
+
+    # Jaccard Similarity
+    jaccard_similarity = intersection / union
+
+    return jaccard_similarity  # (n, m)
+
+
 def correlation_prenormalized(
     mat1_normalized: torch.Tensor, mat2_normalized: torch.Tensor
 ) -> torch.Tensor:

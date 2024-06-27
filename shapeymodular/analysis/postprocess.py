@@ -63,7 +63,7 @@ class NNClassificationError:
             top1_other = top1_other.flatten()  # type: ignore
         comparison_mask = np.tile(top1_other, (11, 1)).T
         # compare if the largest cval for same obj is larger than the top1 cval for other objs
-        if distance == "correlation":
+        if distance == "correlation" or distance == "Jaccard_dists":
             correct_counts = np.greater(top1_excdist, comparison_mask)
         else:
             correct_counts = np.less(top1_excdist, comparison_mask)
@@ -96,7 +96,7 @@ class NNClassificationError:
         top_per_obj_cvals_masked = NNClassificationError.mask_same_obj_cat(
             top_per_obj_cvals, obj
         )
-        if distance == "correlation":
+        if distance == "correlation" or distance == "Jaccard_dists":
             top1_dists_other_obj_cat = np.nanmax(top_per_obj_cvals_masked, axis=1)
             top1_idxs_other_obj_cat = np.nanargmax(top_per_obj_cvals_masked, axis=1)
         else:
@@ -118,7 +118,7 @@ class NNClassificationError:
         top_per_obj_cvals_masked = NNClassificationError.mask_same_obj_cat(
             top_per_obj_cvals, obj
         )
-        if distance == "correlation":
+        if distance == "correlation" or distance == "Jaccard_dists":
             # top 1 other object category
             top1_other_cat_cvals = np.nanmax(top_per_obj_cvals_masked, axis=1)
             comparison_mask = np.tile(top1_other_cat_cvals, (11, 1)).T
@@ -529,7 +529,7 @@ class ErrorDisplay:
         # same_objcat_dists: 1st dim: different objs in same obj cat, 2nd dim: imgs, 3rd dim: exclusion dist in axis
         assert same_objcat_dists.shape == (10, 11, 11)
         assert same_objcat_idxs.shape == (10, 11, 11)
-        if distance == "correlation":
+        if distance == "correlation" or distance == "Jaccard_dists":
             same_objcat_dists_nan_to_zero = same_objcat_dists.copy()
             same_objcat_dists_nan_to_zero[np.isnan(same_objcat_dists)] = 0
             top1_dists_sameobj = np.nanmax(same_objcat_dists, axis=0)
