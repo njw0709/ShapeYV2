@@ -257,27 +257,50 @@ def plot_histogram_with_error_graph(
     # Print the current working directory
     print("Current working directory: {0}".format(cwd))
 
-    # copy config file to feature directory
-    if axes_choice == "pw":
-        cmd = ["cp", utils.PATH_CONFIG_PW_NO_CR, "."]
+    if config_filename is None or not os.path.exists(
+        os.path.join(feature_directory, config_filename)
+    ):
+        if axes_choice == "pw":
+            cmd = ["cp", utils.PATH_CONFIG_PW_NO_CR, "."]
+        elif axes_choice == "all":
+            cmd = ["cp", utils.PATH_CONFIG_ALL_NO_CR, "."]
+        else:
+            raise FileNotFoundError("config file not found")
         utils.execute_and_print(cmd)
         config = dc.load_config(
             os.path.join(feature_directory, utils.PATH_CONFIG_PW_NO_CR)
         )
+    else:
+        config = dc.load_config(os.path.join(feature_directory, config_filename))
+
+    # copy config file to feature directory
+    if axes_choice == "pw":
+        axes = ["pw"]
     elif axes_choice == "all":
-        cmd = ["cp", utils.PATH_CONFIG_ALL_NO_CR, "."]
-        utils.execute_and_print(cmd)
-        config = dc.load_config(
-            os.path.join(feature_directory, utils.PATH_CONFIG_ALL_NO_CR)
-        )
+        axes = [
+            "p",
+            "pr",
+            "pw",
+            "r",
+            "rw",
+            "w",
+            "x",
+            "xp",
+            "xr",
+            "xw",
+            "xy",
+            "y",
+            "yp",
+            "yr",
+            "yw",
+        ]
     else:
         assert config_filename is not None
-        config = dc.load_config(os.path.join(feature_directory, config_filename))
+        axes = typing.cast(List, config.axes)
 
     analysis_hdf_path = os.path.join(feature_directory, analysis_file)
     analysis_hdf = h5py.File(analysis_hdf_path, "r")
     analysis_sampler = dl.Sampler(data_loader, analysis_hdf, config)
-    axes = typing.cast(List, config.axes)
 
     for ax in axes:
         # sampled one object per category
@@ -608,26 +631,50 @@ def plot_tuning_curves(
     print("Current working directory: {0}".format(cwd))
 
     # copy config file to feature directory
-    if axes_choice == "pw":
-        cmd = ["cp", utils.PATH_CONFIG_PW_NO_CR, "."]
+    if config_filename is None or not os.path.exists(
+        feature_directory, config_filename
+    ):
+        if axes_choice == "pw":
+            cmd = ["cp", utils.PATH_CONFIG_PW_NO_CR, "."]
+        elif axes_choice == "all":
+            cmd = ["cp", utils.PATH_CONFIG_ALL_NO_CR, "."]
+        else:
+            raise FileNotFoundError("config file not found")
         utils.execute_and_print(cmd)
         config = dc.load_config(
             os.path.join(feature_directory, utils.PATH_CONFIG_PW_NO_CR)
         )
+    else:
+        config = dc.load_config(os.path.join(feature_directory, config_filename))
+
+    if axes_choice == "pw":
         input_data_descriptions = (
             os.path.join(feature_directory, "imgnames_pw_series.txt"),
             os.path.join(feature_directory, "imgnames_all.txt"),
         )
+        axes = ["pw"]
     elif axes_choice == "all":
-        cmd = ["cp", utils.PATH_CONFIG_ALL_NO_CR, "."]
-        utils.execute_and_print(cmd)
-        config = dc.load_config(
-            os.path.join(feature_directory, utils.PATH_CONFIG_ALL_NO_CR)
-        )
         input_data_descriptions = (
             os.path.join(feature_directory, "imgnames_all.txt"),
             os.path.join(feature_directory, "imgnames_all.txt"),
         )
+        axes = [
+            "p",
+            "pr",
+            "pw",
+            "r",
+            "rw",
+            "w",
+            "x",
+            "xp",
+            "xr",
+            "xw",
+            "xy",
+            "y",
+            "yp",
+            "yr",
+            "yw",
+        ]
     else:
         assert config_filename is not None
         assert row_descriptions is not None
@@ -637,8 +684,7 @@ def plot_tuning_curves(
             os.path.join(feature_directory, row_descriptions),
             os.path.join(feature_directory, col_descriptions),
         )
-
-    axes = typing.cast(List, config.axes)
+        axes = typing.cast(List, config.axes)
 
     distance_mat_file = os.path.join(feature_directory, distances_file)
 

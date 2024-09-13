@@ -62,6 +62,22 @@ def correlation_prenormalized(
     return output
 
 
+def l2_distance(mat1: torch.Tensor, mat2: torch.Tensor) -> torch.Tensor:
+    # mat1: (n, l)
+    # mat2: (m, l)
+    # output shape: (n, m)
+    output = torch.cdist(mat1, mat2, p=2)
+    return output
+
+
+def l1_distance(mat1: torch.Tensor, mat2: torch.Tensor) -> torch.Tensor:
+    # mat1: (n, l)
+    # mat2: (m, l)
+    # output shape: (n, m)
+    output = torch.cdist(mat1, mat2, p=1)
+    return output
+
+
 def cosine_similarity(mat1: torch.Tensor, mat2: torch.Tensor) -> torch.Tensor:
     # divide by the norms
     norm1 = torch.norm(mat1, dim=1, keepdim=True)

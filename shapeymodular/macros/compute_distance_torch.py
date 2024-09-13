@@ -169,9 +169,9 @@ def compute_weighted_jaccard(
 ):
     # Define the device using the specified GPU index
     device = torch.device(f"cuda:{gpu_index}" if torch.cuda.is_available() else "cpu")
-    data_row = torch.tensor(thresholded_features, dtype=dtype).T
-    data_col = torch.tensor(thresholded_features.copy(), dtype=dtype).T
-    weights = torch.tensor(weights, dtype=dtype).T
+    data_row = torch.tensor(thresholded_features).T
+    data_col = torch.tensor(thresholded_features.copy()).T
+    weights = torch.tensor(weights).T
 
     print("Computing jaccard distance...")
     with h5py.File(os.path.join(datadir, output_file), "w") as hf:
@@ -210,10 +210,16 @@ def compute_distance(
     data_row, data_col = load_features(
         features, metric, dataset_exclusion=dataset_exclusion
     )
+    data_row = data_row.T  # converts to 68200 x n_feats
+    data_col = data_col.T  # converts to 68200 x n_feats
 
     print("Computing {} ...".format(metric))
     if metric == "correlation":
         metric_func = distances.correlation_prenormalized
+    elif metric == "l2":
+        metric_func = distances.l2_distance
+    elif metric == "l1":
+        metric_func = distances.l1_distance
     else:
         raise NotImplementedError("metric {} not implemented".format(metric))
 

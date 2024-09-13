@@ -317,7 +317,7 @@ class ProcessData:
                     lambda r: cp.histogram(r[~np.isnan(r)], bins=cp_bins)[0], 1, res
                 )
                 if CUPY_ACTIVE:
-                    hist_array[:, xdist, :] = counts.get()
+                    hist_array[:, xdist, :] = counts.get()  # type: ignore
                 else:
                     hist_array[:, xdist, :] = counts
             if (
