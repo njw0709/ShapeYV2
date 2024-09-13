@@ -2,6 +2,7 @@ import h5py
 import numpy as np
 import torch
 from typing import Sequence, Union, Tuple
+import typing
 
 
 class H5ConcatHandler:
@@ -14,6 +15,11 @@ class H5ConcatHandler:
         self.dataset_sizes: Sequence = []
         self.total_size: int = 0
         self.dataset_shape: Union[Tuple[int], Sequence[int]] = None  # type: ignore
+        self.concatenated_shape: Tuple = None  # type: ignore
+        self.transposed = False
+        self.axes: Union[None, Sequence[int]] = (
+            None  # For custom transpose with specific axes
+        )
         self.device: Union[None, str] = device
 
         if self.to_tensor:
@@ -39,15 +45,56 @@ class H5ConcatHandler:
                     raise ValueError(
                         "All datasets must have the same shape except for the first axis."
                     )
+        self.concatenated_shape = (self.total_size,) + tuple(self.dataset_shape[1:])
 
     @property
     def shape(self):
         """Return the virtual concatenated shape of all datasets."""
-        return (self.total_size,) + tuple(self.dataset_shape[1:])
+        if self.transposed and self.axes:
+            # Adjust the shape based on the custom axes permutation
+            return tuple(self.concatenated_shape[ax] for ax in self.axes)
+        elif self.transposed:
+            # Return the shape with all axes reversed
+            return tuple(reversed(self.concatenated_shape))
+        else:
+            # Original shape with total_size as the first dimension
+            return self.concatenated_shape
+
+    @property
+    def T(self):
+        """Return a transposed view of the dataset (transpose all axes)."""
+        handler = H5ConcatHandler(
+            self.file_paths, self.dataset_name, to_tensor=self.to_tensor
+        )
+        handler.transposed = True
+        return handler
+
+    def transpose(self, *axes):
+        """Return a view of the dataset with the specified axes transposed."""
+        if len(axes) == 0:
+            axes = tuple(range(len(self.concatenated_shape)))[
+                ::-1
+            ]  # Default to reversing axes
+        elif len(axes) != len(self.concatenated_shape):
+            raise ValueError("Axes don't match dataset dimensions.")
+
+        handler = H5ConcatHandler(
+            self.file_paths, self.dataset_name, to_tensor=self.to_tensor
+        )
+        handler.transposed = True
+        handler.axes = axes
+        return handler
 
     def __len__(self):
-        """Return the total size of the concatenated dataset (first axis)."""
-        return self.total_size
+        """Return the total size of the first axis (after potential transpose)."""
+        if self.transposed and self.axes:
+            return self.concatenated_shape[self.axes[0]]  # type: ignore
+        elif self.transposed:
+            return self.concatenated_shape[
+                -1
+            ]  # After transpose, the first axis size is from the last axis
+        else:
+            return self.total_size
 
     def _find_dataset(self, idx):
         """Find which dataset and local index to use for the given global index."""
@@ -84,6 +131,10 @@ class H5ConcatHandler:
 
         dataset, local_idx = self._find_dataset(idx)
         data = dataset[local_idx]
+        data = typing.cast(np.ndarray, data)
+        # Apply transpose if necessary
+        if self.transposed:
+            data = data.T if self.axes is None else np.transpose(data, self.axes)
 
         # Convert to PyTorch tensor if needed
         if self.to_tensor:
@@ -96,6 +147,14 @@ class H5ConcatHandler:
         indices = range(*s.indices(self.total_size))
         concatenated = np.concatenate([self[idx] for idx in indices])
 
+        # Apply transpose if necessary
+        if self.transposed:
+            concatenated = (
+                concatenated.T
+                if self.axes is None
+                else np.transpose(concatenated, self.axes)
+            )
+
         # Convert to PyTorch tensor if needed
         if self.to_tensor:
             return torch.tensor(concatenated, device=self.device)
@@ -106,6 +165,14 @@ class H5ConcatHandler:
         """Handle list of indices, like [1, 5, 7]."""
         results = [self._handle_simple_indexing(idx) for idx in idx_list]
         concatenated = np.concatenate(results)
+
+        # Apply transpose if necessary
+        if self.transposed:
+            concatenated = (
+                concatenated.T
+                if self.axes is None
+                else np.transpose(concatenated, self.axes)
+            )
 
         # Convert to PyTorch tensor if needed
         if self.to_tensor:
@@ -128,6 +195,14 @@ class H5ConcatHandler:
 
         # Concatenate the results
         concatenated = np.concatenate(results)
+
+        # Apply transpose if necessary
+        if self.transposed:
+            concatenated = (
+                concatenated.T
+                if self.axes is None
+                else np.transpose(concatenated, self.axes)
+            )
 
         # Convert to PyTorch tensor if needed
         if self.to_tensor:

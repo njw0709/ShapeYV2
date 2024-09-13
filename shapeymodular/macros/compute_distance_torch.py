@@ -1,6 +1,5 @@
 import os
 import shapeymodular.torchutils.distances as distances
-import shapeymodular.torchutils.features as torchutilfeat
 import shapeymodular.data_loader as dl
 import shapeymodular.analysis as an
 import numpy as np
