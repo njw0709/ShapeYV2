@@ -6,7 +6,9 @@ import typing
 
 
 class H5ConcatHandler:
-    def __init__(self, file_paths, dataset_name, to_tensor=False, device=None):
+    def __init__(
+        self, file_paths, dataset_name, to_tensor=False, device=None, return_dtype=None
+    ):
         """Initialize by opening HDF5 files and retrieving dataset shapes."""
         self.file_paths: Sequence[str] = file_paths
         self.dataset_name: str = dataset_name
@@ -21,6 +23,7 @@ class H5ConcatHandler:
             None  # For custom transpose with specific axes
         )
         self.device: Union[None, str] = device
+        self.return_dtype: Union[None, torch.dtype] = None
 
         if self.to_tensor:
             if self.device is None:
@@ -138,8 +141,10 @@ class H5ConcatHandler:
 
         # Convert to PyTorch tensor if needed
         if self.to_tensor:
-            data = torch.tensor(data, device=self.device)
-
+            if self.return_dtype is not None:
+                data = torch.tensor(data, device=self.device, dtype=self.return_dtype)
+            else:
+                data = torch.tensor(data, device=self.device)
         return data
 
     def _handle_slice(self, s):
@@ -157,7 +162,12 @@ class H5ConcatHandler:
 
         # Convert to PyTorch tensor if needed
         if self.to_tensor:
-            return torch.tensor(concatenated, device=self.device)
+            if self.return_dtype is not None:
+                return torch.tensor(
+                    concatenated, device=self.device, dtype=self.return_dtype
+                )
+            else:
+                return torch.tensor(concatenated, device=self.device)
 
         return concatenated
 
@@ -176,7 +186,12 @@ class H5ConcatHandler:
 
         # Convert to PyTorch tensor if needed
         if self.to_tensor:
-            return torch.tensor(concatenated, device=self.device)
+            if self.return_dtype is not None:
+                return torch.tensor(
+                    concatenated, device=self.device, dtype=self.return_dtype
+                )
+            else:
+                return torch.tensor(concatenated, device=self.device)
 
         return concatenated
 
@@ -206,7 +221,12 @@ class H5ConcatHandler:
 
         # Convert to PyTorch tensor if needed
         if self.to_tensor:
-            return torch.tensor(concatenated, device=self.device)
+            if self.return_dtype is not None:
+                return torch.tensor(
+                    concatenated, device=self.device, dtype=self.return_dtype
+                )
+            else:
+                return torch.tensor(concatenated, device=self.device)
 
         return concatenated
 

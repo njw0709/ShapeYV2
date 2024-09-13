@@ -158,7 +158,7 @@ def compute_jaccard_distance(
 def compute_weighted_jaccard(
     datadir: str,
     thresholded_features: np.ndarray,
-    weights: np.ndarray,
+    weights: Union[np.ndarray, torch.Tensor],
     output_file: str,
     row_segment_size: int,
     col_segment_size: int,
@@ -274,8 +274,8 @@ def load_features(
         data_col = torch.tensor(data_col, dtype=dtype)
         if metric == "correlation":
             print("normalizing features...")
-            data_row_norm = torch.norm(data_row, p=2, dim=1, keepdim=True)
-            data_col_norm = torch.norm(data_col, p=2, dim=1, keepdim=True)
+            data_row_norm = torch.norm(data_row, p=2, dim=1, keepdim=True)  # type: ignore
+            data_col_norm = torch.norm(data_col, p=2, dim=1, keepdim=True)  # type: ignore
             # if norm is close to zero, add small value
             row_close_to_zero = torch.isclose(data_row_norm, torch.tensor([0.0]))
             col_close_to_zero = torch.isclose(data_col_norm, torch.tensor([0.0]))
@@ -311,7 +311,7 @@ def load_features(
         data = torch.tensor(data, dtype=dtype)
         if metric == "correlation":
             print("normalizing features...")
-            data_norm = torch.norm(data, p=2, dim=1, keepdim=True)
+            data_norm = torch.norm(data, p=2, dim=1, keepdim=True)  # type: ignore
             # if norm is close to zero, add small value
             close_to_zero = torch.isclose(data_norm, torch.tensor([0.0]))
             if close_to_zero.any():
