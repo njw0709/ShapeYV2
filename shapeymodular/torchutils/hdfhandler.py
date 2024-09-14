@@ -19,9 +19,6 @@ class H5ConcatHandler:
         self.dataset_shape: Union[Tuple[int], Sequence[int]] = None  # type: ignore
         self.concatenated_shape: Tuple = None  # type: ignore
         self.transposed = False
-        self.axes: Union[None, Sequence[int]] = (
-            None  # For custom transpose with specific axes
-        )
         self.device: Union[None, str] = device
         self.return_dtype: Union[None, torch.dtype] = None
 
@@ -49,16 +46,14 @@ class H5ConcatHandler:
                         "All datasets must have the same shape except for the first axis."
                     )
         self.concatenated_shape = (self.total_size,) + tuple(self.dataset_shape[1:])
+        self.axes_ordering = tuple(range(len(self.concatenated_shape)))
 
     @property
     def shape(self):
         """Return the virtual concatenated shape of all datasets."""
-        if self.transposed and self.axes:
+        if self.transposed:
             # Adjust the shape based on the custom axes permutation
-            return tuple(self.concatenated_shape[ax] for ax in self.axes)
-        elif self.transposed:
-            # Return the shape with all axes reversed
-            return tuple(reversed(self.concatenated_shape))
+            return tuple(self.concatenated_shape[ax] for ax in self.axes_ordering)
         else:
             # Original shape with total_size as the first dimension
             return self.concatenated_shape
@@ -70,14 +65,13 @@ class H5ConcatHandler:
             self.file_paths, self.dataset_name, to_tensor=self.to_tensor
         )
         handler.transposed = True
+        handler.axes_ordering = self.axes_ordering[::-1]
         return handler
 
     def transpose(self, *axes):
         """Return a view of the dataset with the specified axes transposed."""
         if len(axes) == 0:
-            axes = tuple(range(len(self.concatenated_shape)))[
-                ::-1
-            ]  # Default to reversing axes
+            axes = self.axes_ordering[::-1]  # Default to reversing axes
         elif len(axes) != len(self.concatenated_shape):
             raise ValueError("Axes don't match dataset dimensions.")
 
@@ -85,26 +79,23 @@ class H5ConcatHandler:
             self.file_paths, self.dataset_name, to_tensor=self.to_tensor
         )
         handler.transposed = True
-        handler.axes = axes
+        axes = [self.axes_ordering[i] for i in axes]
+        handler.axes_ordering = axes
         return handler
 
     def __len__(self):
         """Return the total size of the first axis (after potential transpose)."""
-        if self.transposed and self.axes:
-            return self.concatenated_shape[self.axes[0]]  # type: ignore
-        elif self.transposed:
-            return self.concatenated_shape[
-                -1
-            ]  # After transpose, the first axis size is from the last axis
+        if self.transposed:
+            return self.concatenated_shape[self.axes_ordering[0]]  # type: ignore
         else:
             return self.total_size
 
-    def _find_dataset(self, idx):
+    def _find_dataset(self, axis_zero_idx):
         """Find which dataset and local index to use for the given global index."""
         cumulative_size = 0
         for i, size in enumerate(self.dataset_sizes):
-            if cumulative_size <= idx < cumulative_size + size:
-                return self.datasets[i], idx - cumulative_size
+            if cumulative_size <= axis_zero_idx < cumulative_size + size:
+                return self.datasets[i], axis_zero_idx - cumulative_size
             cumulative_size += size
         raise IndexError("Index out of bounds")
 
@@ -115,29 +106,44 @@ class H5ConcatHandler:
             return self._handle_multi_indexing(idx)
         elif isinstance(idx, (int, slice)):
             # Handle simple indexing or slicing
-            return self._handle_simple_indexing(idx)
+            return self._handle_simple_indexing(idx, 0)
         elif isinstance(idx, list):
             # Handle list of indices
-            return self._handle_list_indexing(idx)
+            return self._handle_list_indexing(idx, 0)
         else:
             raise TypeError("Invalid index type")
 
-    def _handle_simple_indexing(self, idx):
+    def _handle_simple_indexing(self, idx, current_naxis):
         """Handle simple integer or slice indexing."""
+        original_naxis = self.axes_ordering[current_naxis]
+        axis_size = self.concatenated_shape[original_naxis]
         if isinstance(idx, slice):
-            return self._handle_slice(idx)
-
+            return self._handle_slice(idx, current_naxis)
         if idx < 0:
-            idx += self.total_size
-        if idx >= self.total_size or idx < 0:
+            idx += axis_size
+        if idx >= axis_size or idx < 0:
             raise IndexError("Index out of range")
+        if original_naxis == 0:
+            dataset, local_idx = self._find_dataset(idx)
+            data = dataset[local_idx]
+            data = typing.cast(np.ndarray, data)
+        else:
+            # in case axis = 1
+            data_list = []
+            indexing = []
+            for ax_idx in range(len(self.concatenated_shape)):
+                if ax_idx == original_naxis:  # original axis ordering
+                    indexing.append(idx)
+                else:
+                    indexing.append(slice(None))
+            indexing = tuple(indexing)
+            for dataset in self.datasets:
+                data_list.append(dataset[indexing])
+            data = np.concatenate(data_list)  # concatenate results
 
-        dataset, local_idx = self._find_dataset(idx)
-        data = dataset[local_idx]
-        data = typing.cast(np.ndarray, data)
         # Apply transpose if necessary
         if self.transposed:
-            data = data.T if self.axes is None else np.transpose(data, self.axes)
+            data = np.transpose(data, self.axes_ordering)
 
         # Convert to PyTorch tensor if needed
         if self.to_tensor:
@@ -147,18 +153,19 @@ class H5ConcatHandler:
                 data = torch.tensor(data, device=self.device)
         return data
 
-    def _handle_slice(self, s):
+    def _handle_slice(self, s, current_naxis):
         """Handle slicing and concatenate results from different datasets."""
-        indices = range(*s.indices(self.total_size))
-        concatenated = np.concatenate([self[idx] for idx in indices])
+        original_naxis = self.axes_ordering[current_naxis]
+        axis_size = self.concatenated_shape[original_naxis]
 
-        # Apply transpose if necessary
-        if self.transposed:
-            concatenated = (
-                concatenated.T
-                if self.axes is None
-                else np.transpose(concatenated, self.axes)
-            )
+        indices = range(*s.indices(axis_size))
+
+        concatenated = np.concatenate(
+            [
+                self._handle_simple_indexing(idx, current_naxis) for idx in indices
+            ],  # returns in transposed axis
+            axis=current_naxis,
+        )
 
         # Convert to PyTorch tensor if needed
         if self.to_tensor:
@@ -171,18 +178,12 @@ class H5ConcatHandler:
 
         return concatenated
 
-    def _handle_list_indexing(self, idx_list):
+    def _handle_list_indexing(self, idx_list, current_naxis):
         """Handle list of indices, like [1, 5, 7]."""
-        results = [self._handle_simple_indexing(idx) for idx in idx_list]
-        concatenated = np.concatenate(results)
-
-        # Apply transpose if necessary
-        if self.transposed:
-            concatenated = (
-                concatenated.T
-                if self.axes is None
-                else np.transpose(concatenated, self.axes)
-            )
+        results = [
+            self._handle_simple_indexing(idx, current_naxis) for idx in idx_list
+        ]  # returns in transposed axis
+        concatenated = np.concatenate(results, axis=current_naxis)
 
         # Convert to PyTorch tensor if needed
         if self.to_tensor:
@@ -197,27 +198,28 @@ class H5ConcatHandler:
 
     def _handle_multi_indexing(self, idx_tuple):
         """Handle multiple indices like [1, 5:10]."""
-        results = []
-        for idx in idx_tuple:
-            if isinstance(idx, int):
-                results.append(self._handle_simple_indexing(idx))
-            elif isinstance(idx, slice):
-                results.append(self._handle_slice(idx))
-            elif isinstance(idx, list):
-                results.append(self._handle_list_indexing(idx))
-            else:
-                raise TypeError("Invalid index type")
+        idx_tuple_rearranged = [
+            idx_tuple[naxis] for naxis in self.axes_ordering
+        ]  # rearranged to original order
+        idx_tuple_common = idx_tuple_rearranged[1:]
 
+        # convert the first axis to local index
+        idx_first = idx_tuple_rearranged[0]
+        if isinstance(idx_first, slice):
+            idx_first = list(range(*idx_first.indices(self.concatenated_shape[0])))
+
+        if isinstance(idx_first, list):
+            results = []
+            for idx in idx_first:
+                dataset, local_idx = self._find_dataset(idx)
+                idx_tuple_local = (local_idx,) + tuple(idx_tuple_common)
+                results.append(dataset[idx_tuple_local])
         # Concatenate the results
         concatenated = np.concatenate(results)
 
         # Apply transpose if necessary
         if self.transposed:
-            concatenated = (
-                concatenated.T
-                if self.axes is None
-                else np.transpose(concatenated, self.axes)
-            )
+            concatenated = np.transpose(concatenated, self.axes_ordering)
 
         # Convert to PyTorch tensor if needed
         if self.to_tensor:

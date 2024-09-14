@@ -1,6 +1,7 @@
 import os
 import shapeymodular.torchutils.distances as distances
 import shapeymodular.data_loader as dl
+import shapeymodular.torchutils.hdfhandler as hdfhandler
 import shapeymodular.analysis as an
 import numpy as np
 import h5py
@@ -195,7 +196,14 @@ def compute_weighted_jaccard(
 
 def compute_distance(
     output_dir: str,
-    features: Union[np.ndarray, str, List[str], List[np.ndarray]],
+    features: Union[
+        np.ndarray,
+        str,
+        hdfhandler.H5ConcatHandler,
+        List[str],
+        List[np.ndarray],
+        List[hdfhandler.H5ConcatHandler],
+    ],
     output_file: str,
     row_segment_size: int,
     col_segment_size: int,
@@ -206,11 +214,21 @@ def compute_distance(
 ) -> None:
     # Define the device using the specified GPU index
     device = torch.device(f"cuda:{gpu_index}" if torch.cuda.is_available() else "cpu")
-    data_row, data_col = load_features(
-        features, metric, dataset_exclusion=dataset_exclusion
-    )
-    data_row = data_row.T  # converts to 68200 x n_feats
-    data_col = data_col.T  # converts to 68200 x n_feats
+    if isinstance(features, hdfhandler.H5ConcatHandler) or isinstance(features[0], hdfhandler.H5ConcatHandler):
+        if isinstance(features, list):
+            data_row = features[0].T
+            data_col = features[1].T
+        else:
+            features = features.T
+            data_row = features
+            data_col = features
+    else:
+        data_row, data_col = load_features(
+            features, metric, dataset_exclusion=dataset_exclusion
+        )
+        data_row = data_row.T  # converts to 68200 x n_feats
+        data_col = data_col.T  # converts to 68200 x n_feats
+    print("data_row shape:{}, data_col shape: {}. First dim must be 68200!!".format(data_row.shape, data_col.shape))
 
     print("Computing {} ...".format(metric))
     if metric == "correlation":
