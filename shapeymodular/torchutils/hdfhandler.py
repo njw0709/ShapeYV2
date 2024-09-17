@@ -3,11 +3,40 @@ import numpy as np
 import torch
 from typing import Sequence, Union, Tuple
 import typing
+from tqdm import tqdm
+from collections import OrderedDict
+
+
+class LRUOrderedDict(OrderedDict):
+    def __init__(self, max_items=1000, *args, **kwargs):
+        self.max_items = max_items
+        super().__init__(*args, **kwargs)
+
+    def __getitem__(self, key):
+        value = super().__getitem__(key)
+        # Move the accessed item to the end to show it was recently used
+        self.move_to_end(key)
+        return value
+
+    def __setitem__(self, key, value):
+        # If the key already exists, update its value and mark it as recently used
+        if key in self:
+            self.move_to_end(key)
+        super().__setitem__(key, value)
+        # Remove the oldest item if the size exceeds max_items
+        if len(self) > self.max_items:
+            self.popitem(last=False)
 
 
 class H5ConcatHandler:
     def __init__(
-        self, file_paths, dataset_name, to_tensor=False, device=None, return_dtype=None
+        self,
+        file_paths,
+        dataset_name,
+        to_tensor=False,
+        device=None,
+        return_dtype=None,
+        max_items: int = 100,
     ):
         """Initialize by opening HDF5 files and retrieving dataset shapes."""
         self.file_paths: Sequence[str] = file_paths
@@ -21,6 +50,9 @@ class H5ConcatHandler:
         self.transposed = False
         self.device: Union[None, str] = device
         self.return_dtype: Union[None, torch.dtype] = None
+        self.cache = LRUOrderedDict(
+            max_items=100
+        )  # Dictionary to store cached datasets
 
         if self.to_tensor:
             if self.device is None:
@@ -101,17 +133,23 @@ class H5ConcatHandler:
 
     def __getitem__(self, idx):
         """Lazy load the data from the appropriate dataset based on index or list/slice of indices."""
+        idx_key = str(idx)
+        if idx_key in self.cache.keys():
+            return self.cache[idx_key]
+
         if isinstance(idx, tuple):
             # Handle multi-indexing like [1, 5:10]
-            return self._handle_multi_indexing(idx)
+            out = self._handle_multi_indexing(idx)
         elif isinstance(idx, (int, slice)):
             # Handle simple indexing or slicing
-            return self._handle_simple_indexing(idx, 0)
+            out = self._handle_simple_indexing(idx, 0)
         elif isinstance(idx, list):
             # Handle list of indices
-            return self._handle_list_indexing(idx, 0)
+            out = self._handle_list_indexing(idx, 0)
         else:
             raise TypeError("Invalid index type")
+        self.cache[idx_key] = out
+        return out
 
     def _handle_simple_indexing(self, idx, current_naxis):
         """Handle simple integer or slice indexing."""
@@ -128,7 +166,6 @@ class H5ConcatHandler:
             data = dataset[local_idx]
             data = typing.cast(np.ndarray, data)
         else:
-            # in case axis = 1
             data_list = []
             indexing = []
             for ax_idx in range(len(self.concatenated_shape)):
@@ -153,19 +190,50 @@ class H5ConcatHandler:
                 data = torch.tensor(data, device=self.device)
         return data
 
+    def _split_slice(self, s):
+        """splits slice into local-indexed slices"""
+        global_indices = list(range(*s.indices(self.total_size)))
+        start_idx = global_indices[0]
+        end_idx = global_indices[-1]
+        slice_list = []
+        cumulative_size = 0
+        for i, size in enumerate(self.dataset_sizes):
+            if cumulative_size <= start_idx < cumulative_size + size:
+                local_start_idx = start_idx - cumulative_size
+                if cumulative_size <= end_idx < cumulative_size + size:
+                    local_end_idx = end_idx
+                    break
+                else:
+                    local_end_idx = cumulative_size + size
+                    start_idx = cumulative_size + size
+                slice_list.append((i, slice(local_start_idx, local_end_idx)))
+            cumulative_size += size
+        return slice_list
+
     def _handle_slice(self, s, current_naxis):
         """Handle slicing and concatenate results from different datasets."""
         original_naxis = self.axes_ordering[current_naxis]
-        axis_size = self.concatenated_shape[original_naxis]
 
-        indices = range(*s.indices(axis_size))
-
-        concatenated = np.concatenate(
-            [
-                self._handle_simple_indexing(idx, current_naxis) for idx in indices
-            ],  # returns in transposed axis
-            axis=current_naxis,
-        )
+        if original_naxis == 0:
+            slice_list = self._split_slice(s)
+            concatenated = []
+            for i, local_slice in slice_list:
+                concatenated.append(self.datasets[i][local_slice])
+        else:
+            slice_tuple = []
+            for axis_dim in range(len(self.axes_ordering)):
+                if axis_dim == original_naxis:
+                    slice_tuple.append(s)
+                else:
+                    slice_tuple.append(slice(None))
+            slice_tuple = tuple(slice_tuple)
+            # pull dataset
+            concatenated = []
+            for dataset in self.datasets:
+                concatenated.append(dataset[slice_tuple])
+        concatenated = np.concatenate(concatenated)
+        if self.transpose:
+            concatenated = np.transpose(concatenated, self.axes_ordering)
 
         # Convert to PyTorch tensor if needed
         if self.to_tensor:
