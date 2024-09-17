@@ -96,10 +96,14 @@ def plot_nn_classification_error_graph(
 
         for obj in tqdm(object_list):
             graph_data_obj = an.NNClassificationError.generate_top1_error_data(
-                analysis_sampler, obj, ax
+                analysis_sampler, obj, ax, distance=config.distances_key[0]
             )
             graph_data_cat = an.NNClassificationError.generate_top1_error_data(
-                analysis_sampler, obj, ax, within_category_error=True
+                analysis_sampler,
+                obj,
+                ax,
+                within_category_error=True,
+                distance=config.distances_key[0],
             )
             graph_data_list_obj_error.append(graph_data_obj)
             graph_data_list_cat_error.append(graph_data_cat)
@@ -632,7 +636,7 @@ def plot_tuning_curves(
 
     # copy config file to feature directory
     if config_filename is None or not os.path.exists(
-        feature_directory, config_filename
+        os.path.join(feature_directory, config_filename)
     ):
         if axes_choice == "pw":
             cmd = ["cp", utils.PATH_CONFIG_PW_NO_CR, "."]
