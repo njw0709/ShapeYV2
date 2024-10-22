@@ -4,28 +4,11 @@ import torch
 from typing import Sequence, Union, Tuple
 import typing
 from tqdm import tqdm
-from collections import OrderedDict
+import diskcache as dc
+import time
 
-
-class LRUOrderedDict(OrderedDict):
-    def __init__(self, max_items=1000, *args, **kwargs):
-        self.max_items = max_items
-        super().__init__(*args, **kwargs)
-
-    def __getitem__(self, key):
-        value = super().__getitem__(key)
-        # Move the accessed item to the end to show it was recently used
-        self.move_to_end(key)
-        return value
-
-    def __setitem__(self, key, value):
-        # If the key already exists, update its value and mark it as recently used
-        if key in self:
-            self.move_to_end(key)
-        super().__setitem__(key, value)
-        # Remove the oldest item if the size exceeds max_items
-        if len(self) > self.max_items:
-            self.popitem(last=False)
+# Create a cache object, specifying the directory for the cache
+cache = dc.Cache("/tmp/mycache")
 
 
 class H5ConcatHandler:
@@ -36,7 +19,7 @@ class H5ConcatHandler:
         to_tensor=False,
         device=None,
         return_dtype=None,
-        max_items: int = 100,
+        diskcache: bool = True,
     ):
         """Initialize by opening HDF5 files and retrieving dataset shapes."""
         self.file_paths: Sequence[str] = file_paths
@@ -50,9 +33,10 @@ class H5ConcatHandler:
         self.transposed = False
         self.device: Union[None, str] = device
         self.return_dtype: Union[None, torch.dtype] = None
-        self.cache = LRUOrderedDict(
-            max_items=100
-        )  # Dictionary to store cached datasets
+        if diskcache:
+            self.diskcache = True
+            self.keys = []
+            self.cache = dc.Cache("/tmp/mycache")  # Dictionary to store cached datasets
 
         if self.to_tensor:
             if self.device is None:
@@ -133,9 +117,15 @@ class H5ConcatHandler:
 
     def __getitem__(self, idx):
         """Lazy load the data from the appropriate dataset based on index or list/slice of indices."""
-        idx_key = str(idx)
-        if idx_key in self.cache.keys():
-            return self.cache[idx_key]
+        start_time = time.time()
+        print("loading...")
+        if self.diskcache:
+            if isinstance(idx, slice):
+                idx_key = "start_{}_end_{}".format(idx.start, idx.stop)
+            else:
+                idx_key = "index_{}".format(idx)
+            if idx_key in self.cache:
+                return self.cache[idx_key]
 
         if isinstance(idx, tuple):
             # Handle multi-indexing like [1, 5:10]
@@ -148,7 +138,10 @@ class H5ConcatHandler:
             out = self._handle_list_indexing(idx, 0)
         else:
             raise TypeError("Invalid index type")
-        self.cache[idx_key] = out
+        if self.diskcache:
+            self.keys.append(idx_key)
+            self.cache[idx_key] = out
+        print("loading complete! time spent: {}".format(time.time() - start_time))
         return out
 
     def _handle_simple_indexing(self, idx, current_naxis):
@@ -307,7 +300,8 @@ class H5ConcatHandler:
 
     def __del__(self):
         """Ensure all files are closed when the object is destroyed."""
-        self.close()
+        for dataset in self.datasets:
+            dataset.close()
 
 
 # # Example Usage

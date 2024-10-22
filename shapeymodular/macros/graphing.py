@@ -81,7 +81,7 @@ def plot_nn_classification_error_graph(
         # post process data for graphing
         graph_data_list_obj_error = []
         graph_data_list_cat_error = []
-        if obj_subset is None:
+        if obj_subset is None or obj_subset == "":
             object_list = utils.SHAPEY200_OBJS
         elif obj_subset == "train":
             object_list = utils.SHAPEY200_TRAIN_OBJS

@@ -20,7 +20,7 @@ class GetModelIntermediateLayer(nn.Module):
 def extract_feature_vectors(
     model: nn.Module,
     img_dataset: Dataset,
-    batch_size: int = 10,
+    batch_size: int = 30,
 ) -> np.ndarray:
     device = next(model.parameters()).device
     if model.training:
@@ -40,3 +40,38 @@ def extract_feature_vectors(
 
     features = np.concatenate(features, axis=0)
     return features
+
+
+# Function to check if a certain batch size fits into GPU memory
+def can_allocate_model(model, input_size, batch_size, device_id=0):
+    try:
+        device = torch.device("cuda:{}".format(device_id))
+
+        # Generate dummy data with the current batch size
+        input_tensor = torch.randn(batch_size, *input_size).to(device)
+
+        # Forward pass through the model
+        model = model.to(device)
+        output = model(input_tensor)
+        return True  # Allocation successful
+    except RuntimeError as e:
+        if "CUDA out of memory" in str(e):
+            return False  # Out of memory error
+        else:
+            raise e  # Any other error, re-raise
+
+
+def batch_size_allocation_binary_search(
+    model, input_size, low: int = 0, high: int = 10, device_id: int = 0
+):
+    # Binary search for the largest batch size
+    low = 2**low
+    high = 2**high
+
+    while low < high:
+        mid = (low + high + 1) // 2
+        if can_allocate_model(model, input_size, mid, device_id=device_id):
+            low = mid  # If it fits, try a larger batch size
+        else:
+            high = mid - 1  # If it doesn't fit, reduce the batch size
+    return low

@@ -211,24 +211,22 @@ def compute_distance(
     dtype: type = np.float32,
     metric: str = "correlation",
     dataset_exclusion: bool = False,
+    feature_dim: int = 1,  # dim for features (that is not 68200)
 ) -> None:
     # Define the device using the specified GPU index
     device = torch.device(f"cuda:{gpu_index}" if torch.cuda.is_available() else "cpu")
-    if isinstance(features, hdfhandler.H5ConcatHandler) or isinstance(features[0], hdfhandler.H5ConcatHandler):
-        if isinstance(features, list):
-            data_row = features[0].T
-            data_col = features[1].T
-        else:
-            features = features.T
-            data_row = features
-            data_col = features
-    else:
-        data_row, data_col = load_features(
-            features, metric, dataset_exclusion=dataset_exclusion
-        )
+
+    data_row, data_col = load_features(
+        features, metric, dataset_exclusion=dataset_exclusion, feature_dim=feature_dim
+    )
+    if feature_dim != 1:
         data_row = data_row.T  # converts to 68200 x n_feats
         data_col = data_col.T  # converts to 68200 x n_feats
-    print("data_row shape:{}, data_col shape: {}. First dim must be 68200!!".format(data_row.shape, data_col.shape))
+    print(
+        "data_row shape:{}, data_col shape: {}. First dim must be 68200!!".format(
+            data_row.shape, data_col.shape
+        )
+    )
 
     print("Computing {} ...".format(metric))
     if metric == "correlation":
@@ -261,39 +259,30 @@ def compute_distance(
 
 
 def load_features(
-    features: Union[str, np.ndarray, List[str], List[np.ndarray]],
+    features: Union[np.ndarray, List[np.ndarray]],
     metric: str,
     dataset_exclusion: bool = False,
     dtype: torch.dtype = torch.float32,
     feature_key: str = "feature_output/output",
+    feature_dim: int = 1,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     # load data
     t = time.time()
     if dataset_exclusion:
         assert isinstance(features, list)
         assert len(features) == 2
-        if isinstance(features[0], str):
-            assert os.path.exists(features[0])
-            assert os.path.exists(features[1])  # type: ignore
-            print("Loading features...")
-            # Convert the numpy array to a PyTorch tensor and send it to the specified device
-            with h5py.File(features[0], "r") as hf:
-                data_row = typing.cast(np.ndarray, hf[feature_key][()])  # type: ignore
-            with h5py.File(features[1], "r") as hf:
-                data_col = typing.cast(np.ndarray, hf[feature_key][()])  # type: ignore
-            print("Done loading features. Time: {}".format(time.time() - t))
-        else:
-            data_row = typing.cast(np.ndarray, features[0])
-            data_col = typing.cast(np.ndarray, features[1])
-        assert data_row.shape[1] == data_col.shape[1]
-        print("feature length: {}".format(data_row.shape[1]))
+        data_row = typing.cast(np.ndarray, features[0])
+        data_col = typing.cast(np.ndarray, features[1])
+
+        assert data_row.shape[feature_dim] == data_col.shape[feature_dim]
+        print("feature length: {}".format(data_row.shape[feature_dim]))
 
         data_row = torch.tensor(data_row, dtype=dtype)
         data_col = torch.tensor(data_col, dtype=dtype)
         if metric == "correlation":
             print("normalizing features...")
-            data_row_norm = torch.norm(data_row, p=2, dim=1, keepdim=True)  # type: ignore
-            data_col_norm = torch.norm(data_col, p=2, dim=1, keepdim=True)  # type: ignore
+            data_row_norm = torch.norm(data_row, p=2, dim=feature_dim, keepdim=True)  # type: ignore
+            data_col_norm = torch.norm(data_col, p=2, dim=feature_dim, keepdim=True)  # type: ignore
             # if norm is close to zero, add small value
             row_close_to_zero = torch.isclose(data_row_norm, torch.tensor([0.0]))
             col_close_to_zero = torch.isclose(data_col_norm, torch.tensor([0.0]))
@@ -304,32 +293,13 @@ def load_features(
                 data_col_norm[col_close_to_zero] = 1e9
             data_row = data_row / data_row_norm
             data_col = data_col / data_col_norm
-
-            # joined_data = torch.cat((data_row, data_col), dim=0)
-            # mean_joined = joined_data.mean(dim=0, keepdim=True)
-            # std_joined = joined_data.std(dim=0, keepdim=True)
-            # data_row = torchutilfeat.standardize_features(
-            #     data_row, mean=mean_joined, std=std_joined
-            # )
-            # data_col = torchutilfeat.standardize_features(
-            #     data_col, mean=mean_joined, std=std_joined
-            # )
     else:
-        if isinstance(features, str):
-            assert os.path.exists(features)
-            print("Loading features...")
-            # Convert the numpy array to a PyTorch tensor and send it to the specified device
-            features = typing.cast(str, features)
-            with h5py.File(features, "r") as hf:
-                data = typing.cast(np.ndarray, hf[feature_key][()])  # type: ignore
-            print("Done loading features. Time: {}".format(time.time() - t))
-        else:
-            data = typing.cast(np.ndarray, features)
+        data = typing.cast(np.ndarray, features)
         print("data shape: {}".format(data.shape))
         data = torch.tensor(data, dtype=dtype)
         if metric == "correlation":
             print("normalizing features...")
-            data_norm = torch.norm(data, p=2, dim=1, keepdim=True)  # type: ignore
+            data_norm = torch.norm(data, p=2, dim=feature_dim, keepdim=True)  # type: ignore
             # if norm is close to zero, add small value
             close_to_zero = torch.isclose(data_norm, torch.tensor([0.0]))
             if close_to_zero.any():

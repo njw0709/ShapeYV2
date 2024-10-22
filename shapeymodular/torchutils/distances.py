@@ -74,7 +74,6 @@ def l1_distance(mat1: torch.Tensor, mat2: torch.Tensor) -> torch.Tensor:
     # mat1: (n, l)
     # mat2: (m, l)
     # output shape: (n, m)
-    print("mat1: ", mat1.shape, "mat2: ", mat2.shape)
     output = torch.cdist(mat1, mat2, p=1)
     return output
 
