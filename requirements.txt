@@ -1,5 +1,5 @@
 tqdm >= 4.48.0
-cupy-cuda102
+cupy-cuda12x
 matplotlib>=3.3.1
 h5py>=2.10.0
 twine
@@ -12,6 +12,8 @@ numpy>=1.21
 bidict
 dacite
 Pillow>=9.5.0
-torch == 1.12.1+cu102
-torchvision==0.13.1+cu102
-
+torch 
+torchvision
+dataclasses-json
+diskcache
+tables

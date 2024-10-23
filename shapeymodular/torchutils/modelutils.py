@@ -4,6 +4,7 @@ from torch.utils.data import Dataset, DataLoader
 import shapeymodular.data_loader as dl
 import numpy as np
 from tqdm import tqdm
+import copy
 
 
 class GetModelIntermediateLayer(nn.Module):
@@ -49,15 +50,25 @@ def can_allocate_model(model, input_size, batch_size, device_id=0):
 
         # Generate dummy data with the current batch size
         input_tensor = torch.randn(batch_size, *input_size).to(device)
+        model_copy = copy.deepcopy(model).to(device)
+        model_copy.eval()  # Set to evaluation mode
+        with torch.no_grad():  # Disable gradient calculations
+            # Forward pass through the model copy
+            output = model_copy(input_tensor)
 
-        # Forward pass through the model
-        model = model.to(device)
-        output = model(input_tensor)
+        # Clean up to free GPU memory
+        del model_copy
+        torch.cuda.empty_cache()
         return True  # Allocation successful
     except RuntimeError as e:
         if "CUDA out of memory" in str(e):
+            print(e)
+            del model_copy
+            torch.cuda.empty_cache()
             return False  # Out of memory error
         else:
+            del model_copy
+            torch.cuda.empty_cache()
             raise e  # Any other error, re-raise
 
 
