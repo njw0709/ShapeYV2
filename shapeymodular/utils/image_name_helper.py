@@ -97,6 +97,12 @@ class ImageNameHelper:
             "ax": ax,
             "obj_cat": obj_cat,
         }
+    
+    @staticmethod
+    def parse_imgname(imgname: str) -> Dict[str, str]:
+        shapey_idx = ImageNameHelper.imgname_to_shapey_idx(imgname)
+        parsed_dict = ImageNameHelper.parse_shapey_idx(shapey_idx)
+        return parsed_dict
 
     @staticmethod
     def get_closest_physical_image(ref_shapey_idx: int, exc_dist: int) -> int:
