@@ -219,9 +219,7 @@ class DistanceHistogram:
             else:
                 # 1st dim = series index, 2nd dim = exclusion dist, 3rd dim = histogram bins
                 same_obj_hists = typing.cast(np.ndarray, top1_hists)[img_idx, :, :]
-                other_obj_hist = typing.cast(np.ndarray, cval_hist_otherobj)[
-                    img_idx, :, :
-                ]
+                other_obj_hist = typing.cast(np.ndarray, cval_hist_otherobj)[img_idx, :]
         else:
             hist_cat_other_category = sampler.load(
                 {"data_type": "hist_category_other_cat_objs", "obj": obj, "ax": ax},
@@ -260,7 +258,7 @@ class DistanceHistogram:
                 )[img_idx, :, :]
                 hist_cat_other_category = typing.cast(
                     np.ndarray, hist_cat_other_category
-                )[img_idx, :, :]
+                )[img_idx, :]
             same_obj_hists = hist_cat_same_category
             other_obj_hist = hist_cat_other_category
 

@@ -22,6 +22,7 @@ def extract_feature_vectors(
     model: nn.Module,
     img_dataset: Dataset,
     batch_size: int = 30,
+    timm: bool = False,
 ) -> np.ndarray:
     device = next(model.parameters()).device
     if model.training:
@@ -34,7 +35,10 @@ def extract_feature_vectors(
     features = []
     for img in tqdm(img_dataloader):
         img = img.to(device)
-        feature_vector = model(img)
+        if timm:
+            feature_vector = model.forward_features(img)
+        else:
+            feature_vector = model(img)
         output = feature_vector.view(feature_vector.size(0), -1)
         output_np = output.cpu().data.numpy()
         features.append(output_np)
@@ -58,16 +62,19 @@ def can_allocate_model(model, input_size, batch_size, device_id=0):
 
         # Clean up to free GPU memory
         del model_copy
+        del input_tensor
         torch.cuda.empty_cache()
         return True  # Allocation successful
     except RuntimeError as e:
         if "CUDA out of memory" in str(e):
             print(e)
             del model_copy
+            del input_tensor
             torch.cuda.empty_cache()
             return False  # Out of memory error
         else:
             del model_copy
+            del input_tensor
             torch.cuda.empty_cache()
             raise e  # Any other error, re-raise
 

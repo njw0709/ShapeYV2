@@ -40,10 +40,17 @@ def plot_nn_classification_error_graph(
 
     # copy config file to feature directory
     if config_filename is not None:
+        print(config_filename)
         config = dc.load_config(os.path.join(feature_directory, config_filename))
         if axes_choice != "all":
-            assert axes_choice in typing.cast(List, config.axes)
-            axes = [axes_choice]
+            if not isinstance(axes_choice, list):
+                axes_choice = [axes_choice]
+            for ax in axes_choice:
+                if config.axes is None:
+                    assert ax in utils.ALL_AXES
+                else:
+                    assert ax in typing.cast(List, config.axes)
+            axes = axes_choice
         else:
             axes = typing.cast(List, config.axes)
 
@@ -280,6 +287,8 @@ def plot_histogram_with_error_graph(
     # copy config file to feature directory
     if axes_choice == "pw":
         axes = ["pw"]
+    elif axes_choice == "pr":
+        axes = ["pr"]
     elif axes_choice == "all":
         axes = [
             "p",
@@ -410,6 +419,7 @@ def plot_error_panels(
     distances_file: str = "distances-Jaccard.mat",
     thresholds_file: Union[None, str] = "thresholds.mat",
     axes_choice: str = "pw",
+    xradius_to_plot: int = utils.XRADIUS_TO_PLOT_ERR_PANEL + 1,
     fig_save_dir: str = "figures",
     config_filename: Union[None, str] = None,
     row_descriptions: Union[None, str] = None,
@@ -444,7 +454,7 @@ def plot_error_panels(
                 os.path.join(feature_directory, row_descriptions),
                 os.path.join(feature_directory, col_descriptions),
             )
-
+        axes = typing.cast(List, config.axes)
     elif axes_choice == "all":
         cmd = ["cp", utils.PATH_CONFIG_ALL_NO_CR, "."]
         utils.execute_and_print(cmd)
@@ -455,7 +465,9 @@ def plot_error_panels(
             os.path.join(feature_directory, "imgnames_all.txt"),
             os.path.join(feature_directory, "imgnames_all.txt"),
         )
-    else:
+        axes = typing.cast(List, config.axes)
+
+    elif axes_choice == "":
         assert config_filename is not None
         assert row_descriptions is not None
         assert col_descriptions is not None
@@ -464,9 +476,20 @@ def plot_error_panels(
             os.path.join(feature_directory, row_descriptions),
             os.path.join(feature_directory, col_descriptions),
         )
+        axes = typing.cast(List, config.axes)
+
+    else:
+        config = dc.load_config(os.path.join(feature_directory, config_filename))
+        input_data_descriptions = (
+            os.path.join(feature_directory, row_descriptions),
+            os.path.join(feature_directory, col_descriptions),
+        )
+        if isinstance(axes_choice, list):
+            axes = axes_choice
+        else:
+            axes = [axes_choice]
 
     analysis_hdf_path = os.path.join(feature_directory, analysis_file)
-    axes = typing.cast(List, config.axes)
     distance_mat_file = os.path.join(feature_directory, distances_file)
 
     data_loader = dl.HDFProcessor()
@@ -496,7 +519,7 @@ def plot_error_panels(
                         analysis_sampler,
                         obj,
                         ax,
-                        utils.XRADIUS_TO_PLOT_ERR_PANEL + 1,
+                        xradius_to_plot,
                         within_category_error=True,
                     )
                 )
@@ -506,7 +529,7 @@ def plot_error_panels(
                         analysis_sampler,
                         obj,
                         ax,
-                        utils.XRADIUS_TO_PLOT_ERR_PANEL + 1,
+                        xradius_to_plot,
                         within_category_error=False,
                     )
                 )
@@ -518,7 +541,7 @@ def plot_error_panels(
                         analysis_sampler,
                         obj,
                         ax,
-                        utils.XRADIUS_TO_PLOT_ERR_PANEL + 1,
+                        xradius_to_plot,
                         within_category_error=True,
                     )
                 )
@@ -528,7 +551,7 @@ def plot_error_panels(
                         analysis_sampler,
                         obj,
                         ax,
-                        utils.XRADIUS_TO_PLOT_ERR_PANEL + 1,
+                        xradius_to_plot,
                         within_category_error=False,
                     )
                 )
@@ -542,14 +565,14 @@ def plot_error_panels(
                     same_obj_corrmat_sampler,
                     obj,
                     ax,
-                    utils.XRADIUS_TO_PLOT_ERR_PANEL + 1,
+                    xradius_to_plot,
                 )
                 graph_data_row_list_obj = an.ErrorDisplay.add_closest_physical_image(
                     graph_data_row_list_obj,
                     same_obj_corrmat_sampler,
                     obj,
                     ax,
-                    utils.XRADIUS_TO_PLOT_ERR_PANEL + 1,
+                    xradius_to_plot,
                 )
             # add feature activation levels
             if threshold is not None:
@@ -580,13 +603,13 @@ def plot_error_panels(
                 "Error Panel, obj: {}, series: {}, exclusion radius: {} - Object error".format(
                     utils.ImageNameHelper.shorten_objname(obj),
                     ax,
-                    utils.XRADIUS_TO_PLOT_ERR_PANEL,
+                    xradius_to_plot,
                 )
             )
             fig.savefig(
                 os.path.join(
                     FIG_SAVE_DIR,
-                    "error_display_obj_{}_{}.png".format(obj, ax),
+                    "error_display_obj_{}_{}-{}.png".format(obj, ax, xradius_to_plot),
                 ),
                 bbox_inches="tight",
             )
@@ -601,13 +624,13 @@ def plot_error_panels(
                 "Error Panel, obj: {}, series: {}, exclusion radius: {} - Category error".format(
                     utils.ImageNameHelper.shorten_objname(obj),
                     ax,
-                    utils.XRADIUS_TO_PLOT_ERR_PANEL,
+                    xradius_to_plot,
                 )
             )
             fig.savefig(
                 os.path.join(
                     FIG_SAVE_DIR,
-                    "error_display_cat_{}_{}.png".format(obj, ax),
+                    "error_display_cat_{}_{}-{}.png".format(obj, ax, xradius_to_plot),
                 ),
                 bbox_inches="tight",
             )

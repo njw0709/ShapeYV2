@@ -26,6 +26,7 @@ def extract_shapey200_features(
         [transforms.Resize(224), transforms.ToTensor(), normalize]
     ),
     batch_size: int = 30,
+    timm: bool = False,
 ) -> None:
     dataset_path = utils.SHAPEY200_DATASET_PATH_DICT[dataset_version]
     feature_file_name = "features_{}_{}.h5".format(model_name, dataset_version)
@@ -78,6 +79,6 @@ def extract_shapey200_features(
 
         # extract features
         features = tu.extract_feature_vectors(
-            model, shapey200_dataset, batch_size=batch_size
+            model, shapey200_dataset, batch_size=batch_size, timm=timm
         )
         sampler.save({"data_type": "features"}, features)
