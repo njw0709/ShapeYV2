@@ -2,21 +2,7 @@ import h5py
 from typing import Sequence, Union, Tuple, List
 import typing
 import numpy as np
-
-# import cupy as cp
-
-# try:
-#     NUM_GPUS = cp.cuda.runtime.getDeviceCount()
-#     from cupyx.scipy.linalg import tri
-
-#     CUPY_ACTIVE = True
-# except Exception as e:
-# print("no GPU found, defaulting to numpy...")
-cp = np
 from scipy.linalg import tri
-
-CUPY_ACTIVE = False
-print("defaulting to numpy...")
 
 import shapeymodular.data_classes as dc
 import shapeymodular.utils as utils
@@ -256,8 +242,8 @@ class ProcessData:
         cval_mat_full_np = PrepData.prep_subset_for_exclusion_analysis(
             obj, sameobj_corrmat
         )
-        # convert numpy array to cupy array for gpu processing
-        cval_mat = cp.asarray(cval_mat_full_np)
+        # convert to numpy array
+        cval_mat = np.asarray(cval_mat_full_np)
 
         (
             closest_dists,
@@ -270,7 +256,7 @@ class ProcessData:
 
     @staticmethod
     def get_top1_with_all_exc_dists(
-        single_ax_corrmat: Union[cp.ndarray, np.ndarray],  # 11 x 31*11
+        single_ax_corrmat: Union[np.ndarray, np.ndarray],  # 11 x 31*11
         obj: str,
         ax: str,
         nn_analysis_config: dc.NNAnalysisConfig,
@@ -303,50 +289,39 @@ class ProcessData:
             )
 
         if isinstance(single_ax_corrmat, np.ndarray):
-            cp_single_ax_corrmat = cp.array(single_ax_corrmat)
+            np_single_ax_corrmat = np.array(single_ax_corrmat)
         else:
-            cp_single_ax_corrmat = typing.cast(cp.ndarray, single_ax_corrmat)
+            np_single_ax_corrmat = typing.cast(np.ndarray, single_ax_corrmat)
 
         for xdist in range(0, utils.NUMBER_OF_VIEWS_PER_AXIS):
-            res: cp.ndarray = MaskExcluded.make_excluded_to_nan(
-                cp_single_ax_corrmat, ax, xdist
+            res: np.ndarray = MaskExcluded.make_excluded_to_nan(
+                np_single_ax_corrmat, ax, xdist
             )
             if nn_analysis_config.histogram:
-                cp_bins = cp.asarray(nn_analysis_config.bins)
-                counts = cp.apply_along_axis(
-                    lambda r: cp.histogram(r[~np.isnan(r)], bins=cp_bins)[0], 1, res
+                np_bins = np.asarray(nn_analysis_config.bins)
+                counts = np.apply_along_axis(
+                    lambda r: np.histogram(r[~np.isnan(r)], bins=np_bins)[0], 1, res
                 )
-                if CUPY_ACTIVE:
-                    hist_array[:, xdist, :] = counts.get()  # type: ignore
-                else:
-                    hist_array[:, xdist, :] = counts
+                hist_array[:, xdist, :] = counts
             if (
                 nn_analysis_config.distance_measure == "correlation"
                 or nn_analysis_config.distance_measure == "Jaccard_dist"
             ):
-                closest_dist_xdist = cp.nanmax(res, axis=1)
-                if not CUPY_ACTIVE:
-                    # get all nan rows
-                    all_nan_rows = np.isnan(res).all(axis=1)
-                    res = np.nan_to_num(res, nan=float("-inf"))
-                closest_idx_xdist = cp.nanargmax(res, axis=1)
-                if not CUPY_ACTIVE:
-                    closest_idx_xdist[all_nan_rows] = -1
+                closest_dist_xdist = np.nanmax(res, axis=1)               
+                # get all nan rows
+                all_nan_rows = np.isnan(res).all(axis=1)
+                res = np.nan_to_num(res, nan=float("-inf"))
+                closest_idx_xdist = np.nanargmax(res, axis=1)
+                closest_idx_xdist[all_nan_rows] = -1
             else:
-                closest_dist_xdist = cp.nanmin(res, axis=1)
-                if not CUPY_ACTIVE:
-                    # get all nan rows
-                    all_nan_rows = np.isnan(res).all(axis=1)
-                    res = np.nan_to_num(res, nan=float("inf"))
-                closest_idx_xdist = cp.nanargmin(res, axis=1)
-                if not CUPY_ACTIVE:
-                    closest_idx_xdist[all_nan_rows] = -1
-            if CUPY_ACTIVE:
-                closest_dists[:, xdist] = closest_dist_xdist.get()
-                closest_idxs[:, xdist] = closest_idx_xdist.get()
-            else:
-                closest_dists[:, xdist] = closest_dist_xdist
-                closest_idxs[:, xdist] = closest_idx_xdist
+                closest_dist_xdist = np.nanmin(res, axis=1)
+                # get all nan rows
+                all_nan_rows = np.isnan(res).all(axis=1)
+                res = np.nan_to_num(res, nan=float("inf"))
+                closest_idx_xdist = np.nanargmin(res, axis=1)
+                closest_idx_xdist[all_nan_rows] = -1
+            closest_dists[:, xdist] = closest_dist_xdist
+            closest_idxs[:, xdist] = closest_idx_xdist
         # convert closest index to shapey index
         obj_idx_start = (
             utils.ImageNameHelper.objname_to_shapey_obj_idx(obj)
@@ -388,28 +363,23 @@ class ProcessData:
             (utils.NUMBER_OF_VIEWS_PER_AXIS, utils.NUMBER_OF_VIEWS_PER_AXIS),
             dtype=np.int32,
         )
-        other_obj_corrmat_cp = cp.array(other_obj_corrmat_np)
+        other_obj_corrmat_np = np.array(other_obj_corrmat_np)
         for exc_dist in range(utils.NUMBER_OF_VIEWS_PER_AXIS):
             top1_positive_with_exc_dist = top1_same_obj_with_exc_dist[:, exc_dist]
-            comparison_mask = cp.tile(
+            comparison_mask = np.tile(
                 top1_positive_with_exc_dist, (other_obj_corrmat.corrmat.shape[1], 1)
             ).T
             sameobj_shapey_idx = utils.IndexingHelper.objname_ax_to_shapey_index(obj)
 
             if distance_measure == "correlation" or distance_measure == "Jaccard_dist":
-                comparison_result = other_obj_corrmat_cp >= comparison_mask
+                comparison_result = other_obj_corrmat_np >= comparison_mask
             else:
-                comparison_result = other_obj_corrmat_cp <= comparison_mask
+                comparison_result = other_obj_corrmat_np <= comparison_mask
             # make sameobj zero
             comparison_result[:, sameobj_shapey_idx] = False
             # count how many are true
-            above_top1_positive_match_count = cp.sum(comparison_result, axis=1)
-            if CUPY_ACTIVE:
-                positive_match_imgrank[:, exc_dist] = (
-                    above_top1_positive_match_count.get()
-                )
-            else:
-                positive_match_imgrank[:, exc_dist] = above_top1_positive_match_count
+            above_top1_positive_match_count = np.sum(comparison_result, axis=1)
+            positive_match_imgrank[:, exc_dist] = above_top1_positive_match_count
         return positive_match_imgrank
 
     @staticmethod
@@ -521,15 +491,13 @@ class ProcessData:
         distance: str = "correlation",
     ) -> np.ndarray:
         sameobj_objrank = []
-        top1_per_obj_dists = cp.array(top1_per_obj_dists)
+        top1_per_obj_dists = np.array(top1_per_obj_dists)
         for col in sameobj_top1_dists_with_xdists.T:
-            comparison_mask = cp.tile(col, (top1_per_obj_dists.shape[1], 1)).T
+            comparison_mask = np.tile(col, (top1_per_obj_dists.shape[1], 1)).T
             if distance == "correlation":
                 count_col = (top1_per_obj_dists > comparison_mask).sum(axis=1)
             else:
                 count_col = (top1_per_obj_dists < comparison_mask).sum(axis=1)
-            if CUPY_ACTIVE:
-                count_col = count_col.get()
             count_col = count_col.astype(np.float32)
             count_col[np.isnan(col)] = np.nan
             sameobj_objrank.append(count_col)
@@ -579,13 +547,13 @@ class ProcessData:
                 cval_mat_full_np = PrepData.prep_subset_for_exclusion_analysis(
                     other_obj, curr_obj_to_other_obj_same_cat_subset
                 )
-                cval_mat_full_cp = cp.array(cval_mat_full_np)
+                cval_mat_full_np = np.array(cval_mat_full_np)
                 (
                     closest_dists,
                     closest_idxs,
                     hists,
                 ) = ProcessData.get_top1_with_all_exc_dists(
-                    cval_mat_full_cp, other_obj, ax, nn_analysis_config
+                    cval_mat_full_np, other_obj, ax, nn_analysis_config
                 )
                 list_top1_dists_obj_same_cat.append((other_obj, closest_dists))
                 list_top1_idxs_obj_same_cat.append((other_obj, closest_idxs))
@@ -599,15 +567,15 @@ class ProcessData:
 
 class MaskExcluded:
     @staticmethod
-    def create_single_axis_nan_mask(exc_dist: int) -> cp.ndarray:
+    def create_single_axis_nan_mask(exc_dist: int) -> np.ndarray:
         # make number_of_views_per_axis x number_of_views_per_axis exclusion to nan mask
         # creates a mask that is 1 for positive match candidates and nan for excluded candidates
         if exc_dist == 0:
-            return cp.ones(
+            return np.ones(
                 (utils.NUMBER_OF_VIEWS_PER_AXIS, utils.NUMBER_OF_VIEWS_PER_AXIS)
             )
         else:
-            single_axis_excluded_to_nan_mask: cp.ndarray = 1 - (
+            single_axis_excluded_to_nan_mask: np.ndarray = 1 - (
                 tri(
                     utils.NUMBER_OF_VIEWS_PER_AXIS,
                     utils.NUMBER_OF_VIEWS_PER_AXIS,
@@ -622,34 +590,34 @@ class MaskExcluded:
                 )
             )
             single_axis_excluded_to_nan_mask[single_axis_excluded_to_nan_mask == 0] = (
-                cp.nan
+                np.nan
             )
             return single_axis_excluded_to_nan_mask
 
     @staticmethod
     def create_irrelevant_axes_to_nan_mask(
         axis: str,
-    ) -> cp.ndarray:  # 11 x 31*11 of 1 and nan block matrix
-        contain_ax = cp.array(
-            [[cp.array([c in a for c in axis]).all() for a in utils.ALL_AXES]],
+    ) -> np.ndarray:  # 11 x 31*11 of 1 and nan block matrix
+        contain_ax = np.array(
+            [[np.array([c in a for c in axis]).all() for a in utils.ALL_AXES]],
             dtype=float,
         )
         # create sampling mask of size 11 (# image in each series) x 31 (total number of axes)
-        contain_ax_mask = cp.repeat(
-            cp.repeat(contain_ax, utils.NUMBER_OF_VIEWS_PER_AXIS, axis=1),
+        contain_ax_mask = np.repeat(
+            np.repeat(contain_ax, utils.NUMBER_OF_VIEWS_PER_AXIS, axis=1),
             utils.NUMBER_OF_VIEWS_PER_AXIS,
             axis=0,
         )
         # make irrelevant axes to nan
-        contain_ax_mask[contain_ax_mask == 0] = cp.nan
+        contain_ax_mask[contain_ax_mask == 0] = np.nan
         return contain_ax_mask
 
     @staticmethod
     def make_excluded_to_nan(
-        corr_mat_sameobj: cp.ndarray,
+        corr_mat_sameobj: np.ndarray,
         axis: str,
         exc_dist: int,
-    ) -> cp.ndarray:
+    ) -> np.ndarray:
         # check if the size of corr mat is correct
         assert corr_mat_sameobj.shape[0] == utils.NUMBER_OF_VIEWS_PER_AXIS
         assert (
@@ -665,16 +633,16 @@ class MaskExcluded:
                 exc_dist
             )
             # then create a 11 x 31*11 exclusion mask (number of views x number of axes * number of views)
-            all_axes_excluded_to_nan_mask = cp.tile(
+            all_axes_excluded_to_nan_mask = np.tile(
                 single_axis_excluded_to_nan_mask, (1, 31)
             )
             # combine two exclusion criteria
-            sampling_mask_whole = cp.multiply(
+            sampling_mask_whole = np.multiply(
                 all_axes_excluded_to_nan_mask, contain_ax_mask
             )
         else:
             sampling_mask_whole = contain_ax_mask
 
         # sample from the correlation matrix using the sampling mask
-        corr_mat_sameobj = cp.multiply(sampling_mask_whole, corr_mat_sameobj)
+        corr_mat_sameobj = np.multiply(sampling_mask_whole, corr_mat_sameobj)
         return corr_mat_sameobj

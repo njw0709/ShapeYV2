@@ -1,7 +1,6 @@
 import os
 import argparse
 import shapeymodular.macros.nn_batch as nn_batch
-import cupy as cp
 
 FILE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -35,16 +34,7 @@ if __name__ == "__main__":
         default="analysis_results.h5",
     )
 
-    parser.add_argument(
-        "--cupy_device",
-        type=int,
-        default=0,
-    )
-
     args = parser.parse_args()
-
-    # set cupy device
-    cp.cuda.Device(args.cupy_device).use()
 
     nn_batch.run_exclusion_analysis(
         args.dir,
