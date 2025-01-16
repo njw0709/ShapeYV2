@@ -53,37 +53,3 @@ class IndexingHelper:
                 )
         all_shapey_idxs_containing_ax.sort()
         return all_shapey_idxs_containing_ax
-
-    # # select columns where the exclusion axes are present. (i.e., if ax = "pw", then select all that has "pw" in it - pwr, pwy, pwx, prw, etc.)
-    # contain_ax = np.array(
-    #     [[all([c in a for c in ax])] * 11 for a in ALL_AXES], dtype=int
-    # ).flatten()  # binary vector indicating whether the specified axis (ax) is contained in the column exclusion axes(a).
-
-    # col_shapey_idx = [
-    #     idx for i, idx in enumerate(obj_mat_shapey_idxs) if contain_ax[i]
-    # ]
-
-
-# return (row_shapey_idx, col_shapey_idx)
-
-# @staticmethod
-# def shapey_idx_to_within_obj_idx(shapey_idx: Sequence[int], obj) -> List[int]:
-#     within_obj_idx = []
-#     obj_shapey_idx_start = (
-#         constants.SHAPEY200_OBJS.index(obj)
-#         * constants.NUMBER_OF_VIEWS_PER_AXIS
-#         * constants.NUMBER_OF_AXES
-#     )
-#     obj_shapey_idx_end = (
-#         (constants.SHAPEY200_OBJS.index(obj) + 1)
-#         * constants.NUMBER_OF_VIEWS_PER_AXIS
-#         * constants.NUMBER_OF_AXES
-#     )
-#     for shid in shapey_idx:
-#         if obj_shapey_idx_start <= shid < obj_shapey_idx_end:
-#             within_obj_idx.append(shid - obj_shapey_idx_start)
-#         else:
-#             raise ValueError(
-#                 "given shapey index {} is not of the object {}.".format(shid, obj)
-#             )
-#     return within_obj_idx

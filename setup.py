@@ -8,7 +8,6 @@ with open("README.md") as file:
 # specify requirements of your package here
 REQUIREMENTS = [
     "tqdm >= 4.48.0",
-    "cupy-cuda12x",
     "matplotlib>=3.3.1",
     "h5py>=2.10.0",
     "twine",

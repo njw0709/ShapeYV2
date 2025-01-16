@@ -122,3 +122,10 @@ class ImageNameHelper:
             return choices[0] + ref_shapey_idx
         else:
             return ref_shapey_idx + random.choice(choices)
+
+    @staticmethod
+    def get_all_positive_match_candidate_axes(axis: str):
+        all_axes = constants.ALL_AXES
+        filtered = [s for s in all_axes if all(c in s for c in axis)]
+        return filtered
+    
