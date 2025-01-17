@@ -10,6 +10,9 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
+import matplotlib.cm as cm
+import matplotlib.figure as mplfig
+
 from PIL import Image
 import matplotlib.axes as mplax
 from typing import List
@@ -120,12 +123,16 @@ class SimilarityHistogramSampler:
     def collect_pmc_nmc_histograms_for_exclusion_axis(
         exc_ax: str,
         cmat: np.ndarray,
+        obj_subset: List[str] = [],
     ):
         # for pr
+        if len(obj_subset) == 0:
+            obj_subset = SHAPEY200_OBJS
         all_imgnames = [
             imgname
             for imgname in SHAPEY200_IMGNAMES
             if utils.ImageNameHelper.parse_imgname(imgname)["ax"] == exc_ax
+            and utils.ImageNameHelper.parse_imgname(imgname)["objname"] in obj_subset
         ]
         hist_bins = np.linspace(0.0, 1.0, 1001)
         pmc_corrval_hists_with_xdist = [
@@ -134,6 +141,7 @@ class SimilarityHistogramSampler:
         nmc_corrval_hist = np.array([0 for _ in range(1000)])
         top1_pmc_cvals_with_xdist = [[] for _ in range(11)]
         top1_nmc_cvals = []
+        top1_nmc_cvals_with_xdist = [[] for _ in range(11)]
         for imgname in tqdm(all_imgnames):
             (
                 (
@@ -153,6 +161,7 @@ class SimilarityHistogramSampler:
                 pmc_corrval_hists_with_xdist[i] += pmc_corrval_hist
                 if i < len(top1_pmc_cval_with_xdist):
                     top1_pmc_cvals_with_xdist[i].append(top1_pmc_cval_with_xdist[i])
+                    top1_nmc_cvals_with_xdist[i].append(top1_nmc_cval)
 
         # normalize histograms for plotting
         nmc_corrvals_norm, nmc_bin_centers = SimilarityHistogramSampler.normalize_hist(
@@ -161,11 +170,11 @@ class SimilarityHistogramSampler:
         top1_pmc_cval_mean = []
         top1_pmc_cval_moe = []
         for top1_pmc_cvals in top1_pmc_cvals_with_xdist:
-            mean, moe = SimilarityHistogramSampler.compute_mean_quantile(top1_pmc_cvals)
+            mean, moe = SimilarityHistogramSampler.compute_mean_std(top1_pmc_cvals)
             top1_pmc_cval_mean.append(mean)
             top1_pmc_cval_moe.append(moe)
         top1_nmc_cval_mean, top1_nmc_cval_moe = (
-            SimilarityHistogramSampler.compute_mean_quantile(top1_nmc_cvals)
+            SimilarityHistogramSampler.compute_mean_std(top1_nmc_cvals)
         )
 
         pmc_corrvals_with_xdists_norm = []
@@ -179,11 +188,13 @@ class SimilarityHistogramSampler:
         return (
             pmc_corrvals_with_xdists_norm,
             pmc_corrvals_bin_centers,
+            top1_pmc_cvals_with_xdist,
             top1_pmc_cval_mean,
             top1_pmc_cval_moe,
         ), (
             nmc_corrvals_norm,
             nmc_bin_centers,
+            top1_nmc_cvals_with_xdist,
             top1_nmc_cval_mean,
             top1_nmc_cval_moe,
         )
@@ -226,6 +237,15 @@ class SimilarityHistogramSampler:
         margin_of_error = critical_value * sem
 
         return mean, margin_of_error
+
+    @staticmethod
+    def compute_mean_std(data):
+        # Calculate the mean
+        mean = np.mean(data)
+
+        # Calculate the standard deviation
+        std_dev = np.std(data, ddof=1)  # Use ddof=1 for sample standard deviation
+        return mean, std_dev
 
 
 class SimilarityHistogramGraph:
@@ -421,14 +441,14 @@ class SimilarityHistogramGraph:
                 pmc_corrvals_bin_centers[i],
                 x_coord,
                 pmc_corrvals_norm + x_coord,
-                alpha=0.6,
+                alpha=0.8,
                 color=COLORS(1),
             )  # Right half
             ax.fill_betweenx(
                 pmc_corrvals_bin_centers[i],
                 -pmc_corrvals_norm + x_coord,
                 x_coord,
-                alpha=0.6,
+                alpha=0.8,
                 color=COLORS(1),
             )  # Left half
 
@@ -437,15 +457,15 @@ class SimilarityHistogramGraph:
             nmc_bin_centers,
             x_coord,
             nmc_corrvals_norm + x_coord,
-            alpha=0.2,
-            color=COLORS(2),
+            alpha=0.8,
+            color=COLORS(3),
         )  # Right half
         ax.fill_betweenx(
             nmc_bin_centers,
             -nmc_corrvals_norm + x_coord,
             x_coord,
-            alpha=0.2,
-            color=COLORS(2),
+            alpha=0.8,
+            color=COLORS(3),
         )  # Left half
 
         ax.set_xlim([-1.5, 12])  # type: ignore
@@ -460,15 +480,49 @@ class SimilarityHistogramGraph:
             capthick=1,
         )
 
-        ax.errorbar(
-            11,
-            top1_nmc_cval_mean,
-            yerr=top1_nmc_cval_moe,
-            marker="*",
-            capsize=5,
-            capthick=1,
-        )
         parsed_imgname = {}
         parsed_imgname["ax"] = "pr"
         SimilarityHistogramGraph.format_similarity_histogram(ax, parsed_imgname)
         return ax
+
+    @staticmethod
+    def draw_top1_pmc_nmc_scatter_plot(
+        fig_sc: mplfig.Figure,
+        ax_sc: mplax.Axes,
+        top1_pmc_cvals_with_xdist,
+        top1_nmc_cvals_with_xdist,
+    ):
+        # Create a colormap
+        cmap = plt.get_cmap("plasma")  # type: ignore
+
+        # Normalize the range 0 to 10 to 0 to 1
+        norm = plt.Normalize(vmin=0, vmax=6)  # type: ignore
+
+        for i, top1_pmc_cvals in enumerate(top1_pmc_cvals_with_xdist[1:6]):
+            ax_sc.scatter(
+                top1_nmc_cvals_with_xdist[i + 1],
+                top1_pmc_cvals,
+                marker=".",  # type: ignore
+                color=cmap(norm(i)),
+                s=1,
+                alpha=0.7,
+            )
+        ax_sc.set_xlim([-0.01, 1.01])  # type: ignore
+        ax_sc.set_ylim([-0.01, 1.01])  # type: ignore
+        ax_sc.set_aspect("equal")
+        ax_sc.plot(
+            np.linspace(0, 1, 100),
+            np.linspace(0, 1, 100),
+            linestyle="--",
+            color="red",
+            linewidth=1,
+            alpha=0.5,
+        )
+        sm = cm.ScalarMappable(cmap=cmap, norm=norm)
+        sm.set_array([])
+        cbar = fig_sc.colorbar(sm, ax=ax_sc)
+        cbar.set_label("Exclusion radius ($r_e$)")  # Label for the colorbar
+        ax_sc.set_xlabel("Top 1 NMC similarity score")
+        ax_sc.set_ylabel("Top 1 PMC similarity score")
+
+        return fig_sc, ax_sc
