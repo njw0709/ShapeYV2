@@ -711,9 +711,9 @@ def plot_tuning_curves(
             os.path.join(feature_directory, row_descriptions),
             os.path.join(feature_directory, col_descriptions),
         )
-        axes = typing.cast(List, config.axes)
+        axes = [axes_choice]
 
-    distance_mat_file = os.path.join(feature_directory, distances_file)
+    distance_mat_file = distances_file
 
     # load distance matrix
     with h5py.File(distance_mat_file, "r") as f:
@@ -730,7 +730,7 @@ def plot_tuning_curves(
                 graph_data_group_tuning_curve = an.TuningCurve.get_tuning_curve(
                     obj, ax, corrmats[0], config
                 )
-                fig, ax_graph = plt.subplots(1, 1)
+                fig, ax_graph = plt.subplots(1, 1, figsize=(5, 3.5))
                 fig, ax_graph = vis.TuningCurve.draw_all(
                     fig, ax_graph, graph_data_group_tuning_curve
                 )

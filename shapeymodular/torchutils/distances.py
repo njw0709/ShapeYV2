@@ -24,6 +24,74 @@ def jaccard_distance_mm(mat1, mat2):
     return jaccard_similarity  # (n, m)
 
 
+# new function for computing log ratios
+def log_ratio_jaccard_per_feature_type(mat1, mat2, density_threshold=0.005):
+
+    mat1 = mat1.float()  # N (number of images) x # features
+    mat2 = mat2.float()  # M (number of images) x # features
+
+    # Intersection
+    intersection = torch.mm(mat1, mat2.T)  # N X M
+
+    # Sum of rows for mat1 and mat2
+    sum_mat1 = mat1.sum(dim=1, keepdim=True)  # N x 1
+    sum_mat2 = mat2.sum(dim=1, keepdim=True)  # M x 1
+
+    # if density1 or density2 is zero, return just zero
+    density_mat1 = sum_mat1 / mat1.shape[1]  # N x 1
+    density_mat2 = sum_mat1 / mat1.shape[1]  # M x 1
+
+    # Union
+    union = (sum_mat1 + sum_mat2.T) - intersection  # N x M
+
+    # Avoid division by zero
+    union = union + (union == 0).float()
+
+    # Jaccard Similarity
+    jaccard_similarity = intersection / union  # N X M
+
+    # compute expected jaccard distances given random two densities
+    expected_intersection = torch.mm(density_mat1, density_mat2.T)  # N x M
+    expected_union = density_mat1 + density_mat2.T - expected_intersection  # N X M
+    expected_jaccard = expected_intersection / expected_union  # N x M
+
+    # log of ratios
+    log_of_ratios = torch.log2(jaccard_similarity) - torch.log2(
+        expected_jaccard
+    )  # N x M
+
+    # if density is zero, make it zero
+    mat1_lower_than_threshold = density_mat1 < density_threshold  # N x 1
+    mat2_lower_than_threshold = density_mat2 < density_threshold  # M x 1
+
+    log_of_ratios[mat1_lower_than_threshold, :] = 0.0
+    log_of_ratios[:, mat2_lower_than_threshold] = 0.0
+
+    return log_of_ratios
+
+
+def avg_log_ratios_all_feature_type(
+    mat1_all_feat_type, mat2_all_feat_type, density_threshold=0.005
+):
+    # mat1_all_feat_type: # N x num_feat x num_feature_type
+    # mat2_all_feat_type: # M x num_feat x num_feature_type
+
+    num_feature_type = mat1_all_feat_type.shape[-1]
+    assert num_feature_type == mat2_all_feat_type.shape[-1]
+
+    mat_log_of_ratios = torch.zeros(
+        (mat1_all_feat_type.shape[0], mat2_all_feat_type[0], num_feature_type), device="cpu"
+    )
+    for feat_type_idx in range(num_feature_type):
+        log_of_ratio = log_ratio_jaccard_per_feature_type(
+            mat1_all_feat_type[:, :, feat_type_idx],
+            mat1_all_feat_type[:, :, feat_type_idx],
+        )
+        mat_log_of_ratios[:, :, feat_type_idx] = log_of_ratio.cpu()
+
+    return mat_log_of_ratios.mean(dim=2)
+
+
 def weighted_jaccard_distance_mm(mat1, mat2, weights):
     mat1 = mat1.float()
     mat2 = mat2.float()

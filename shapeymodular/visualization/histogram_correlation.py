@@ -252,8 +252,8 @@ class SimilarityHistogramGraph:
     @staticmethod
     def create_axis_grid():
         fig = plt.figure(figsize=(8, 7))
-        gs = GridSpec(3, 7, figure=fig)
-        cval_ax = fig.add_subplot(gs[1:2, :])
+        gs = GridSpec(4, 7, figure=fig)
+        cval_ax = fig.add_subplot(gs[1:, :])
 
         # create image grid
         grid_axes = []
@@ -270,8 +270,9 @@ class SimilarityHistogramGraph:
         subsample: bool = True,
         sample_size: int = 1000,
         x_offset: float = 0.0,
+        max_xdist: int = 5,
     ):
-        xdists = np.arange(-1, NUMBER_OF_VIEWS_PER_AXIS - 1)
+        xdists = np.arange(-1, max_xdist)
         # scatter plot for x dists 0~10
         for i, x in enumerate(xdists):
             if subsample and len(pmc_corrvals_with_xdist[i]) > sample_size:
@@ -291,28 +292,30 @@ class SimilarityHistogramGraph:
         pmc_corrvals_with_xdist_nonempty = [
             pmc_cval for pmc_cval in pmc_corrvals_with_xdist if len(pmc_cval) != 0
         ]
-        positions = np.arange(-1, len(pmc_corrvals_with_xdist_nonempty) - 1) - x_offset
+        positions = np.arange(-1, max_xdist) - x_offset
         violin_parts = cval_ax.violinplot(
-            pmc_corrvals_with_xdist_nonempty, positions=positions, widths=0.4
+            pmc_corrvals_with_xdist_nonempty[: len(positions)],
+            positions=positions,
+            widths=0.45,
         )
         SimilarityHistogramGraph.format_violin_plot(
             violin_parts,
             linewidth=1.0,
             markercolor=COLORS(0),
             facecolor=COLORS(1),
-            alpha=0.2,
+            alpha=0.6,
         )
 
         # plot negative match candidate histogram
         violin_parts = cval_ax.violinplot(
-            nmc_corrvals, positions=[11 - x_offset], widths=0.4
+            nmc_corrvals, positions=[max_xdist - x_offset], widths=0.45
         )
         SimilarityHistogramGraph.format_violin_plot(
             violin_parts,
             linewidth=1.0,
             markercolor=COLORS(2),
             facecolor=COLORS(3),
-            alpha=0.2,
+            alpha=0.6,
         )
 
         if subsample:
@@ -321,7 +324,7 @@ class SimilarityHistogramGraph:
             nmc_corrvals_subsample = nmc_corrvals
         top1_nmc_cval = np.max(nmc_corrvals)
         cval_ax.scatter(
-            np.repeat(11 - x_offset, len(nmc_corrvals_subsample)),
+            np.repeat(max_xdist - x_offset, len(nmc_corrvals_subsample)),
             nmc_corrvals_subsample,
             marker="_",  # type: ignore
             color=COLORS(2),
@@ -332,7 +335,7 @@ class SimilarityHistogramGraph:
         cval_ax.hlines(
             top1_nmc_cval,
             xmin=-1.5,
-            xmax=11.5,
+            xmax=max_xdist + 0.5,
             linestyles="--",  # type: ignore
             color=COLORS(6),
             linewidth=1,
@@ -341,12 +344,15 @@ class SimilarityHistogramGraph:
 
     @staticmethod
     def draw_correlation_fall_off(
-        cval_ax: mplax.Axes, top1_pmc_cval_with_xdist, x_offset: float = 0.0
+        cval_ax: mplax.Axes,
+        top1_pmc_cval_with_xdist,
+        x_offset: float = 0.0,
+        max_xdist: int = 5,
     ):
-        xdists = np.arange(-1, NUMBER_OF_VIEWS_PER_AXIS - 1) - x_offset
+        xdists = np.arange(-1, max_xdist) - x_offset
         cval_ax.plot(
-            xdists[: len(top1_pmc_cval_with_xdist)],
-            top1_pmc_cval_with_xdist,
+            xdists,
+            top1_pmc_cval_with_xdist[: len(xdists)],
             linestyle="--",
             marker=".",
             color=COLORS(0),
@@ -407,13 +413,15 @@ class SimilarityHistogramGraph:
         return
 
     @staticmethod
-    def format_similarity_histogram(cval_ax: mplax.Axes, parsed_imgname: dict):
+    def format_similarity_histogram(
+        cval_ax: mplax.Axes, parsed_imgname: dict, max_xdist: int = 5
+    ):
         # formatting
-        cval_ax.set_xlim(-1.5, 11.5)
+        cval_ax.set_xlim(-1.5, max_xdist + 0.5)
         cval_ax.set_ylim(-0.1, 1.1)
-        cval_ax.set_xticks(np.arange(-1, 12))
+        cval_ax.set_xticks(np.arange(-1, max_xdist + 1))
         cval_ax.set_xticklabels(
-            ["no\nexclusion"] + list(range(11)) + ["negative\nmatches"]
+            ["no\nexclusion"] + list(range(max_xdist)) + ["negative\nmatches"]
         )
         cval_ax.grid(linestyle="--", alpha=0.5)
         cval_ax.set_xlabel(
@@ -480,6 +488,15 @@ class SimilarityHistogramGraph:
             capthick=1,
         )
 
+        ax.errorbar(
+            11,
+            top1_nmc_cval_mean,
+            yerr=np.array(top1_nmc_cval_moe).T,
+            marker="*",
+            capsize=5,
+            capthick=1,
+        )
+
         parsed_imgname = {}
         parsed_imgname["ax"] = "pr"
         SimilarityHistogramGraph.format_similarity_histogram(ax, parsed_imgname)
@@ -491,6 +508,8 @@ class SimilarityHistogramGraph:
         ax_sc: mplax.Axes,
         top1_pmc_cvals_with_xdist,
         top1_nmc_cvals_with_xdist,
+        alpha: float = 0.7,
+        colorbar: bool = True,
     ):
         # Create a colormap
         cmap = plt.get_cmap("plasma")  # type: ignore
@@ -505,7 +524,7 @@ class SimilarityHistogramGraph:
                 marker=".",  # type: ignore
                 color=cmap(norm(i)),
                 s=1,
-                alpha=0.7,
+                alpha=alpha,
             )
         ax_sc.set_xlim([-0.01, 1.01])  # type: ignore
         ax_sc.set_ylim([-0.01, 1.01])  # type: ignore
@@ -518,11 +537,12 @@ class SimilarityHistogramGraph:
             linewidth=1,
             alpha=0.5,
         )
-        sm = cm.ScalarMappable(cmap=cmap, norm=norm)
-        sm.set_array([])
-        cbar = fig_sc.colorbar(sm, ax=ax_sc)
-        cbar.set_label("Exclusion radius ($r_e$)")  # Label for the colorbar
-        ax_sc.set_xlabel("Top 1 NMC similarity score")
-        ax_sc.set_ylabel("Top 1 PMC similarity score")
+        if colorbar:
+            sm = cm.ScalarMappable(cmap=cmap, norm=norm)
+            sm.set_array([])
+            cbar = fig_sc.colorbar(sm, ax=ax_sc)
+            cbar.set_label("Exclusion radius ($r_e$)")  # Label for the colorbar
+            ax_sc.set_xlabel("Top 1 negative match candidate\nsimilarity score")
+            ax_sc.set_ylabel("Top 1 positive match candidate\nsimilarity score")
 
         return fig_sc, ax_sc

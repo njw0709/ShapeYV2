@@ -156,6 +156,50 @@ def compute_jaccard_distance(
         )
 
 
+def compute_log_ratio_jaccard(
+    datadir: str,
+    thresholded_features: Union[np.ndarray, str],
+    output_file: str,
+    row_segment_size: int,
+    col_segment_size: int,
+    gpu_index: int = 0,
+    dtype: type = np.float32,
+    dataset_exclusion: bool = False,
+):
+    # Define the device using the specified GPU index
+    device = torch.device(f"cuda:{gpu_index}" if torch.cuda.is_available() else "cpu")
+    metric = "jaccard"
+    data_row, data_col = load_features(
+        thresholded_features,
+        metric,
+        dataset_exclusion=dataset_exclusion,
+        dtype=torch.bool,
+        feature_key="thresholded_features",
+    )
+    print("Computing jaccard distance...")
+    data_row = data_row.T
+    data_col = data_col.T
+    print("data row shape: {}".format(data_row.shape[0]))
+    print("data col shape: {}".format(data_col.shape[0]))
+    with h5py.File(os.path.join(datadir, output_file), "w") as hf:
+        distance_matrix_dset = hf.create_dataset(
+            "Jaccard_dists",
+            (data_row.shape[0], data_col.shape[0]),
+            dtype=dtype,
+            chunks=(row_segment_size // 2, data_row.shape[0]),
+        )
+        # compute jaccard distance in segments
+        compute_distance_in_segments(
+            data_row,
+            data_col,
+            row_segment_size,
+            col_segment_size,
+            distances.avg_log_ratios_all_feature_type,
+            distance_matrix_dset,
+            device,
+        )
+
+
 def compute_weighted_jaccard(
     datadir: str,
     thresholded_features: np.ndarray,
