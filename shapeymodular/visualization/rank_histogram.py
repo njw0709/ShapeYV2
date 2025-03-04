@@ -160,8 +160,11 @@ class RankHistogramGraph:
         edgecolor="blue",
         height=0.9,
         last_rank_to_show: int = 10,
+        no_xlabel=False,
     ):
-        def format(ax, xdist, no_yticklabel=False, minimal_border=True):
+        def format(
+            ax, xdist, no_xlabel=False, no_yticklabel=False, minimal_border=True
+        ):
             ax.set_ylim([0, last_rank_to_show + 2])
             ax.set_yticks(np.arange(1, last_rank_to_show + 2, 1))
             ax.invert_yaxis()
@@ -182,10 +185,11 @@ class RankHistogramGraph:
                 ax.tick_params(axis="y", which="both", length=0)
             else:
                 ax.set_yticklabels(list(np.arange(1, last_rank_to_show + 1, 1)) + [">"])
-            if xdist == -1:
-                ax.set_xlabel("no exc.", fontsize=10, fontweight="bold")
-            else:
-                ax.set_xlabel("{}".format(xdist), fontsize=10, fontweight="bold")
+            if not no_xlabel:
+                if xdist == -1:
+                    ax.set_xlabel("no exc.", fontsize=10, fontweight="bold")
+                else:
+                    ax.set_xlabel("{}".format(xdist), fontsize=10, fontweight="bold")
 
         for i, data in enumerate(data_list):
             rank_prob, bin_centers = RankHistogramGraph.get_counts_of_each_rank(data)
@@ -197,7 +201,7 @@ class RankHistogramGraph:
                 height=height,
                 alpha=alpha,
             )
-            format(axes[i], positions[i], no_yticklabel=(i != 0))
+            format(axes[i], positions[i], no_yticklabel=(i != 0), no_xlabel=no_xlabel)
             # write text on the top bar
             first_bar_value = rank_prob[0]
             first_bar_position = bin_centers[0]
@@ -222,7 +226,8 @@ class RankHistogramGraph:
         obj_rank_mat_all: np.ndarray,
         last_xdist_to_show: int = 10,
         last_rank_to_show=10,
-        category=False,
+        category: bool = False,
+        no_xlabel: bool = False,
     ):
         # graph rank histogram
         assert axes.shape[0] >= last_xdist_to_show
@@ -246,5 +251,6 @@ class RankHistogramGraph:
             edgecolor=color,  # type: ignore
             height=0.9,
             last_rank_to_show=last_rank_to_show,
+            no_xlabel=no_xlabel,
         )
         return axes
