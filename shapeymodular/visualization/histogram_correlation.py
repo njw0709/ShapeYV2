@@ -401,11 +401,12 @@ class SimilarityHistogramGraph:
         alpha=0.2,
     ):
         for partname in ("cbars", "cmins", "cmaxes"):
-            vp = violin_parts[partname]
-            vp.set_linewidth(
-                linewidth
-            )  # Adjust thickness of central bar, min, and max lines
-            vp.set_color(markercolor)
+            if partname in violin_parts.keys():
+                vp = violin_parts[partname]
+                vp.set_linewidth(
+                    linewidth
+                )  # Adjust thickness of central bar, min, and max lines
+                vp.set_color(markercolor)
         for pc in violin_parts["bodies"]:
             pc.set_facecolor(facecolor)  # Set color for the second violin
             pc.set_edgecolor(facecolor)
