@@ -271,9 +271,11 @@ class SimilarityHistogramGraph:
         sample_size: int = 1000,
         x_offset: float = 0.0,
         max_xdist: int = 5,
+        display_nmc_above: bool = True,
     ):
         xdists = np.arange(-1, max_xdist)
         # scatter plot for x dists 0~10
+
         for i, x in enumerate(xdists):
             if subsample and len(pmc_corrvals_with_xdist[i]) > sample_size:
                 pmc_corrval = np.random.choice(
@@ -289,6 +291,18 @@ class SimilarityHistogramGraph:
                 s=20,
                 linewidths=0.5,
             )
+            if display_nmc_above:
+                top_pmc = pmc_corrvals_with_xdist[i].max()
+                # number of nmc corrvals above top pmc
+                number_of_nmc_above_top_pmc = (nmc_corrvals > top_pmc).sum()
+                cval_ax.text(
+                    x - x_offset,
+                    top_pmc + 0.05,
+                    number_of_nmc_above_top_pmc,
+                    fontsize=10,
+                    ha="center",
+                )
+
         pmc_corrvals_with_xdist_nonempty = [
             pmc_cval for pmc_cval in pmc_corrvals_with_xdist if len(pmc_cval) != 0
         ]

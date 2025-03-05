@@ -145,10 +145,10 @@ class RankHistogramGraph:
         bbox_data = bbox.transformed(inv_transform)
 
         # bbox_data.x0 gives the left edge in data coordinates
-        if bbox_data.x0 < 0:
+        if bbox_data.y0 < 0:
             # Calculate how much to shift the text right so its left edge is at zero
             # Update the text position (since ha="right", we add the shift)
-            text_obj.set_x(bbox_data.x1 - bbox_data.x0 - 0.01)
+            text_obj.set_y(bbox_data.y1 - bbox_data.y0 + 0.02)
 
     @staticmethod
     def plot_rank_bars(
@@ -160,63 +160,95 @@ class RankHistogramGraph:
         edgecolor="blue",
         height=0.9,
         last_rank_to_show: int = 10,
+        no_title=False,
         no_xlabel=False,
     ):
         def format(
-            ax, xdist, no_xlabel=False, no_yticklabel=False, minimal_border=True
+            ax,
+            xdist,
+            no_title=False,
+            no_xticklabel=False,
+            no_yticklabel=False,
+            minimal_border=True,
         ):
-            ax.set_ylim([0, last_rank_to_show + 2])
-            ax.set_yticks(np.arange(1, last_rank_to_show + 2, 1))
-            ax.invert_yaxis()
-            ax.set_xlim([-0.05, 1.05])
-            ax.grid(linestyle="--", linewidth=0.8, alpha=0.4, axis="x")
-            ax.set_xticks(np.arange(0, 1.1, 0.5))
+            ax.set_xlim([0, last_rank_to_show + 2])
+            ax.set_xticks(np.arange(1, last_rank_to_show + 2, 1))
+            yticks = np.arange(0, 1.1, 0.2)
+            yticklabels = ["{:.1f}".format(y) for y in yticks]
+
+            # ax.invert_yaxis()
+            ax.set_ylim([-0.05, 1.05])
+            ax.grid(linestyle="--", linewidth=0.8, alpha=0.4, axis="both")
+            ax.set_yticks(yticks)
+
             if not minimal_border:
-                ax.set_xticklabels(["", "0.5", "1"])
                 ax.tick_params(axis="x", which="both", length=0.01)
             else:
                 ax.spines["right"].set_visible(False)
                 ax.spines["bottom"].set_visible(False)
-                ax.set_xticklabels(["", "", ""])
-                ax.tick_params(axis="x", which="both", length=0.00)
+                ax.tick_params(
+                    axis="x",
+                    which="both",
+                    top=True,
+                    labeltop=True,
+                    bottom=False,
+                    labelbottom=False,
+                )
 
-            if no_yticklabel:
-                ax.set_yticklabels([])
-                ax.tick_params(axis="y", which="both", length=0)
+            if no_xticklabel:
+                ax.set_xticklabels([])
+                ax.tick_params(axis="x", which="both", length=0)
             else:
-                ax.set_yticklabels(list(np.arange(1, last_rank_to_show + 1, 1)) + [">"])
-            if not no_xlabel:
+                ax.set_xticklabels(
+                    list(np.arange(1, last_rank_to_show + 1, 1)) + [">"], fontsize=7
+                )
+                ax.set_xlabel("Rank", loc="center", fontsize=8)
+                ax.xaxis.set_label_position("top")
+
+            if not no_yticklabel:
+                ax.set_yticklabels(yticklabels, fontsize=7)
+            else:
+                ax.set_yticklabels(["" for _ in yticklabels])
+            if not no_title:
                 if xdist == -1:
-                    ax.set_xlabel("no exc.", fontsize=10, fontweight="bold")
+                    ax.set_xlabel("no exclusion", fontsize=10)
                 else:
-                    ax.set_xlabel("{}".format(xdist), fontsize=10, fontweight="bold")
+                    ax.set_xlabel("$r_e$={}".format(xdist), fontsize=10)
 
         for i, data in enumerate(data_list):
             rank_prob, bin_centers = RankHistogramGraph.get_counts_of_each_rank(data)
-            axes[i].barh(
+            axes[i].bar(
                 bin_centers,
                 rank_prob,
                 color=color,
                 edgecolor=edgecolor,
-                height=height,
+                width=height,
                 alpha=alpha,
             )
-            format(axes[i], positions[i], no_yticklabel=(i != 0), no_xlabel=no_xlabel)
+            format(
+                axes[i],
+                positions[i],
+                no_xticklabel=no_xlabel,
+                no_title=no_title,
+                no_yticklabel=(i != 0),
+            )
             # write text on the top bar
             first_bar_value = rank_prob[0]
             first_bar_position = bin_centers[0]
 
             # Adjust x-position slightly to the left of the bar for visibility
             text_obj = axes[i].text(
-                first_bar_value,  # Offset text slightly
                 first_bar_position,
+                first_bar_value,
                 f"{first_bar_value:.2f}",
-                va="center",  # Center vertically
-                ha="right",  # Align to the right
-                fontsize=7,  # Set font size
-                color="black",  # Text color
+                va="center",
+                ha="right",
+                fontsize=7,
+                color="black",
+                rotation=90,
+                rotation_mode="anchor",
             )
-            # RankHistogramGraph.shift_text_if_over_border(axes[i], text_obj)
+            RankHistogramGraph.shift_text_if_over_border(axes[i], text_obj)
 
         return axes
 
@@ -227,6 +259,7 @@ class RankHistogramGraph:
         last_xdist_to_show: int = 10,
         last_rank_to_show=10,
         category: bool = False,
+        no_title: bool = False,
         no_xlabel: bool = False,
     ):
         # graph rank histogram
@@ -251,6 +284,7 @@ class RankHistogramGraph:
             edgecolor=color,  # type: ignore
             height=0.9,
             last_rank_to_show=last_rank_to_show,
+            no_title=no_title,
             no_xlabel=no_xlabel,
         )
         return axes
