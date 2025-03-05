@@ -44,20 +44,30 @@ class SimilarityHistogramSampler:
         else:
             positive_mc_objs = [parsed_imgname["objname"]]
         positive_mc_indices = []
-        all_imgs_same_obj_indices = []
         for obj in positive_mc_objs:
             for ax in all_positive_mc_axes:
                 positive_mc_indices.append(
                     utils.IndexingHelper.objname_ax_to_shapey_index(obj, ax)
                 )
-            all_imgs_same_obj_indices.extend(
-                utils.IndexingHelper.objname_ax_to_shapey_index(obj)
-            )
-        negative_mc_indices = [
-            i
-            for i in range(len(SHAPEY200_IMGNAMES))
-            if i not in all_imgs_same_obj_indices
-        ]
+
+        if category:
+            negative_objs = [
+                obj for obj in SHAPEY200_OBJS if parsed_imgname["obj_cat"] not in obj
+            ]
+        else:
+            negative_objs = [
+                obj for obj in SHAPEY200_OBJS if parsed_imgname["objname"] != obj
+            ]
+
+        negative_mc_indices = []
+        top_per_obj_nmc_cvals = []
+        for obj in negative_objs:
+            nmc_obj_indices = utils.IndexingHelper.objname_ax_to_shapey_index(obj)
+            negative_mc_indices.extend(nmc_obj_indices)
+            nmc_obj_cvals = row[nmc_obj_indices]
+            top_per_obj_nmc_cvals.append(nmc_obj_cvals.max())
+        top_per_obj_nmc_cvals = np.array(top_per_obj_nmc_cvals)
+
         # get nmc corrvals
         nmc_corrvals = row[negative_mc_indices]
         top1_nmc_shapey_idx = negative_mc_indices[nmc_corrvals.argmax()]
@@ -116,6 +126,7 @@ class SimilarityHistogramSampler:
                 nmc_corrvals,
                 top1_nmc_cval,
                 utils.ImageNameHelper.shapey_idx_to_imgname(top1_nmc_shapey_idx),
+                top_per_obj_nmc_cvals,
             ),
         )
 
@@ -149,7 +160,7 @@ class SimilarityHistogramSampler:
                     top1_pmc_cval_with_xdist,
                     top1_pmc_imgnames_with_xdist,
                 ),
-                (nmc_corrvals, top1_nmc_cval, top1_nmc_imgname),
+                (nmc_corrvals, top1_nmc_cval, _, _),
             ) = SimilarityHistogramSampler.get_pmc_nmc_scores_with_xdist(
                 imgname, cmat, category=False
             )
@@ -267,6 +278,7 @@ class SimilarityHistogramGraph:
         cval_ax: mplax.Axes,
         pmc_corrvals_with_xdist: List[np.ndarray],
         nmc_corrvals: np.ndarray,
+        top_per_obj_nmc_corrvals: np.ndarray,
         subsample: bool = True,
         sample_size: int = 1000,
         x_offset: float = 0.0,
@@ -294,7 +306,7 @@ class SimilarityHistogramGraph:
             if display_nmc_above:
                 top_pmc = pmc_corrvals_with_xdist[i].max()
                 # number of nmc corrvals above top pmc
-                number_of_nmc_above_top_pmc = (nmc_corrvals > top_pmc).sum()
+                number_of_nmc_above_top_pmc = (top_per_obj_nmc_corrvals > top_pmc).sum()
                 cval_ax.text(
                     x - x_offset,
                     top_pmc + 0.02,
@@ -333,7 +345,7 @@ class SimilarityHistogramGraph:
         )
 
         if subsample:
-            nmc_corrvals_subsample = np.random.choice(nmc_corrvals, size=sample_size)
+            nmc_corrvals_subsample = top_per_obj_nmc_corrvals
         else:
             nmc_corrvals_subsample = nmc_corrvals
         top1_nmc_cval = np.max(nmc_corrvals)
