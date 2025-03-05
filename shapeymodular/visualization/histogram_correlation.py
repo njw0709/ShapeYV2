@@ -297,7 +297,7 @@ class SimilarityHistogramGraph:
                 number_of_nmc_above_top_pmc = (nmc_corrvals > top_pmc).sum()
                 cval_ax.text(
                     x - x_offset,
-                    top_pmc + 0.05,
+                    top_pmc + 0.02,
                     number_of_nmc_above_top_pmc,
                     fontsize=10,
                     ha="center",

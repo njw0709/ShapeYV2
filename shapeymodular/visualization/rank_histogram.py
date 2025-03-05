@@ -266,7 +266,7 @@ class RankHistogramGraph:
         assert axes.shape[0] >= last_xdist_to_show
 
         obj_rank_mat_all[obj_rank_mat_all > last_rank_to_show] = last_rank_to_show + 1
-        xdists = np.arange(-1, last_xdist_to_show)
+        xdists = np.arange(0, last_xdist_to_show)
         if category:
             color = COLORS(2)
         else:
@@ -276,7 +276,7 @@ class RankHistogramGraph:
             axes,
             [
                 obj_rank_mat_all[:, i][~np.isnan(obj_rank_mat_all[:, i])]
-                for i in range(last_xdist_to_show + 1)
+                for i in range(1, last_xdist_to_show + 1)
             ],
             positions=xdists,
             color=color,  # type: ignore
