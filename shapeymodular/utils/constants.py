@@ -45,8 +45,8 @@ def sampled_one_obj_per_cat(sample_idx: int = 3) -> List[str]:
 
 
 SHAPEY200_DATASET_PATH_DICT = {
-   "original": "/home/namj/projects/datasets/ShapeY200/dataset",
-   "contrast_reversed": "/home/namj/projects/datasets/ShapeY200CR/dataset",
+    "original": "/home/namj/projects/datasets/ShapeY200/dataset",
+    "contrast_reversed": "/home/namj/projects/datasets/ShapeY200CR/dataset",
 }
 
 DEGREES_OF_FREEDOM: int = 5
@@ -79,7 +79,7 @@ SHAPEX200_TEST_OBJS = [obj for obj in SHAPEY200_OBJS if obj not in SHAPEX200_TRA
 
 SHAPEY200_OBJCATS = np.unique([obj.split("_")[0] for obj in SHAPEY200_OBJS])
 SHAPEY200_CAT_TO_OBJ_DICT = create_shapey_cat_to_obj_dict()
-ONE_PER_OBJ_SAMPLE_IDX = 3
+ONE_PER_OBJ_SAMPLE_IDX = 4
 SHAPEY200_SAMPLED_OBJS = sampled_one_obj_per_cat(sample_idx=ONE_PER_OBJ_SAMPLE_IDX)
 SHAPEY200_IMGNAMES = generate_all_imgnames(SHAPEY200_OBJS)
 SHAPEY200_IMGNAMES_DICT = bidict(enumerate(SHAPEY200_IMGNAMES))

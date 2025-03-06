@@ -419,7 +419,7 @@ def plot_error_panels(
     distances_file: str = "distances-Jaccard.mat",
     thresholds_file: Union[None, str] = "thresholds.mat",
     axes_choice: str = "pw",
-    xradius_to_plot: int = utils.XRADIUS_TO_PLOT_ERR_PANEL + 1,
+    xdist_to_plot: int = utils.XRADIUS_TO_PLOT_ERR_PANEL,
     fig_save_dir: str = "figures",
     config_filename: Union[None, str] = None,
     row_descriptions: Union[None, str] = None,
@@ -519,7 +519,7 @@ def plot_error_panels(
                         analysis_sampler,
                         obj,
                         ax,
-                        xradius_to_plot,
+                        xdist_to_plot,
                         within_category_error=True,
                     )
                 )
@@ -529,7 +529,7 @@ def plot_error_panels(
                         analysis_sampler,
                         obj,
                         ax,
-                        xradius_to_plot,
+                        xdist_to_plot,
                         within_category_error=False,
                     )
                 )
@@ -541,7 +541,7 @@ def plot_error_panels(
                         analysis_sampler,
                         obj,
                         ax,
-                        xradius_to_plot,
+                        xdist_to_plot,
                         within_category_error=True,
                     )
                 )
@@ -551,7 +551,7 @@ def plot_error_panels(
                         analysis_sampler,
                         obj,
                         ax,
-                        xradius_to_plot,
+                        xdist_to_plot,
                         within_category_error=False,
                     )
                 )
@@ -565,14 +565,14 @@ def plot_error_panels(
                     same_obj_corrmat_sampler,
                     obj,
                     ax,
-                    xradius_to_plot,
+                    xdist_to_plot,
                 )
                 graph_data_row_list_obj = an.ErrorDisplay.add_closest_physical_image(
                     graph_data_row_list_obj,
                     same_obj_corrmat_sampler,
                     obj,
                     ax,
-                    xradius_to_plot,
+                    xdist_to_plot,
                 )
             # add feature activation levels
             if threshold is not None:
@@ -603,13 +603,13 @@ def plot_error_panels(
                 "Error Panel, obj: {}, series: {}, exclusion radius: {} - Object error".format(
                     utils.ImageNameHelper.shorten_objname(obj),
                     ax,
-                    xradius_to_plot,
+                    xdist_to_plot - 1,
                 )
             )
             fig.savefig(
                 os.path.join(
                     FIG_SAVE_DIR,
-                    "error_display_obj_{}_{}-{}.png".format(obj, ax, xradius_to_plot),
+                    "error_display_obj_{}_{}-{}.png".format(obj, ax, xdist_to_plot - 1),
                 ),
                 bbox_inches="tight",
             )
@@ -624,13 +624,13 @@ def plot_error_panels(
                 "Error Panel, obj: {}, series: {}, exclusion radius: {} - Category error".format(
                     utils.ImageNameHelper.shorten_objname(obj),
                     ax,
-                    xradius_to_plot,
+                    xdist_to_plot - 1,
                 )
             )
             fig.savefig(
                 os.path.join(
                     FIG_SAVE_DIR,
-                    "error_display_cat_{}_{}-{}.png".format(obj, ax, xradius_to_plot),
+                    "error_display_cat_{}_{}-{}.png".format(obj, ax, xdist_to_plot - 1),
                 ),
                 bbox_inches="tight",
             )
