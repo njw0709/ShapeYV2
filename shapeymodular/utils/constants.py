@@ -79,7 +79,7 @@ SHAPEX200_TEST_OBJS = [obj for obj in SHAPEY200_OBJS if obj not in SHAPEX200_TRA
 
 SHAPEY200_OBJCATS = np.unique([obj.split("_")[0] for obj in SHAPEY200_OBJS])
 SHAPEY200_CAT_TO_OBJ_DICT = create_shapey_cat_to_obj_dict()
-ONE_PER_OBJ_SAMPLE_IDX = 4
+ONE_PER_OBJ_SAMPLE_IDX = 9
 SHAPEY200_SAMPLED_OBJS = sampled_one_obj_per_cat(sample_idx=ONE_PER_OBJ_SAMPLE_IDX)
 SHAPEY200_IMGNAMES = generate_all_imgnames(SHAPEY200_OBJS)
 SHAPEY200_IMGNAMES_DICT = bidict(enumerate(SHAPEY200_IMGNAMES))

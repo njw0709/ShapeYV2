@@ -10,9 +10,8 @@ import numpy as np
 from typing import Union, Callable
 from torchvision import transforms
 
-normalize = (
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-)  # Normalize as per ImageNet standards
+normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+# Normalize as per ImageNet standards
 
 
 def extract_shapey200_features(
