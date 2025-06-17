@@ -1,24 +1,48 @@
-from dataclasses import dataclass
+from pydantic import BaseModel, ConfigDict, field_validator, Field
 from typing import Sequence, Union, Tuple, List
 from bidict import bidict
 import shapeymodular.utils as utils
 import numpy as np
 
 
-@dataclass
-class AxisDescription:
+class AxisDescription(BaseModel):
+    """Pydantic v2 implementation of AxisDescription"""
+    
+    model_config = ConfigDict(
+        # Allow extra fields for compatibility
+        extra='allow',
+        # Validate assignment to handle mutations
+        validate_assignment=True,
+        # Allow arbitrary types (for bidict)
+        arbitrary_types_allowed=True
+    )
+    
     imgnames: Sequence[str]
+    
+    # Regular fields with default factories
+    shapey_idxs: List[int] = Field(default_factory=list)
+    axis_idx_to_shapey_idx: bidict[int, int] = Field(default_factory=bidict)
 
-    def __post_init__(self):
-        # convert imgnames to shapey200 index list
-        shapey_idxs = [
-            utils.ImageNameHelper.imgname_to_shapey_idx(imgname)
-            for imgname in self.imgnames
-        ]
-        self.axis_idx_to_shapey_idx: bidict[int, int] = bidict(
-            zip(range(len(shapey_idxs)), shapey_idxs)
-        )
-        self.shapey_idxs = shapey_idxs
+    @field_validator('imgnames')
+    @classmethod
+    def validate_imgnames(cls, v):
+        """Validate that imgnames is a sequence of strings"""
+        if not isinstance(v, Sequence):
+            raise ValueError("imgnames must be a sequence")
+        # Convert to list to ensure it's indexable
+        return list(v) if not isinstance(v, list) else v
+
+    def model_post_init(self, __context):
+        """Initialize derived fields after model creation"""
+        # Only compute if not already set
+        if not self.shapey_idxs:
+            self.shapey_idxs = [
+                utils.ImageNameHelper.imgname_to_shapey_idx(imgname)
+                for imgname in self.imgnames
+            ]
+        
+        if not self.axis_idx_to_shapey_idx:
+            self.axis_idx_to_shapey_idx = bidict(zip(range(len(self.shapey_idxs)), self.shapey_idxs))
 
     def shapey_idx_to_corrmat_idx(
         self, shapey_idx: Union[Sequence[int], int]
@@ -76,7 +100,58 @@ class AxisDescription:
         return item in self.imgnames
 
     def __eq__(self, other):
+        if not isinstance(other, AxisDescription):
+            return False
         return self.imgnames == other.imgnames
+
+
+class CorrMatDescription(BaseModel):
+    """Pydantic v2 implementation of CorrMatDescription"""
+    
+    model_config = ConfigDict(
+        # Allow extra fields for compatibility
+        extra='allow',
+        # Validate assignment to handle mutations
+        validate_assignment=True,
+        # Allow arbitrary types (for bidict)
+        arbitrary_types_allowed=True
+    )
+    
+    axes_descriptors: Sequence[AxisDescription]
+    summary: Union[None, str] = None
+    
+    # Regular fields with default factories
+    imgnames: Sequence[Sequence[str]] = Field(default_factory=list)
+    axis_idx_to_shapey_idxs: Sequence[bidict[int, int]] = Field(default_factory=list)
+
+    @field_validator('axes_descriptors')
+    @classmethod
+    def validate_axes_descriptors(cls, v):
+        """Validate that all axes_descriptors are AxisDescription instances"""
+        if not isinstance(v, Sequence):
+            raise ValueError("axes_descriptors must be a sequence")
+        for desc in v:
+            if not isinstance(desc, AxisDescription):
+                raise ValueError("All items in axes_descriptors must be AxisDescription instances")
+        return v
+
+    def model_post_init(self, __context):
+        """Initialize derived fields after model creation"""
+        # Only compute if not already set
+        if not self.imgnames:
+            self.imgnames = [axis_description.imgnames for axis_description in self.axes_descriptors]
+        
+        if not self.axis_idx_to_shapey_idxs:
+            self.axis_idx_to_shapey_idxs = [axis_description.axis_idx_to_shapey_idx for axis_description in self.axes_descriptors]
+
+    def __repr__(self) -> str:
+        if self.summary is None:
+            return f"CorrMatDescription(imgnames={self.imgnames}, shapey_idxs={self.axis_idx_to_shapey_idxs})"
+        else:
+            return f"CorrMatDescription(imgnames={self.imgnames}, shapey_idxs={self.axis_idx_to_shapey_idxs}, summary={self.summary})"
+
+    def __getitem__(self, idx) -> AxisDescription:
+        return self.axes_descriptors[idx]
 
 
 def pull_axis_description_from_txt(filepath: str) -> AxisDescription:
@@ -86,29 +161,5 @@ def pull_axis_description_from_txt(filepath: str) -> AxisDescription:
         imgnames = [imgname.split("features_")[1] for imgname in imgnames]
     if ".mat" in imgnames[0]:
         imgnames = [imgname.split(".mat")[0] + ".png" for imgname in imgnames]
-    axis_description = AxisDescription(imgnames)
+    axis_description = AxisDescription(imgnames=imgnames)
     return axis_description
-
-
-class CorrMatDescription:
-    def __init__(
-        self,
-        axes_descriptors: Sequence[AxisDescription],
-        summary: Union[None, str] = None,
-    ):
-        self.__axes_descriptors: Sequence[AxisDescription] = axes_descriptors
-        self.imgnames: Sequence[Sequence[str]] = []
-        self.axis_idx_to_shapey_idxs: Sequence[bidict[int, int]] = []
-        self.summary: Union[None, str] = summary
-        for axis_description in axes_descriptors:
-            self.imgnames.append(axis_description.imgnames)
-            self.axis_idx_to_shapey_idxs.append(axis_description.axis_idx_to_shapey_idx)
-
-    def __repr__(self) -> str:
-        if self.summary is None:
-            return f"CorrMatDescription(imgnames={self.imgnames}, shapey_idxs={self.axis_idx_to_shapey_idxs})"
-        else:
-            return f"CorrMatDescription(imgnames={self.imgnames}, shapey_idxs={self.axis_idx_to_shapey_idxs}, summary={self.summary})"
-
-    def __getitem__(self, idx) -> AxisDescription:
-        return self.__axes_descriptors[idx]
