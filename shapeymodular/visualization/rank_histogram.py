@@ -50,12 +50,12 @@ class RankHistogramSampler:
     def compute_rank_per_exclusion(top1_dist_sameobj, top_per_cvals):
         # top1_dist_sameobj: 11 x 11 (first dim: series idx, second dim: exclusion radius)
         # top_per_cval dims: 11 x 199 or 11 x 19 (all object or object category except same obj or obj category)
-        rank_mat = np.zeros_like(top1_dist_sameobj)
+        rank_mat = np.zeros_like(top1_dist_sameobj, dtype=np.int64)
         for exc_rad in range(top1_dist_sameobj.shape[1]):
             col = top1_dist_sameobj[:, exc_rad][..., np.newaxis]
             ranks = np.where(
                 np.isnan(col).flatten(),
-                np.nan,
+                -1,
                 np.sum((col < top_per_cvals), axis=1) + 1,
             )
             rank_mat[:, exc_rad] = ranks
@@ -125,8 +125,9 @@ class RankHistogramSampler:
 
 class RankHistogramGraph:
     @staticmethod
-    def get_counts_of_each_rank(data, normalize=True):
-        bins = np.arange(data.min(), data.max() + 2, 1)
+    def get_counts_of_each_rank(data, normalize=True, max_rank=11):
+        bins = np.arange(1, max_rank + 2, 1)
+        # bins = np.arange(data.min(), data.max() + 2, 1)
         counts, bin_edges = np.histogram(data, bins=bins)
         if normalize:
             counts = counts / len(data)
@@ -170,9 +171,10 @@ class RankHistogramGraph:
             no_xticklabel=False,
             no_yticklabel=False,
             minimal_border=True,
+            xticks=np.arange(1, last_rank_to_show + 2, 1),
         ):
             ax.set_xlim([0, last_rank_to_show + 2])
-            ax.set_xticks(np.arange(1, last_rank_to_show + 2, 1))
+            ax.set_xticks(xticks)
             yticks = np.arange(0, 1.1, 0.2)
             yticklabels = ["{:.1f}".format(y) for y in yticks]
 
@@ -199,9 +201,7 @@ class RankHistogramGraph:
                 ax.set_xticklabels([])
                 ax.tick_params(axis="x", which="both", length=0)
             else:
-                ax.set_xticklabels(
-                    list(np.arange(1, last_rank_to_show + 1, 1)) + [">"], fontsize=7
-                )
+                ax.set_xticklabels(list(xticks[:-1]) + [">"], fontsize=7)
                 ax.set_xlabel("Rank", loc="center", fontsize=8)
                 ax.xaxis.set_label_position("top")
 
@@ -231,6 +231,7 @@ class RankHistogramGraph:
                 no_xticklabel=no_xlabel,
                 no_title=no_title,
                 no_yticklabel=(i != 0),
+                xticks=bin_centers,
             )
             # write text on the top bar
             first_bar_value = rank_prob[0]

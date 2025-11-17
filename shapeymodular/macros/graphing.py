@@ -424,6 +424,7 @@ def plot_error_panels(
     config_filename: Union[None, str] = None,
     row_descriptions: Union[None, str] = None,
     col_descriptions: Union[None, str] = None,
+    subsample: bool = True,
 ) -> None:
     # create figure directory
     FIG_SAVE_DIR = os.path.join(feature_directory, fig_save_dir)
@@ -506,7 +507,11 @@ def plot_error_panels(
 
     for ax in axes:
         # sampled one object per category
-        for obj in tqdm(utils.SHAPEY200_SAMPLED_OBJS):
+        if subsample:
+            objlist = utils.SHAPEY200_SAMPLED_OBJS
+        else:
+            objlist = utils.SHAPEY200_OBJS
+        for obj in tqdm(objlist):
             # add reference image
             graph_data_row_list_cat = an.ErrorDisplay.add_reference_images(obj, ax)
             graph_data_row_list_obj = an.ErrorDisplay.add_reference_images(obj, ax)

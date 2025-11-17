@@ -307,7 +307,7 @@ class ProcessData:
                 nn_analysis_config.distance_measure == "correlation"
                 or nn_analysis_config.distance_measure == "Jaccard_dist"
             ):
-                closest_dist_xdist = np.nanmax(res, axis=1)               
+                closest_dist_xdist = np.nanmax(res, axis=1)
                 # get all nan rows
                 all_nan_rows = np.isnan(res).all(axis=1)
                 res = np.nan_to_num(res, nan=float("-inf"))
