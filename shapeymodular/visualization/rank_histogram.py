@@ -62,10 +62,16 @@ class RankHistogramSampler:
         return rank_mat
 
     @staticmethod
-    def get_objrank_mat_all(ax: str, sampler: dl.Sampler, category: bool = False):
-        obj_rank_mat_all = np.zeros((11 * 200, 11))
+    def get_objrank_mat_all(
+        ax: str, sampler: dl.Sampler, category: bool = False, test_objs: bool = False
+    ):
+        if test_objs:
+            all_objs = utils.SHAPEX200_TEST_OBJS
+        else:
+            all_objs = utils.SHAPEY200_OBJS
+        obj_rank_mat_all = np.zeros((11 * len(all_objs), 11))
 
-        for obj_idx, obj in enumerate(utils.SHAPEY200_OBJS):
+        for obj_idx, obj in enumerate(all_objs):
             base_query = {"obj": obj, "ax": ax}
             cat = utils.ImageNameHelper.get_obj_category_from_objname(obj)
             same_cat_objs = [
@@ -234,19 +240,34 @@ class RankHistogramGraph:
                 xticks=bin_centers,
             )
             # write text on the top bar
-            first_bar_value = rank_prob[0]
-            first_bar_position = bin_centers[0]
+            podium_total = 0
+            for rank in range(3):
+                first_bar_value = rank_prob[rank]
+                podium_total += first_bar_value
+                first_bar_position = bin_centers[rank]
 
-            # Adjust x-position slightly to the left of the bar for visibility
+                # Adjust x-position slightly to the left of the bar for visibility
+                text_obj = axes[i].text(
+                    first_bar_position,
+                    max(first_bar_value - 0.2, 0.2),
+                    f"{first_bar_value:.2f}",
+                    va="center",
+                    ha="right",
+                    fontsize=7,
+                    color="black",
+                    rotation=90,
+                    rotation_mode="anchor",
+                )
+            # add total of 3
             text_obj = axes[i].text(
-                first_bar_position,
-                first_bar_value,
-                f"{first_bar_value:.2f}",
+                bin_centers[2] + 0.5,
+                rank_prob[1] + 0.3,
+                f"{podium_total:.2f}",
                 va="center",
                 ha="right",
                 fontsize=7,
                 color="black",
-                rotation=90,
+                rotation=0,
                 rotation_mode="anchor",
             )
             RankHistogramGraph.shift_text_if_over_border(axes[i], text_obj)
