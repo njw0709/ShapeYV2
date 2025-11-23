@@ -3,6 +3,7 @@ import shapeymodular.data_loader as dl
 import shapeymodular.utils as utils
 import typing
 import matplotlib.pyplot as plt
+from typing import Optional
 from .styles import COLORS
 
 
@@ -47,9 +48,29 @@ class RankHistogramSampler:
         return top1_dists_same_objcat
 
     @staticmethod
-    def compute_rank_per_exclusion(top1_dist_sameobj, top_per_cvals):
+    def compute_rank_per_exclusion(
+        top1_dist_sameobj,
+        top_per_cvals,
+        top1_obj_rank_of_same_cat=False,  # computes the highest object rank of the objects in the same category
+        category_index: Optional[
+            int
+        ] = None,  # category index of the positive match candidate (from 0~19)
+    ):
         # top1_dist_sameobj: 11 x 11 (first dim: series idx, second dim: exclusion radius)
         # top_per_cval dims: 11 x 199 or 11 x 19 (all object or object category except same obj or obj category)
+        if top1_obj_rank_of_same_cat:
+            # you must pass in top1_dist_sameobj_cat, which is also a 11 x 11 matrix
+            assert top_per_cvals.shape[1] == len(utils.SHAPEY200_OBJS) - 1
+            assert category_index is not None
+            # cut out same category
+            top_per_cvals = np.concatenate(
+                [
+                    top_per_cvals[:, : category_index * 10],
+                    top_per_cvals[:, category_index * 10 + 9 :],
+                ],
+                axis=1,
+            )
+
         rank_mat = np.zeros_like(top1_dist_sameobj, dtype=np.int64)
         for exc_rad in range(top1_dist_sameobj.shape[1]):
             col = top1_dist_sameobj[:, exc_rad][..., np.newaxis]
@@ -63,7 +84,11 @@ class RankHistogramSampler:
 
     @staticmethod
     def get_objrank_mat_all(
-        ax: str, sampler: dl.Sampler, category: bool = False, test_objs: bool = False
+        ax: str,
+        sampler: dl.Sampler,
+        category: bool = False,
+        test_objs: bool = False,
+        top1_obj_rank_of_same_cat=False,
     ):
         if test_objs:
             all_objs = utils.SHAPEX200_TEST_OBJS
@@ -92,7 +117,7 @@ class RankHistogramSampler:
                     {"data_type": "top1_per_obj_cvals", **base_query}, lazy=False
                 ),
             )  # 1st dim = refimgs, 2nd dim = objs (199)
-            if category:
+            if category or top1_obj_rank_of_same_cat:
                 top1_dists_sameobj_cat_all = [
                     sampler.load(
                         {
@@ -112,14 +137,25 @@ class RankHistogramSampler:
                         top1_dists_sameobj, top1_dists_sameobj_cat_all
                     )
                 )
+                if top1_obj_rank_of_same_cat:
+                    assert category == False
+                    rank_mat = RankHistogramSampler.compute_rank_per_exclusion(
+                        top1_dists_sameobj_cat,
+                        top_per_obj_cvals,
+                        top1_obj_rank_of_same_cat=top1_obj_rank_of_same_cat,
+                        category_index=np.where(utils.SHAPEY200_OBJCATS == cat)[
+                            0
+                        ].item(),
+                    )
+                else:
+                    assert category == True
+                    top_per_objcat_cvals = RankHistogramSampler.compute_top_per_objcat(
+                        top_per_obj_cvals, cat
+                    )
 
-                top_per_objcat_cvals = RankHistogramSampler.compute_top_per_objcat(
-                    top_per_obj_cvals, cat
-                )
-
-                rank_mat = RankHistogramSampler.compute_rank_per_exclusion(
-                    top1_dists_sameobj_cat, top_per_objcat_cvals
-                )
+                    rank_mat = RankHistogramSampler.compute_rank_per_exclusion(
+                        top1_dists_sameobj_cat, top_per_objcat_cvals
+                    )
             else:
                 rank_mat = RankHistogramSampler.compute_rank_per_exclusion(
                     top1_dists_sameobj, top_per_obj_cvals
