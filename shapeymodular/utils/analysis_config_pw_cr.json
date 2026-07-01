@@ -11,7 +11,8 @@
     "imgnames": null,
     "batch_analysis": true,
     "distances_key": [
-        "Jaccard_dists"
+        "correlation",
+        "correlation"
     ],
     "histogram": true,
     "bins": [

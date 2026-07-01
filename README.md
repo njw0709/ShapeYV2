@@ -102,6 +102,58 @@ Writes `distances-correlation.h5` into `<DIR>`, containing a `"correlation"` dat
 similarity matrix) that every downstream tool reads. Unlike binarized distances, cosine
 similarity needs no separate thresholding step.
 
+#### Contrast-reversed (CR) experiment — compute **two** matrices
+The CR benchmark asks whether the system finds the correct shape even when the candidate images
+have their contrast reversed. That requires **two** cosine-similarity matrices, computed from the
+original and contrast-reversed features and fed to the analysis **in sequence**:
+
+1. **Same-contrast matrix** — original features vs. original features (identical to the standard
+   Step B above; probe and candidates share the original contrast polarity).
+2. **Cross-contrast matrix** — original features vs. contrast-reversed features (probe is
+   original, candidates are contrast-reversed). Compute it with `dataset_exclusion=True`, passing
+   the two feature sets as a list `[row_features, col_features]` (row = original,
+   col = contrast-reversed):
+
+```python
+import h5py
+import shapeymodular.macros.compute_distance_torch as compute_distance
+
+with h5py.File("/path/to/<DIR>/features_resnet50_original.h5", "r") as hf:
+    features_orig = hf["feature_output/output"][()]
+with h5py.File("/path/to/<DIR>/features_resnet50_contrast_reversed.h5", "r") as hf:
+    features_cr = hf["feature_output/output"][()]
+
+# (1) same-contrast matrix -> distances-correlation.h5   (same call as standard Step B)
+compute_distance.compute_distance(
+    output_dir="/path/to/<DIR>/", features=features_orig,
+    output_file="distances-correlation.h5",
+    row_segment_size=1000, col_segment_size=1000, gpu_index=0, metric="correlation",
+)
+
+# (2) cross-contrast matrix -> distances-correlation-cr.h5
+compute_distance.compute_distance(
+    output_dir="/path/to/<DIR>/", features=[features_orig, features_cr],
+    output_file="distances-correlation-cr.h5",
+    row_segment_size=1000, col_segment_size=1000, gpu_index=0, metric="correlation",
+    dataset_exclusion=True,
+)
+```
+Both files carry a `"correlation"` dataset. The order matters: the analysis reads the
+same-contrast matrix first and the cross-contrast matrix second (see the `--distance_file`
+tuple in Step C).
+
+**Soft vs. hard mode** (`contrast_exclusion_mode` in the config — set it to `"soft"` or
+`"hard"`). The positive / same-object match *always* uses the cross-contrast matrix, so the
+correct answer is always a contrast-reversed view of the probe. The mode only changes which
+matrix supplies the negative / other-object distractors:
+
+- **`"soft"`** — the negative match also uses the cross-contrast matrix, so *both* positive and
+  negative match candidates are contrast-reversed (they share the same reversed background).
+- **`"hard"`** — the negative match uses the same-contrast matrix, so the distractors keep the
+  original contrast polarity (same as the probe) while the positive candidate is contrast-reversed
+  (different polarity). This is the harder condition: a shape-blind system can exploit the
+  distractor's matching contrast to beat the correct, contrast-reversed match.
+
 ### Step C — Nearest-neighbor (exclusion) analysis
 Runs the exclusion-distance nearest-neighbor analysis over the cosine-similarity matrix and
 produces the final nearest-neighbor matrix / analysis results. Uses
@@ -117,10 +169,33 @@ python cmdtools/step2_nn_analysis.py \
     --save_name analysis_results.h5
 ```
 Writes `analysis_results.h5` into `<DIR>` — this is the nearest-neighbor result consumed by all
-graphing tools below. Which dataset inside the distance file is used (and whether contrast
-exclusion is applied for CR) is controlled by the analysis config; the config paths are defined
-in [shapeymodular/utils/constants.py](shapeymodular/utils/constants.py) (`PATH_CONFIG_*_CR` for
-the contrast-reversed experiment, `PATH_CONFIG_*_NO_CR` for the original).
+graphing tools below. Whether contrast exclusion is applied is controlled by the analysis config;
+the config paths are defined in
+[shapeymodular/utils/constants.py](shapeymodular/utils/constants.py) (`PATH_CONFIG_*_CR` for the
+contrast-reversed experiment, `PATH_CONFIG_*_NO_CR` for the original). These configs read the
+matrix from the `"correlation"` dataset written in Step B (the CR configs list it twice, one key
+per matrix).
+
+**Contrast-reversed (CR):** the CR run consumes the two matrices from Step B as an ordered pair.
+The single-file `--distance_file` CLI flag can't express that, so run the analysis via the macro
+directly, passing a `(same_contrast, cross_contrast)` tuple and a CR config
+(`contrast_exclusion: true`, and `contrast_exclusion_mode` set to `"soft"` or `"hard"` — see the
+soft-vs-hard explanation under Step B for the difference):
+
+```python
+import shapeymodular.macros.nn_batch as nn_batch
+import shapeymodular.utils as utils
+
+nn_batch.run_exclusion_analysis(
+    "/path/to/<DIR>/",
+    distance_file=("distances-correlation.h5", "distances-correlation-cr.h5"),  # order matters
+    row_imgnames="imgnames_all.txt",
+    col_imgnames="imgnames_all.txt",
+    save_name="analysis_results.h5",
+    config_filename=utils.PATH_CONFIG_ALL_CR,  # or PATH_CONFIG_PW_CR
+)
+```
+The CR result file is suffixed automatically (e.g. `analysis_results_cr_soft.h5`).
 
 > **Automating the pipeline:** [run_analysis/](run_analysis/) contains driver scripts that loop
 > the above over many feature directories. [run_analysis/macro.py](run_analysis/macro.py) chains
